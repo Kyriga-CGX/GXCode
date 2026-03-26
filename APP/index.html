@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en" data-cgx-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GXCode Native Environment</title>
+    <!-- TailwindCSS Local: Pro-Grade Build (v4) -->
+    <link rel="stylesheet" href="dist/output.css">
+    
+    <!-- Nostro Engine di Skin Ereditato -->
+    <link href="patch.css" rel="stylesheet">
+    <link href="lib/xterm/xterm.css" rel="stylesheet">
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs/loader.js"></script>
+    
+    <!-- Fix AMD/UMD Conflict between Monaco and xterm -->
+    <script>
+        const originalDefine = window.define;
+        window.define = undefined;
+    </script>
+    <script src="lib/xterm/xterm.js"></script>
+    <script src="lib/xterm/addon-fit.js"></script>
+    <script>
+        window.define = originalDefine;
+    </script>
+    <style>
+       ::-webkit-scrollbar { width: 6px; }
+        select option {
+            background-color: #0d1117 !important;
+            color: #c9d1d9 !important;
+        }
+        
+        select:focus {
+            border-color: #2188ff !important;
+            box-shadow: 0 0 0 1px #2188ff;
+        }
+       ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+       /* Custom height for Monaco container */
+       #monaco-editor-container { width: 100%; height: 100%; }
+       /* Evita flash bianchi di base e garantisce il look originario */
+       body { background-color: #0d1117; color: #c9d1d9; font-family: -apple-system, system-ui, sans-serif; }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col antialiased">
+    
+    <!-- APP HEADER -->
+    <header class="h-12 bg-[#161b22] border-b border-gray-800 flex items-center justify-between px-4 shrink-0 shadow-sm relative z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-7 h-7 rounded bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold opacity-90 shadow-lg text-xs">GX</div>
+            <h1 class="font-bold tracking-widest text-gray-200 text-sm mr-4">GX<span class="text-blue-500">Code</span></h1>
+            
+            <!-- PANEL TOGGLES (Moved here as requested) -->
+            <div class="flex items-center gap-1.5 px-3 border-l border-r border-gray-700/50">
+                <button id="toggle-left-btn" class="p-1.5 text-gray-500 hover:text-white transition rounded-md hover:bg-gray-800/80 active:scale-95" title="Toggle Explorer/Tickets (Sinistra)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                </button>
+                <button id="toggle-terminal-btn" class="p-1.5 text-gray-500 hover:text-white transition rounded-md hover:bg-gray-800/80 active:scale-95" title="Toggle Terminale (Basso)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                </button>
+                <button id="toggle-right-btn" class="p-1.5 text-gray-500 hover:text-white transition rounded-md hover:bg-gray-800/80 active:scale-95" title="Toggle Agents/Skills (Destra)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2 ml-2">
+                 <button id="nav-market-agents" class="px-2.5 py-1 text-blue-400 hover:text-white transition text-[10px] font-bold uppercase tracking-wider" title="Market Agenti">
+                    Market Agenti
+                 </button>
+                 <button id="nav-market-skills" class="px-2.5 py-1 text-purple-400 hover:text-white transition text-[10px] font-bold uppercase tracking-wider" title="Market Skills">
+                    Market Skills
+                 </button>
+                 <button id="nav-market-addons" class="px-2.5 py-1 text-emerald-400 hover:text-white transition text-[10px] font-bold uppercase tracking-wider" title="Market Addons">
+                    Market Addons
+                 </button>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+             <button id="nav-settings" class="p-2 text-gray-500 hover:text-white transition rounded-full hover:bg-gray-800" title="Settings">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+             </button>
+        </div>
+    </header>
+
+    <!-- ACTIVITY BAR & SIDEBAR FLEX CONTAINER -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- VS CODE STYLE ACTIVITY BAR -->
+        <nav id="activity-bar" class="w-12 bg-[#0d1117] border-r border-gray-800 flex flex-col items-center py-4 shrink-0 gap-4 z-20">
+            <button id="activity-explorer" class="p-2.5 text-blue-500 hover:text-white transition rounded-md border-l-2 border-blue-500" onclick="window.setState({ activeActivity: 'explorer', isLeftSidebarOpen: true })" title="Explorer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </button>
+            <button id="activity-search" class="p-2.5 text-gray-500 hover:text-white transition rounded-md" onclick="window.setState({ activeActivity: 'search', isLeftSidebarOpen: true })" title="Search">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </button>
+            <button id="activity-git" class="p-2.5 text-gray-500 hover:text-white transition rounded-md" onclick="window.setState({ activeActivity: 'git', isLeftSidebarOpen: true })" title="Source Control">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v8"/><path d="m16 6-4 4-4-4"/><circle cx="12" cy="18" r="3"/></svg>
+            </button>
+            <button id="activity-debug" class="p-2.5 text-gray-500 hover:text-white transition rounded-md" onclick="window.setState({ activeActivity: 'debug', isLeftSidebarOpen: true })" title="Debug">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 4 5 2 5-2v11l-5 2-5-2V4Z"/><path d="M15.5 10.5 12 14l-3.5-3.5"/></svg>
+            </button>
+            <button id="activity-testing" class="p-2.5 text-gray-500 hover:text-white transition rounded-md" onclick="window.setState({ activeActivity: 'testing', isLeftSidebarOpen: true })" title="Testing">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/></svg>
+            </button>
+        </nav>
+
+        <!-- LEFT SIDEBAR: DYNAMIC PANES -->
+        <aside id="left-sidebar" class="w-64 bg-[#0d1117] border-r border-gray-800 flex flex-col shrink-0 transition-all z-10 shadow-lg overflow-hidden relative">
+            <div id="left-content-area" class="flex-1 overflow-hidden relative flex flex-col">
+                <!-- EXPLORER PANE ROOT -->
+                <div id="pane-explorer-root" class="flex-1 flex flex-col overflow-hidden">
+                    <div class="flex border-b border-gray-800 shrink-0">
+                        <button id="left-tab-explorer" class="flex-1 py-2 text-[10px] uppercase tracking-wider font-semibold border-b-[2px] transition text-gray-300 border-blue-500 bg-[#161b22]">📁 Files</button>
+                        <button id="left-tab-tickets" class="flex-1 py-2 text-[10px] uppercase tracking-wider font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300">🎫 Tickets</button>
+                    </div>
+                    
+                    <div class="flex-1 overflow-hidden relative">
+                        <!-- EXPLORER PANE -->
+                        <div id="pane-explorer" class="absolute inset-0 flex flex-col bg-[#0d1117]">
+                             <div class="p-1.5 border-b border-gray-800 flex justify-between items-center shrink-0 bg-[#0a0d12]">
+                                 <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2">Progetto Locale</h3>
+                                 <button id="btn-open-folder" class="p-1 text-[10px] text-gray-300 hover:text-white hover:bg-blue-600/30 bg-gray-800/80 rounded transition flex items-center gap-1 border border-gray-700" title="Apri Cartella Sistema"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Apri Cartella</button>
+                             </div>
+                             <div id="workspace-tree-container" class="flex-1 overflow-y-auto custom-scrollbar p-1"></div>
+                        </div>
+                        
+                        <!-- TICKETS PANE -->
+                        <div id="pane-tickets" class="absolute inset-0 flex flex-col hidden bg-[#0d1117]">
+                             <div class="p-2 border-b border-gray-800 flex justify-between items-center shrink-0 bg-[#0a0d12]">
+                                 <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">YouTrack Assigned</h3>
+                             </div>
+                             <div id="tickets-content" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar"></div>
+                        </div>
+
+                        <!-- GIT PANE (Source Control) -->
+                        <div id="pane-git" class="absolute inset-0 flex flex-col hidden bg-[#0d1117]">
+                             <div class="p-2 border-b border-gray-800 flex justify-between items-center shrink-0 bg-[#161b22]">
+                                 <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Source Control</h3>
+                             </div>
+                             <div id="git-content" class="flex-1 overflow-y-auto custom-scrollbar p-2">
+                                <div class="p-8 text-center opacity-30 mt-10">
+                                    <svg class="mx-auto mb-4" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v8"/><path d="m16 6-4 4-4-4"/><circle cx="12" cy="18" r="3"/></svg>
+                                    <p class="text-[10px] uppercase font-bold tracking-widest">Inizializzazione Git...</p>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEARCH PANE -->
+                <div id="pane-search" class="hidden flex flex-col h-full flex-1 overflow-hidden p-4">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Search</h3>
+                    <div class="relative group mb-4">
+                        <input type="text" id="global-search-input" placeholder="Search in files..." class="w-full bg-[#161b22] border border-gray-800 rounded px-4 py-2 text-xs text-gray-300 outline-none focus:border-blue-500/50 transition duration-300">
+                    </div>
+                    <div id="global-search-results" class="flex-1 overflow-y-auto space-y-2 custom-scrollbar opacity-50 text-[10px] uppercase text-gray-600 font-bold text-center mt-10">
+                        Nessuna ricerca avviata
+                    </div>
+                </div>
+
+                <!-- TESTING PANE -->
+                <div id="pane-testing" class="hidden flex flex-col h-full flex-1 overflow-hidden px-2 py-4">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-2">Test Explorer</h3>
+                    <div class="px-2 mb-4">
+                        <button id="btn-run-all-tests" class="w-full py-1.5 bg-[#161b22] hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-white rounded text-[10px] uppercase font-bold tracking-wider transition shadow-sm opacity-50 cursor-not-allowed flex items-center justify-center gap-2">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 3 14 9-14 9V3z"/></svg>
+                            Run All Playwright
+                        </button>
+                    </div>
+                    <!-- TEST TREE -->
+                    <div id="test-tree-root" class="flex-1 overflow-y-auto space-y-1 custom-scrollbar px-1">
+                        <div class="opacity-30 text-[10px] uppercase text-gray-500 font-bold text-center mt-10">Apri workspace per scansionare i tests...</div>
+                    </div>
+                </div>
+
+                <!-- DEBUG PANE -->
+                <div id="pane-debug" class="hidden flex flex-col h-full flex-1 overflow-hidden p-4">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Debug</h3>
+                    <div class="flex items-center gap-2 mb-6">
+                        <button class="flex-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] uppercase font-bold tracking-wider">Start Debug</button>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="border-t border-gray-800 pt-3"><span class="text-[10px] uppercase text-gray-600 font-bold">Variables</span></div>
+                        <div class="border-t border-gray-800 pt-3"><span class="text-[10px] uppercase text-gray-600 font-bold">Watch</span></div>
+                        <div class="border-t border-gray-800 pt-3"><span class="text-[10px] uppercase text-gray-600 font-bold">Call Stack</span></div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+            <!-- CENTER WORKSPACE -->
+            <main class="flex-1 flex flex-col bg-[#0f111a] relative min-w-0">
+                
+                <!-- TOP: CHAT / APRI CARTELLE -->
+                <div id="main-canvas" class="flex-1 overflow-y-auto p-6 scroll-smooth flex flex-col no-scrollbar">
+                    
+                    <!-- Top Action Bar (Nuova) -->
+                    <div class="px-3 py-2 border-b border-gray-800 flex gap-2 shrink-0 bg-[#0d1117] items-center min-h-[40px]">
+                        <div id="workspace-tabs" class="flex space-x-1 overflow-x-auto overflow-y-hidden no-scrollbar">
+                            <!-- I tab appariranno qui dinamicamente -->
+                        </div>
+                    </div>
+
+                    <!-- BREADCRUMBS / OUTLINE NAVIGATOR (NEW) -->
+                    <div id="editor-breadcrumbs" class="h-8 bg-[#0d1117] border-b border-gray-800 flex items-center px-4 overflow-x-auto no-scrollbar gap-2 shrink-0 hidden transition-all">
+                        <!-- Breadcrumbs will appear here -->
+                    </div>
+
+                    <div id="hub-content-area" class="flex-1 flex flex-col items-center justify-center relative">
+                        <div class="max-w-2xl text-center text-gray-400 space-y-4">
+                            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-500/5 border border-blue-500/20 mb-2">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="text-blue-500/50" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            </div>
+                            <h2 class="text-3xl font-light text-gray-200 tracking-tight">Workspace Ready.</h2>
+                            <p class="text-[13px] text-gray-500">Apri un progetto dalla barra di sinistra dell'Explorer per visualizzare i tuoi file.</p>
+                            <p class="text-[11px] text-gray-600 font-mono tracking-widest mt-8">IDE Architecture 2.0 • Pure Vanilla Core</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DRAG BAR PER MINIMIZZARE IL PANNELLO -->
+                <div id="terminal-drag-bar" class="h-1 bg-gray-800 hover:bg-blue-500 cursor-row-resize shrink-0 transition" title="Ridimensiona Pannello"></div>
+
+                <!-- BOTTOM PANEL: Multi-tab (Terminal, Problems) -->
+                <div id="bottom-panel" class="h-[40%] min-h-[36px] bg-[#0d1117] shrink-0 flex flex-col shadow-[0_-5px_20px_rgba(0,0,0,0.2)] transition-all duration-300 border-t border-gray-800 relative z-10">
+                    
+                    <!-- BOTTOM TABS HEADER -->
+                    <div id="bottom-panel-header" class="h-9 border-b border-gray-800 flex items-center justify-between px-3 shrink-0 bg-[#0d1117]">
+                        <div class="flex items-center h-full">
+                            <button id="tab-terminal-btn" class="h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-blue-500 text-gray-200 hover:text-white bg-[#161b22]/50">Terminale</button>
+                            <button id="tab-problems-btn" class="h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-transparent text-gray-500 hover:text-gray-300 flex items-center gap-2">
+                                Problemi <span id="problems-count-badge" class="px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-400 text-[8px] font-bold">0</span>
+                            </button>
+                            <button id="tab-output-btn" class="h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-transparent text-gray-500 hover:text-gray-300">Output</button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="close-panel-btn" class="p-1.5 text-gray-500 hover:text-white transition rounded" title="Nascondi Pannello inferior">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BOTTOM PANES STACK -->
+                    <div id="bottom-panes-root" class="flex-1 w-full relative overflow-hidden bg-[#06080a]">
+                        
+                        <!-- PANE: TERMINAL (Container for xterm) -->
+                        <div id="pane-terminal" class="absolute inset-0 flex flex-col">
+                            <!-- Terminal content handled by terminal.js -->
+                            <div class="p-4 text-xs font-mono text-blue-500/50">Terminal Initializing...</div>
+                        </div>
+
+                        <!-- PANE: PROBLEMS -->
+                        <div id="pane-problems" class="absolute inset-0 hidden flex flex-col p-4 overflow-y-auto custom-scrollbar">
+                            <div class="opacity-30 text-[10px] uppercase text-gray-500 font-bold text-center mt-10">Nessun problema rilevato nel workspace.</div>
+                        </div>
+
+                        <!-- PANE: OUTPUT -->
+                        <div id="pane-output" class="absolute inset-0 hidden flex flex-col p-4 font-mono text-xs text-gray-400 overflow-y-auto custom-scrollbar">
+                            <div class="opacity-30 text-[10px] uppercase text-gray-500 font-bold text-center mt-10">I log del sistema appariranno qui.</div>
+                        </div>
+
+                    </div>
+                </div>
+            </main>
+
+        <!-- RIGHT SIDEBAR: AGENTI E SKILL -->
+        <aside id="right-sidebar" class="w-72 bg-[#0d1117] border-l border-gray-800 flex flex-col shrink-0 transition-all z-10 shadow-lg overflow-hidden relative">
+            <div class="flex border-b border-gray-800 shrink-0 bg-[#0d1117]">
+                <button id="sidebar-tab-agents" class="flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-blue-400 border-blue-500 bg-[#161b22]">Agents</button>
+                <button id="sidebar-tab-skills" class="flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300">Skills</button>
+                <button id="sidebar-tab-addons" class="flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300">Addons</button>
+            </div>
+            
+            <!-- EX TICKET DEFAULTS HEADER -->
+            <div class="p-3 bg-[#12161d] border-b border-gray-800 flex justify-between text-[10px] text-gray-400 tracking-widest uppercase">
+                <div class="flex flex-col gap-1 items-start"><span>Type</span><span class="text-white font-bold">Task</span></div>
+                <div class="flex flex-col gap-1 items-center"><span>Priority</span><span class="text-blue-400 font-bold">Normal</span></div>
+                <div class="flex flex-col gap-1 items-end"><span>State</span><span class="text-green-400 font-bold">Open</span></div>
+            </div>
+
+<!-- Migrated panes to Left Sidebar -->
+
+            <div class="px-4 py-3 border-b border-gray-800 flex flex-col gap-3">
+                <div class="flex justify-between items-center text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase">
+                    <span id="sidebar-dynamic-title">AGENTS</span>
+                    <button class="hover:text-white transition text-lg">+</button>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="relative group">
+                    <input type="text" id="sidebar-search" placeholder="Cerca..." class="w-full bg-[#161b22] border border-gray-800 rounded px-8 py-1.5 text-xs text-gray-300 outline-none focus:border-blue-500/50 transition duration-300">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute left-2.5 top-2.5 text-gray-600 group-focus-within:text-blue-500 transition-colors"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                </div>
+
+                <!-- Category Tags (Visible only on Skills tab via JS) -->
+                <div id="skill-categories" class="flex flex-wrap gap-1.5 hidden animate-fade-in">
+                     <button class="px-2 py-0.5 rounded text-[9px] bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition lowercase" data-cat="all">All</button>
+                     <button class="px-2 py-0.5 rounded text-[9px] bg-gray-800 text-gray-400 border border-gray-700 hover:bg-gray-700 transition lowercase" data-cat="tester">Tester</button>
+                     <button class="px-2 py-0.5 rounded text-[9px] bg-gray-800 text-gray-400 border border-gray-700 hover:bg-gray-700 transition lowercase" data-cat="sviluppatore">Sviluppatore</button>
+                     <button class="px-2 py-0.5 rounded text-[9px] bg-gray-800 text-gray-400 border border-gray-700 hover:bg-gray-700 transition lowercase" data-cat="devops">DevOps</button>
+                </div>
+            </div>
+
+            <div id="sidebar-content" class="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 custom-scrollbar">
+                <div class="text-sm text-gray-500 text-center mt-10 animate-pulse uppercase tracking-widest text-[10px]">Syncing Core...</div>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- ROOT DELLE MODALI (Marketplace, Settings) -->
+    <div id="modals-root" class="absolute inset-0 pointer-events-none z-50"></div>
+
+    <!-- SCRIPT CHUNKS (Modular Architecture) -->
+    <script type="module" src="scripts/app.js"></script>
+</body>
+</html>

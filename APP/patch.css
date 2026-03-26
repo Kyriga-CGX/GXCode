@@ -1,0 +1,582 @@
+/* ========================================================
+   1. GLOBAL THEME VARIABLES & SYSTEM
+   ======================================================== */
+:root {
+    --bg-app: #0d1117;
+    --bg-sidebar: #0d1117;
+    --bg-header: #161b22;
+    --bg-workspace: #0f111a;
+    --border-color: rgba(255,255,255,0.08);
+    --text-main: #c9d1d9;
+    --text-dim: #8b949e;
+    --accent: #2188ff;
+    --glass-blur: 0px;
+}
+
+/* [SKIN 1] LIQUID GLASS (DEEP DARK) */
+html[data-cgx-theme="liquid-glass"] {
+    --bg-app: rgba(5, 5, 10, 0.4);
+    --bg-sidebar: rgba(10, 10, 15, 0.3);
+    --bg-header: rgba(20, 20, 30, 0.4);
+    --bg-workspace: transparent;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --text-main: #f0f6fc;
+    --text-dim: #9198a1;
+    --glass-blur: 25px;
+}
+html[data-cgx-theme="liquid-glass"] body, 
+html[data-cgx-theme="liquid-glass"] #root {
+    background: url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2548&auto=format&fit=crop') no-repeat center center fixed !important;
+    background-size: cover !important;
+}
+
+html[data-cgx-theme="liquid-glass"] #activity-bar,
+html[data-cgx-theme="liquid-glass"] #left-sidebar,
+html[data-cgx-theme="liquid-glass"] #right-sidebar,
+html[data-cgx-theme="liquid-glass"] #terminal-root,
+html[data-cgx-theme="liquid-glass"] header,
+html[data-cgx-theme="liquid-glass"] main,
+html[data-cgx-theme="liquid-glass"] #main-canvas,
+html[data-cgx-theme="liquid-glass"] #workspace-tabs,
+html[data-cgx-theme="liquid-glass"] #hub-content-area,
+html[data-cgx-theme="liquid-glass"] #left-content-area,
+html[data-cgx-theme="liquid-glass"] #pane-explorer-root,
+html[data-cgx-theme="liquid-glass"] #pane-explorer,
+html[data-cgx-theme="liquid-glass"] #sidebar-content,
+html[data-cgx-theme="liquid-glass"] div[class*="bg-["],
+html[data-cgx-theme="liquid-glass"] aside,
+html[data-cgx-theme="liquid-glass"] nav,
+html[data-cgx-theme="liquid-glass"] #modals-root > div > div {
+    background-color: var(--bg-app) !important;
+    backdrop-filter: blur(var(--glass-blur)) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-main) !important;
+}
+
+/* Modal Backdrops must be theme-aware */
+html[data-cgx-theme="apple"] #modals-root > div,
+html[data-cgx-theme="light"] #modals-root > div {
+    background-color: rgba(255, 255, 255, 0.4) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+html[data-cgx-theme="apple"] #modals-root > div > div,
+html[data-cgx-theme="light"] #modals-root > div > div {
+    background-color: #ffffff !important;
+    border-color: #d2d2d7 !important;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.12) !important;
+}
+
+/* Forziamo la trasparenza sui contenitori che non devono avere un loro background layer */
+html[data-cgx-theme="liquid-glass"] #cgx-terminal-wrap,
+html[data-cgx-theme="liquid-glass"] .cgx-term-tabbar,
+html[data-cgx-theme="liquid-glass"] .cgx-term-output-area,
+html[data-cgx-theme="liquid-glass"] .cgx-term-input-row,
+html[data-cgx-theme="liquid-glass"] #workspace-tabs-container,
+html[data-cgx-theme="liquid-glass"] .bg-transparent-glass {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+html[data-cgx-theme="liquid-glass"] input, 
+html[data-cgx-theme="liquid-glass"] textarea,
+html[data-cgx-theme="liquid-glass"] .cgx-term-input {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+}
+
+/* [SKIN 7] CLASSIC RELOADED (DARK SEMI) */
+html[data-cgx-theme="classic"] body {
+    background: #0f1419 !important;
+}
+html[data-cgx-theme="classic"] div[class*="bg-"], 
+html[data-cgx-theme="classic"] aside, 
+html[data-cgx-theme="classic"] header {
+    background-color: #1a1f26 !important;
+    border-color: #2d333b !important;
+    color: #adbac7 !important;
+}
+
+/* [SKIN 2] APPLE STYLE (LIGHT) */
+html[data-cgx-theme="apple"] {
+    --bg-app: #f5f5f7;
+    --bg-sidebar: #f5f5f7;
+    --bg-header: #ffffff;
+    --bg-workspace: #ffffff;
+    --border-color: #d2d2d7;
+    --text-main: #1d1d1f;
+    --text-dim: #86868b;
+    --accent: #0071e3;
+}
+html[data-cgx-theme="apple"] body, html[data-cgx-theme="apple"] #root {
+    background: var(--bg-app) !important;
+    color: var(--text-main) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif !important;
+}
+html[data-cgx-theme="apple"] div[class*="bg-"], 
+html[data-cgx-theme="apple"] aside, 
+html[data-cgx-theme="apple"] header, 
+html[data-cgx-theme="apple"] nav,
+html[data-cgx-theme="apple"] main,
+html[data-cgx-theme="apple"] [role="dialog"], 
+html[data-cgx-theme="apple"] [role="tabpanel"] {
+    background-color: var(--bg-workspace) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-main) !important;
+}
+
+/* Solo in Apple o Light, i testi gray di Tailwind devono diventare scuri */
+/* Fix card backgrounds and borders in Marketplace */
+html[data-cgx-theme="apple"] .p-4.border.border-gray-800.rounded-xl.bg-\[\#161b22\],
+html[data-cgx-theme="apple"] .hover\:bg-\[\#1d232b\]:hover,
+html[data-cgx-theme="light"] .p-4.border.border-gray-800.rounded-xl.bg-\[\#161b22\],
+html[data-cgx-theme="light"] .hover\:bg-\[\#1d232b\]:hover {
+    background-color: #f5f5f7 !important;
+    border-color: #e5e5ea !important;
+}
+html[data-cgx-theme="apple"] .text-gray-100,
+html[data-cgx-theme="light"] .text-gray-100 {
+    color: var(--text-main) !important;
+}
+
+/* Solo in Apple, Light o Aero, i testi gray di Tailwind devono diventare scuri per leggibilità */
+html[data-cgx-theme="apple"] [class*="text-gray-"], html[data-cgx-theme="apple"] .text-gray-200, html[data-cgx-theme="apple"] .text-gray-300, html[data-cgx-theme="apple"] .text-gray-400,
+html[data-cgx-theme="light"] [class*="text-gray-"], html[data-cgx-theme="light"] .text-gray-200, html[data-cgx-theme="light"] .text-gray-300, html[data-cgx-theme="light"] .text-gray-400,
+html[data-cgx-theme="aero"] [class*="text-gray-"], html[data-cgx-theme="aero"] .text-gray-200, html[data-cgx-theme="aero"] .text-gray-300, html[data-cgx-theme="aero"] .text-gray-400 { 
+    color: var(--text-main) !important; 
+}
+html[data-cgx-theme="apple"] .text-gray-500, html[data-cgx-theme="apple"] .text-gray-600,
+html[data-cgx-theme="light"] .text-gray-500, html[data-cgx-theme="light"] .text-gray-600,
+html[data-cgx-theme="aero"] .text-gray-500, html[data-cgx-theme="aero"] .text-gray-600 { 
+    color: var(--text-dim) !important; 
+}
+
+/* Global Utility Fixes: Borders must follow the theme in Apple/Light/Aero */
+html[data-cgx-theme="apple"] [class*="border-gray-"],
+html[data-cgx-theme="light"] [class*="border-gray-"],
+html[data-cgx-theme="aero"] [class*="border-gray-"],
+html[data-cgx-theme="apple"] .border-gray-800,
+html[data-cgx-theme="light"] .border-gray-800,
+html[data-cgx-theme="aero"] .border-gray-800,
+html[data-cgx-theme="apple"] [class*="divide-gray-"],
+html[data-cgx-theme="light"] [class*="divide-gray-"],
+html[data-cgx-theme="aero"] [class*="divide-gray-"] {
+    border-color: var(--border-color) !important;
+}
+
+/* Force GXCode specific backgrounds to follow the theme variables */
+html[data-cgx-theme="apple"] .bg-\[\#0d1117\], html[data-cgx-theme="apple"] .bg-\[\#161b22\], html[data-cgx-theme="apple"] .bg-\[\#0a0d12\],
+html[data-cgx-theme="light"] .bg-\[\#0d1117\], html[data-cgx-theme="light"] .bg-\[\#161b22\], html[data-cgx-theme="light"] .bg-\[\#0a0d12\],
+html[data-cgx-theme="apple"] .bg-black\/20, html[data-cgx-theme="light"] .bg-black\/20 {
+    background-color: var(--bg-workspace) !important;
+    color: var(--text-main) !important;
+}
+
+/* Active states for Tabs & Tickets */
+html[data-cgx-theme="apple"] .bg-\[\#161b22\].text-blue-400,
+html[data-cgx-theme="light"] .bg-\[\#161b22\].text-blue-400 {
+    background-color: rgba(0, 113, 227, 0.08) !important;
+    border-bottom: 2px solid var(--accent) !important;
+}
+
+/* Activity Bar & Sidebar Overrides for Light/Apple */
+html[data-cgx-theme="apple"] #activity-bar,
+html[data-cgx-theme="light"] #activity-bar {
+    background-color: var(--bg-sidebar) !important;
+    border-right: 1px solid var(--border-color) !important;
+}
+
+html[data-cgx-theme="apple"] .hover\:bg-gray-800:hover,
+html[data-cgx-theme="apple"] .bg-gray-800,
+html[data-cgx-theme="light"] .hover\:bg-gray-800:hover,
+html[data-cgx-theme="light"] .bg-gray-800 {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    color: var(--text-main) !important;
+}
+
+html[data-cgx-theme="apple"] .hover\:text-white:hover,
+html[data-cgx-theme="light"] .hover\:text-white:hover {
+    color: var(--accent) !important;
+}
+
+html[data-cgx-theme="apple"] .text-blue-400,
+html[data-cgx-theme="light"] .text-blue-400 {
+    color: var(--accent) !important;
+}
+
+/* Fix for Workspace Tree & Sidebar Items */
+html[data-cgx-theme="apple"] .hover\:bg-\[\#1a202a\]:hover,
+html[data-cgx-theme="light"] .hover\:bg-\[\#1a202a\]:hover {
+    background-color: rgba(0, 0, 0, 0.04) !important;
+}
+html[data-cgx-theme="apple"] .text-gray-300,
+html[data-cgx-theme="light"] .text-gray-300 {
+    color: var(--text-main) !important;
+}
+
+html[data-cgx-theme="apple"] #cgx-terminal-wrap, 
+html[data-cgx-theme="apple"] .cgx-term-tabbar,
+html[data-cgx-theme="apple"] .cgx-term-input-row,
+html[data-cgx-theme="apple"] .cgx-term-output-area { 
+    background-color: #000000 !important; color: #ffffff !important; border-color: #333 !important;
+}
+html[data-cgx-theme="apple"] .cgx-term-tab.cgx-tab-active { background-color: #222 !important; }
+
+/* [SKIN 3] AERO GLASS (MODES) */
+html[data-cgx-theme="aero"] {
+    --bg-app: rgba(230, 235, 255, 0.4);
+    --bg-sidebar: rgba(200, 210, 230, 0.3);
+    --bg-header: rgba(255, 255, 255, 0.4);
+    --bg-workspace: rgba(255, 255, 255, 0.1);
+    --border-color: rgba(255, 255, 255, 0.3);
+    --text-main: #111115;
+    --text-dim: #444455;
+    --accent: #0078d4;
+    --glass-blur: 15px;
+}
+html[data-cgx-theme="aero"] body, html[data-cgx-theme="aero"] #root {
+    background: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2670&auto=format&fit=crop') no-repeat center center fixed !important;
+    background-size: cover !important;
+}
+
+/* [SKIN 4] ANIME STYLE */
+html[data-cgx-theme="anime"] {
+    --bg-app: rgba(30, 15, 25, 0.7);
+    --bg-sidebar: rgba(45, 20, 35, 0.6);
+    --bg-header: rgba(60, 25, 50, 0.7);
+    --bg-workspace: rgba(0, 0, 0, 0.2);
+    --border-color: rgba(255, 100, 150, 0.4);
+    --text-main: #ffffff;
+    --text-dim: #ffb6c1;
+    --accent: #ff007f;
+    --glass-blur: 10px;
+}
+html[data-cgx-theme="anime"] body, html[data-cgx-theme="anime"] #root {
+    background: url('https://images.unsplash.com/photo-1541562232579-512a21360020?q=80&w=2670&auto=format&fit=crop') no-repeat center center fixed !important;
+    background-size: cover !important;
+}
+
+/* [SKIN 5] CUSTOM GRADIENT */
+html[data-cgx-theme="custom-gradient"] {
+    --bg-app: rgba(10, 10, 10, 0.6);
+    --bg-sidebar: rgba(5, 5, 5, 0.5);
+    --bg-header: rgba(20, 20, 20, 0.7);
+    --bg-workspace: transparent;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --text-main: #eeeeee;
+    --text-dim: #aaaaaa;
+    --glass-blur: 8px;
+}
+html[data-cgx-theme="custom-gradient"] body, html[data-cgx-theme="custom-gradient"] #root {
+    background: linear-gradient(135deg, var(--cgx-grad-custom, #ff0055), #0f0f0f) no-repeat center center fixed !important;
+    background-size: cover !important;
+}
+
+/* Applichiamo il Glass Effect Universale anche a questi temi se hanno blur */
+html[data-cgx-theme="aero"] div[class*="bg-["], html[data-cgx-theme="aero"] aside, html[data-cgx-theme="aero"] header, html[data-cgx-theme="aero"] nav, html[data-cgx-theme="aero"] main,
+html[data-cgx-theme="anime"] div[class*="bg-["], html[data-cgx-theme="anime"] aside, html[data-cgx-theme="anime"] header, html[data-cgx-theme="anime"] nav, html[data-cgx-theme="anime"] main,
+html[data-cgx-theme="custom-gradient"] div[class*="bg-["], html[data-cgx-theme="custom-gradient"] aside, html[data-cgx-theme="custom-gradient"] header, html[data-cgx-theme="custom-gradient"] nav, html[data-cgx-theme="custom-gradient"] main {
+    background-color: var(--bg-app) !important;
+    backdrop-filter: blur(var(--glass-blur)) saturate(180%) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-main) !important;
+}
+
+/* Specifiche Terminale per questi temi */
+html[data-cgx-theme="aero"] #cgx-terminal-wrap { background: rgba(0, 0, 0, 0.3) !important; }
+html[data-cgx-theme="anime"] #cgx-terminal-wrap { background: rgba(20, 10, 20, 0.8) !important; }
+html[data-cgx-theme="custom-gradient"] #cgx-terminal-wrap { background: rgba(0, 0, 0, 0.5) !important; }
+
+/* [SKIN 6] LIGHT MODE */
+html[data-cgx-theme="light"] {
+    --bg-app: #ffffff;
+    --bg-sidebar: #f8f9fa;
+    --bg-header: #ffffff;
+    --bg-workspace: #ffffff;
+    --border-color: #e1e4e8;
+    --text-main: #24292e;
+    --text-dim: #586069;
+    --accent: #0366d6;
+}
+html[data-cgx-theme="light"] body, html[data-cgx-theme="light"] #root { background: var(--bg-app) !important; color: var(--text-main) !important; }
+html[data-cgx-theme="light"] div[class*="bg-"], 
+html[data-cgx-theme="light"] aside, 
+html[data-cgx-theme="light"] nav,
+html[data-cgx-theme="light"] header,
+html[data-cgx-theme="light"] [role="dialog"] { 
+    background-color: var(--bg-workspace) !important; border-color: var(--border-color) !important; color: var(--text-main) !important;
+}
+
+html[data-cgx-theme="light"] input, html[data-cgx-theme="light"] select { background-color: #fff !important; color: #111 !important; border: 1px solid #ccc !important; }
+html[data-cgx-theme="light"] #cgx-terminal-wrap,
+html[data-cgx-theme="light"] .cgx-term-output-area { background-color: #f6f8fa !important; color: #24292e !important; border-color: #d1d5da !important; }
+html[data-cgx-theme="light"] .cgx-term-tabbar,
+html[data-cgx-theme="light"] .cgx-term-input-row { background-color: #e1e4e8 !important; color: #24292e !important; }
+html[data-cgx-theme="light"] .cgx-term-input { color: #24292e !important; }
+html[data-cgx-theme="light"] .t-dim { color: #6a737d; }
+html[data-cgx-theme="light"] .t-prompt { color: #22863a; }
+html[data-cgx-theme="light"] .t-cmd { color: #005cc5; }
+
+/* Global Utility Fixes: Borders must follow the theme in Apple/Light */
+html[data-cgx-theme="apple"] [class*="border-gray-"],
+html[data-cgx-theme="light"] [class*="border-gray-"] {
+    border-color: var(--border-color) !important;
+}
+
+/* [SKIN 7] DARK MODE */
+html[data-cgx-theme="dark"] body { background: #0d1117 !important; color: #c9d1d9 !important; }
+
+/* ========================================================
+   2. SETTINGS MODAL UI & TABS FIX
+   ======================================================== */
+
+/* Fix: The native TabsList uses Tailwind grid-cols-2. We override it to flex so our 3rd tab fits beautifully horizontally! */
+[data-cgx-settings="1"] [role="tablist"] {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    gap: 4px !important;
+    padding: 4px !important;
+}
+[data-cgx-settings="1"] [role="tablist"] > button {
+    flex: 1 1 auto !important;
+    white-space: nowrap !important;
+    justify-content: center !important;
+    text-align: center !important;
+}
+
+/* Assicurati che lo spazio del tabpanel usi tutto lo spazio disponibile */
+[data-cgx-settings="1"] [role="tabpanel"], 
+[data-cgx-settings="1"] #cgx-extra-settings {
+    width: 100% !important;
+    margin-top: 10px !important;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.cgx-settings-section {
+    padding: 20px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); color: inherit;
+}
+.cgx-settings-divider { display: none; }
+.cgx-settings-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: inherit; }
+.cgx-settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.cgx-select, .cgx-input { background: #1e1e24; border: 1px solid #333; color: #fff; padding: 8px 12px; border-radius: 6px; width: 60%; }
+
+/* Scrollbar & Button Fixes for Light Modes */
+html[data-cgx-theme="apple"] ::-webkit-scrollbar-thumb,
+html[data-cgx-theme="light"] ::-webkit-scrollbar-thumb {
+    background: #d1d5da !important;
+}
+html[data-cgx-theme="apple"] ::-webkit-scrollbar-track,
+html[data-cgx-theme="light"] ::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+html[data-cgx-theme="apple"] .opacity-30,
+html[data-cgx-theme="light"] .opacity-30 {
+    opacity: 0.5 !important; /* Più visibile su bianco */
+}
+
+/* Fix for Select inputs in light mode */
+html[data-cgx-theme="apple"] select,
+html[data-cgx-theme="light"] select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+    background-position: right 0.5rem center !important;
+    background-repeat: no-repeat !important;
+    background-size: 1.5em 1.5em !important;
+    padding-right: 2.5rem !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+}
+
+/* Container Embedded in basso (30%) */
+#cgx-terminal-wrap {
+    display: flex;
+    flex-direction: column;
+    
+    /* Rimuoviamo min-height per non "bloccare" il collapse nativo di React! */
+    height: 100%;
+    width: 100%;
+    flex: 1;
+    margin-top: auto; /* Se in flex, lo spinge bene a fondo pagina */
+    background: #0d0d0d;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 12.5px;
+    border-radius: 6px;
+    border: 1px solid #333;
+    overflow: hidden;
+}
+
+#cgx-terminal-wrap.cgx-visible {
+    display: flex;
+}
+
+/* Tabbar */
+.cgx-term-tabbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #141414;
+    border-bottom: 1px solid #222;
+    padding: 4px 8px 0;
+    flex-shrink: 0;
+}
+
+.cgx-term-tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px 4px;
+    font-size: 11px;
+    color: #666;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-bottom: none;
+    transition: color 0.12s, background 0.12s;
+    background: transparent;
+}
+
+.cgx-term-tab:hover {
+    color: #ccc;
+    background: #1a1a1a;
+}
+
+.cgx-term-tab.cgx-tab-active {
+    color: #ddd;
+    background: #1e1e1e;
+    border-color: #333;
+}
+
+.cgx-term-tab-close {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    opacity: 0;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    color: #888;
+    transition: opacity 0.12s;
+}
+
+.cgx-term-tab:hover .cgx-term-tab-close {
+    opacity: .7;
+}
+
+.cgx-term-tab-close:hover {
+    opacity: 1 !important;
+    background: #444 !important;
+}
+
+/* Azioni a Destra (.cgx-term-tabbar-actions) */
+.cgx-term-tabbar-actions {
+    display: flex;
+    gap: 3px;
+    margin-left: auto;
+    padding-bottom: 3px;
+}
+
+.cgx-term-action-btn {
+    padding: 2px 7px;
+    font-size: 10px;
+    color: #555;
+    border: 1px solid #2a2a2a;
+    border-radius: 3px;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.cgx-term-action-btn:hover {
+    background: #1e1e1e;
+    color: #aaa;
+    border-color: #3a3a3a;
+}
+
+.cgx-term-action-btn.green:hover {
+    background: rgba(74,222,128,.12);
+    color: #4ade80;
+    border-color: rgba(74,222,128,.4);
+}
+
+/* Area di Output */
+.cgx-term-output-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 12px;
+    background: #0d0d0d;
+    font-size: 12.5px;
+    color: #c8c8c8;
+    white-space: pre-wrap;
+    line-height: 1.55;
+    word-break: break-all;
+}
+
+.cgx-term-output-area::-webkit-scrollbar {
+    width: 4px;
+}
+
+.cgx-term-output-area::-webkit-scrollbar-thumb {
+    background: #2a2a2a;
+    border-radius: 2px;
+}
+
+.cgx-term-output-area::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+
+/* Colori Testo del Terminale */
+.t-prompt { color: #4ade80; font-weight: 700; }
+.t-cmd    { color: #60a5fa; }
+.t-err    { color: #f87171; }
+.t-warn   { color: #fbbf24; }
+.t-info   { color: #a78bfa; }
+.t-path   { color: #34d399; }
+.t-dim    { color: #555; }
+
+/* Riga di Input (.cgx-term-input-row) */
+.cgx-term-input-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: #141414;
+    border-top: 1px solid #222;
+    flex-shrink: 0;
+}
+
+.cgx-term-prompt-label {
+    color: #4ade80;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.cgx-term-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: #c8c8c8;
+    caret-color: #60a5fa;
+}
+
+.cgx-term-input::placeholder {
+    color: #333;
+}

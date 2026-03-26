@@ -1,0 +1,12 @@
+{
+  "p": [
+    "    { data: u = [], isLoading: d } = mn({ queryKey: [\"/api/plugins\"] }),",
+    "        (await ct(\"PATCH\", `/api/plugins/${k}`, Q)).json(),",
+    "        pt.invalidateQueries({ queryKey: [\"/api/plugins\"] });"
+  ],
+  "ms": [
+    "      queryKey: [\"/api/marketplace-skills\"],",
+    "        (await ct(\"PATCH\", `/api/marketplace-skills/${j}`, q)).json(),",
+    "        pt.invalidateQueries({ queryKey: [\"/api/marketplace-skills\"] });"
+  ]
+}
