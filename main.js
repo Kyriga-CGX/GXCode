@@ -1,12 +1,17 @@
 // main.js
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const { exec } = require("child_process");
 const express = require("express");
 const os = require("os");
 const fs = require("fs");
-const pty = require("node-pty");
+let pty;
+try {
+  pty = require("node-pty");
+} catch (e) {
+  console.error("ERRORE: Impossibile caricare node-pty. Il terminale non funzionerà.", e);
+}
 
 // ================== GESTIONE CONTESTO AI E DISCO Locale ==================
 let currentAiContext = '.GXCODE'; // Di base usa una cartella universale
@@ -608,6 +613,9 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
+    frame: false, // Rimuove la barra di sistema
+    title: "GXCode Native Environment",
+    icon: path.join(__dirname, "APP", "assets", "logo.png"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -618,8 +626,23 @@ function createWindow() {
   // carica l'index dalla cartella app/
   win.loadFile(path.join(__dirname, "APP", "index.html"));
 
-  // Se ti servono i devtools:
-  win.webContents.openDevTools();
+  // Se ti servono i devtools (solo in dev):
+  /* 
+  // Disabilitiamo l'apertura automatica in dev su richiesta dell'utente
+  if (!app.isPackaged) {
+    win.webContents.openDevTools();
+  }
+  */
+
+  // Rimuove i menu di default (File, Edit, etc) come richiesto
+  Menu.setApplicationMenu(null);
+
+  // Fallback: Apri DevTools con F12 (utile in dev e per il debug dell'utente)
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' && input.type === 'keyDown') {
+      win.webContents.toggleDevTools();
+    }
+  });
 
   win.webContents.on('console-message', (event, level, message, line, sourceId) => {
     console.log(`[Renderer] ${message} (${sourceId}:${line})`);
@@ -905,14 +928,13 @@ app.whenReady().then(() => {
         return false; 
     }
     
-    try {
-        const result = await autoUpdater.checkForUpdates();
-        // Se updateInfo esiste, c'è un aggiornamento
-        return !!result.updateInfo;
-    } catch (err) {
-        console.error("[Updater] Errore check ufficiale:", err);
-        return false;
-    }
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return !!result.updateInfo;
+  } catch (err) {
+    console.warn("[Updater] Errore check ufficiale:", err);
+    return false;
+  }
   });
 
   ipcMain.handle('perform-update', async () => {
@@ -1078,6 +1100,22 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
+  });
+  // Gestione Finestra (Minimizza, Massimizza, Chiudi)
+  ipcMain.on('window-control', (event, action) => {
+    const w = BrowserWindow.fromWebContents(event.sender);
+    if (!w) return;
+    if (action === 'minimize') w.minimize();
+    else if (action === 'maximize') {
+      if (w.isMaximized()) w.unmaximize();
+      else w.maximize();
+    }
+    else if (action === 'close') w.close();
+  });
+
+  ipcMain.on('open-devtools', (event) => {
+    const w = BrowserWindow.fromWebContents(event.sender);
+    if (w) w.webContents.openDevTools();
   });
 });
 

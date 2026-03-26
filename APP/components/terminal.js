@@ -171,6 +171,7 @@ export const initTerminal = async () => {
                 second.fitAddon.fit();
             }, 100);
         }
+        };
     }
     
     await createTerminal('t1', 'ps');

@@ -28,5 +28,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   debugTest: (workspacePath, filePath, testName) => ipcRenderer.invoke('debug-test', workspacePath, filePath, testName),
   runAllTests: (workspacePath) => ipcRenderer.invoke('run-all-tests', workspacePath),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
-  performUpdate: () => ipcRenderer.invoke('perform-update')
+  performUpdate: () => ipcRenderer.invoke('perform-update'),
+  
+  // Gestione Finestra Personalizzata
+  windowControl: (action) => ipcRenderer.send('window-control', action),
+  openDevTools: () => ipcRenderer.send('open-devtools')
 });

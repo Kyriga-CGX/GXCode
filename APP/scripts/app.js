@@ -361,6 +361,12 @@ const bootstrap = async () => {
         }
     });
 
+    // Window Controls
+    document.getElementById('nav-devtools')?.addEventListener('click', () => window.electronAPI.openDevTools());
+    document.getElementById('win-min')?.addEventListener('click', () => window.electronAPI.windowControl('minimize'));
+    document.getElementById('win-max')?.addEventListener('click', () => window.electronAPI.windowControl('maximize'));
+    document.getElementById('win-close')?.addEventListener('click', () => window.electronAPI.windowControl('close'));
+
     // Inizializza i dati dal backend!
     // Triggers render automatico appena caricati!
     await api.loadAll();
