@@ -139,9 +139,9 @@ export const initTerminal = async () => {
         }
     };
 
-    btnAddPs.onclick = () => createTerminal('t' + Date.now(), 'ps');
-    btnAddCmd.onclick = () => createTerminal('t' + Date.now(), 'cmd');
-    btnAddBash.onclick = () => createTerminal('t' + Date.now(), 'bash');
+    if (btnAddPs) btnAddPs.onclick = () => createTerminal('t' + Date.now(), 'ps');
+    if (btnAddCmd) btnAddCmd.onclick = () => createTerminal('t' + Date.now(), 'cmd');
+    if (btnAddBash) btnAddBash.onclick = () => createTerminal('t' + Date.now(), 'bash');
     
     // Split Logic (Basic Side-by-Side in current Tab Container)
     if (btnSplit) {
