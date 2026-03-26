@@ -238,7 +238,13 @@ const renderTabContent = () => {
                                 <p class="text-[11px] text-gray-500">Mantenere GXCode aggiornato garantisce le ultime feature e patch di sicurezza.</p>
                             </div>
                         </div>
-                        <button id="btn-do-update" onclick="window.startAppUpdate()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-blue-900/40">Aggiorna Ora</button>
+                        <div class="flex flex-col items-end gap-2">
+                            <button id="btn-do-update" onclick="window.startAppUpdate()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-blue-900/40">Aggiorna Ora</button>
+                            <div id="update-progress-container" class="hidden w-40 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                <div id="update-progress-bar" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <span id="update-progress-text" class="hidden text-[9px] text-gray-500 font-mono uppercase">Downloading: 0%</span>
+                        </div>
                     </div>
 
                     <div class="space-y-4">
@@ -418,17 +424,42 @@ window.openSourceSettings = () => {
 
 window.startAppUpdate = async () => {
     const btn = document.getElementById('btn-do-update');
+    
+    // Se il tasto è in stato "Riavvia ora", esegui il restart
+    if (btn && btn.dataset.state === 'restart') {
+        window.electronAPI.quitAndInstall();
+        return;
+    }
+
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<span class="animate-pulse">Updating...</span>';
+        btn.innerHTML = '<span class="animate-pulse">Verifica...</span>';
     }
+
     try {
-        await window.electronAPI.performUpdate();
+        const hasUpdate = await window.electronAPI.performUpdate();
+        if (!hasUpdate) {
+            window.gxToast("Sei già all'ultima versione di GXCode! ✨", 'info');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'GXCode è aggiornato ✨';
+                setTimeout(() => { if (btn) btn.innerHTML = 'Aggiorna Ora'; }, 3000);
+            }
+            return;
+        }
+
+        // Se l'update inizia, mostriamo la progress bar
+        const container = document.getElementById('update-progress-container');
+        const text = document.getElementById('update-progress-text');
+        if (container) container.classList.remove('hidden');
+        if (text) text.classList.remove('hidden');
+        if (btn) btn.innerHTML = '<span class="animate-pulse">Download...</span>';
+
     } catch (err) {
-        alert("Errore durante l'aggiornamento: " + err.message);
+        window.gxToast(err.message || "Errore durante l'aggiornamento", 'error');
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = 'Aggiorna Ora';
+            btn.innerHTML = 'Riprova';
         }
     }
 };
@@ -439,5 +470,30 @@ export const initSettings = () => {
     if (btnNav) btnNav.addEventListener('click', () => {
         setState({ isSettingsOpen: true, isMarketplaceOpen: false });
     });
+
+    // Gestione download in tempo reale
+    window.electronAPI.onDownloadProgress((percent) => {
+        const bar = document.getElementById('update-progress-bar');
+        const text = document.getElementById('update-progress-text');
+        if (bar) bar.style.width = `${percent}%`;
+        if (text) text.innerText = `Downloading: ${Math.round(percent)}%`;
+    });
+
+    window.electronAPI.onUpdateReady(() => {
+        const btn = document.getElementById('btn-do-update');
+        const container = document.getElementById('update-progress-container');
+        const text = document.getElementById('update-progress-text');
+        
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Riavvia ora 🛠️';
+            btn.classList.replace('bg-blue-600', 'bg-emerald-600');
+            btn.classList.replace('hover:bg-blue-500', 'hover:bg-emerald-500');
+            btn.dataset.state = 'restart';
+        }
+        if (container) container.classList.add('hidden');
+        if (text) text.classList.add('hidden');
+    });
+
     subscribe(renderSettingsModal);
 };

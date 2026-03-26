@@ -72,3 +72,41 @@ export const gxAlert = (title, message, iconType = 'info') => {
 
 window.gxConfirm = gxConfirm;
 window.gxAlert = gxAlert;
+
+export const gxToast = (message, type = 'info', duration = 4000) => {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'fixed bottom-6 left-6 z-[200] flex flex-col gap-3 pointer-events-none';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `
+        pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg border shadow-2xl animate-slide-up-fade min-w-[280px]
+        ${type === 'error' ? 'bg-[#1c1616] border-red-500/30 text-red-400' : 'bg-[#161b22] border-blue-500/30 text-blue-400'}
+    `;
+
+    const icon = type === 'error' 
+        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+        : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+
+    toast.innerHTML = `
+        <div class="shrink-0">${icon}</div>
+        <div class="flex-1 text-xs font-bold">${message}</div>
+        <button class="shrink-0 text-gray-500 hover:text-white transition">✕</button>
+    `;
+
+    container.appendChild(toast);
+
+    const removeToast = () => {
+        toast.classList.add('animate-fade-out');
+        setTimeout(() => toast.remove(), 300);
+    };
+
+    toast.querySelector('button').onclick = removeToast;
+    setTimeout(removeToast, duration);
+};
+
+window.gxToast = gxToast;

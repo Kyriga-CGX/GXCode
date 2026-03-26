@@ -34,5 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowControl: (action) => ipcRenderer.send('window-control', action),
   openDevTools: () => ipcRenderer.send('open-devtools'),
   onUpdateReady: (callback) => ipcRenderer.on('update-ready-to-install', () => callback()),
+  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', () => callback()),
+  onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (event, progress) => callback(progress)),
   quitAndInstall: () => ipcRenderer.send('quit-and-install')
 });

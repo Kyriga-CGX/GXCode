@@ -922,48 +922,39 @@ app.whenReady().then(() => {
   autoUpdater.logger = console;
 
   ipcMain.handle('check-for-updates', async () => {
-    if (!app.isPackaged) {
-        console.log("[Updater] In modalità dev, simuliamo controllo...");
-        // Fallback sul vecchio metodo git per dev, o semplicemente ritorna false
-        return false; 
+    if (!app.isPackaged) return false;
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      return !!result.updateInfo;
+    } catch (err) {
+      return false;
     }
-    
-  try {
-    const result = await autoUpdater.checkForUpdates();
-    return !!result.updateInfo;
-  } catch (err) {
-    console.warn("[Updater] Errore check ufficiale:", err);
-    return false;
-  }
   });
 
   ipcMain.handle('perform-update', async (event) => {
-    if (!app.isPackaged) {
-        const w = BrowserWindow.fromWebContents(event.sender);
-        dialog.showMessageBoxSync(w, {
-            type: 'info',
-            message: "L'aggiornamento automatico è disponibile solo nell'app installata (.exe)"
-        });
-        return false;
-    }
-    
+    if (!app.isPackaged) return false;
     try {
-        // Forza un check prima del download per evitare l'errore "Please check update first"
         const checkResult = await autoUpdater.checkForUpdates();
         if (checkResult && checkResult.updateInfo) {
             await autoUpdater.downloadUpdate();
             return true;
         } else {
-            throw new Error("Nessun aggiornamento trovato. La tua versione potrebbe essere già l'ultima.");
+            throw new Error("Sei già all'ultima versione di GXCode.");
         }
     } catch (err) {
-        console.error("[Updater] Errore nel processo di update:", err);
         throw err;
     }
   });
 
+  autoUpdater.on('update-available', () => {
+    win.webContents.send('update-available');
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    win.webContents.send('download-progress', progressObj.percent);
+  });
+
   autoUpdater.on('update-downloaded', () => {
-    // Comunica al renderer che l'update è pronto
     win.webContents.send('update-ready-to-install');
   });
 

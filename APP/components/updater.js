@@ -17,33 +17,24 @@ export const initUpdater = () => {
     };
 
     const showUpdatePopup = () => {
-        // Usiamo gxConfirm se disponibile, o un toast personalizzato
-        if (window.gxConfirm) {
-            window.gxConfirm(
-                "Aggiornamento Disponibile! 🚀",
-                "È stata rilevata una nuova versione di GXCode con nuovi commit. Vuoi andare nelle impostazioni per aggiornare l'applicazione?",
-                () => {
-                    // Apri impostazioni alla tab aggiornamenti (che creeremo)
-                    setState({ isSettingsOpen: true, activeSettingsTab: 'updates' });
-                }
-            );
+        if (window.gxToast) {
+            window.gxToast("Aggiornamento Disponibile! 🚀 Clicca nelle impostazioni per scaricarlo.", 'info', 6000);
         }
     };
 
-    // Primo controllo all'avvio dopo 10 secondi per non appesantire il bootstrap
-    setTimeout(checkForUpdates, 10000);
-    
-    // Ascolta quando la build è pronta per essere installata (scaricata)
-    window.electronAPI.onUpdateReady(() => {
-        window.gxConfirm(
-            "Installazione Pronta! 📦",
-            "Il download dell'aggiornamento è terminato. Vuoi riavviare GXCode ora per applicare i cambiamenti?",
-            () => {
-                window.electronAPI.quitAndInstall();
-            }
-        );
+    // Ascolta eventi dal Main Process
+    window.electronAPI.onUpdateAvailable(() => {
+        showUpdatePopup();
     });
 
+    window.electronAPI.onUpdateReady(() => {
+        // Notifica finale quando il download è completato
+        window.gxToast("Download Completato! 📦 L'aggiornamento è pronto per l'installazione.", 'info', 8000);
+    });
+
+    // Primo controllo all'avvio dopo 10 secondi
+    setTimeout(checkForUpdates, 10000);
+    
     // Loop
     setInterval(checkForUpdates, CHECK_INTERVAL);
 };
