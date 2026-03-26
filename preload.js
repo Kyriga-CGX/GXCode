@@ -32,5 +32,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Gestione Finestra Personalizzata
   windowControl: (action) => ipcRenderer.send('window-control', action),
-  openDevTools: () => ipcRenderer.send('open-devtools')
+  openDevTools: () => ipcRenderer.send('open-devtools'),
+  onUpdateReady: (callback) => ipcRenderer.on('update-ready-to-install', () => callback()),
+  quitAndInstall: () => ipcRenderer.send('quit-and-install')
 });

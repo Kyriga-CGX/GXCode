@@ -41,4 +41,34 @@ export const gxConfirm = (title, message, onConfirm) => {
     };
 };
 
+export const gxAlert = (title, message, iconType = 'info') => {
+    const root = document.getElementById('modals-root');
+    root.classList.remove('pointer-events-none');
+    
+    const icon = iconType === 'error' 
+        ? `<div class="w-12 h-12 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto border border-red-500/30"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>`
+        : `<div class="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center mx-auto border border-blue-500/30"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>`;
+
+    root.innerHTML = `
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[110] animate-fade-in p-4">
+            <div class="bg-[#12161d] w-full max-w-sm rounded-xl border border-gray-800 shadow-2xl flex flex-col scale-in overflow-hidden">
+                <div class="p-6 text-center space-y-4">
+                    ${icon}
+                    <h3 class="text-gray-100 font-bold text-lg">${title}</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">${message}</p>
+                </div>
+                <div class="p-4 border-t border-gray-800">
+                    <button id="gx-alert-ok" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition uppercase tracking-widest">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('gx-alert-ok').onclick = () => {
+        root.innerHTML = '';
+        root.classList.add('pointer-events-none');
+    };
+};
+
 window.gxConfirm = gxConfirm;
+window.gxAlert = gxAlert;

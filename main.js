@@ -937,32 +937,34 @@ app.whenReady().then(() => {
   }
   });
 
-  ipcMain.handle('perform-update', async () => {
+  ipcMain.handle('perform-update', async (event) => {
     if (!app.isPackaged) {
-        alert("L'aggiornamento automatico è disponibile solo nell'app installata (.exe)");
+        const w = BrowserWindow.fromWebContents(event.sender);
+        dialog.showMessageBoxSync(w, {
+            type: 'info',
+            message: "L'aggiornamento automatico è disponibile solo nell'app installata (.exe)"
+        });
         return false;
     }
     
     try {
-        await autoUpdater.downloadUpdate();
-        // autoUpdater notificherà quando è pronto per installare.
-        // Possiamo aggiungere un listener per l'evento 'update-downloaded'
-        return true;
+        // Forza un check prima del download per evitare l'errore "Please check update first"
+        const checkResult = await autoUpdater.checkForUpdates();
+        if (checkResult && checkResult.updateInfo) {
+            await autoUpdater.downloadUpdate();
+            return true;
+        } else {
+            throw new Error("Nessun aggiornamento trovato. La tua versione potrebbe essere già l'ultima.");
+        }
     } catch (err) {
-        console.error("[Updater] Errore download:", err);
+        console.error("[Updater] Errore nel processo di update:", err);
         throw err;
     }
   });
 
   autoUpdater.on('update-downloaded', () => {
-    // Una volta scaricato, chiediamo di riavviare
-    const choice = dialog.showMessageBoxSync({
-        type: 'info',
-        buttons: ['Riavvia ora', 'Più tardi'],
-        title: 'Aggiornamento scaricato',
-        message: 'L\'aggiornamento è stato scaricato. Vuoi riavviare l\'app per installarlo?'
-    });
-    if (choice === 0) autoUpdater.quitAndInstall();
+    // Comunica al renderer che l'update è pronto
+    win.webContents.send('update-ready-to-install');
   });
 
   ipcMain.handle('git-status', async () => {
@@ -1116,6 +1118,10 @@ app.whenReady().then(() => {
   ipcMain.on('open-devtools', (event) => {
     const w = BrowserWindow.fromWebContents(event.sender);
     if (w) w.webContents.openDevTools();
+  });
+
+  ipcMain.on('quit-and-install', () => {
+    autoUpdater.quitAndInstall();
   });
 });
 
