@@ -580,3 +580,55 @@ html[data-cgx-theme="light"] select {
 .cgx-term-input::placeholder {
     color: #333;
 }
+/* ========================================================
+   3. MONACO BREAKPOINT & GUTTER SYSTEM (FIX V3 - BULLETPROOF)
+   ======================================================== */
+
+.monaco-editor .margin-view-overlays .glyph-margin {
+    display: block !important;
+    width: 28px !important;
+    z-index: 10 !important;
+    background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Base class for our decoration */
+.monaco-breakpoint-gutter, 
+.monaco-breakpoint-ghost {
+    width: 28px !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+}
+
+.monaco-breakpoint-gutter::before {
+    content: "●" !important;
+    color: #ff4747 !important;
+    font-size: 18px !important;
+    line-height: 1 !important;
+    text-shadow: 0 0 8px rgba(255, 71, 71, 0.8) !important;
+}
+
+.monaco-breakpoint-ghost::before {
+    content: "●" !important;
+    color: rgba(255, 71, 71, 0.3) !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+}
+
+/* Active Line for Debugging */
+.monaco-debug-active-line {
+    background-color: rgba(255, 255, 0, 0.15) !important;
+}
+
+.monaco-debug-active-glyph::before {
+    content: "▶" !important;
+    color: #ffca28 !important;
+    font-size: 14px !important;
+    margin-left: 10px !important;
+    text-shadow: 0 0 5px rgba(255, 202, 40, 0.8) !important;
+}
+
+
+

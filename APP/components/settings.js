@@ -31,6 +31,13 @@ const applyGlobalSkinEffects = () => {
     if (custom) document.documentElement.style.setProperty('--cgx-grad-custom', custom);
 };
 
+const MCP_TEMPLATES = [
+    { id: 'google-search', name: 'Google Search', icon: '🔍', url: 'http://localhost:3000', desc: 'Permette all\'IA di cercare sul web.' },
+    { id: 'github', name: 'GitHub Integration', icon: '🐙', url: 'http://localhost:3001', desc: 'Gestione repository e issue.' },
+    { id: 'slack', name: 'Slack MCP', icon: '💬', url: 'http://localhost:3002', desc: 'Comunicazione automatizzata.' },
+    { id: 'python', name: 'Python Interpreter', icon: '🐍', url: 'http://localhost:3003', desc: 'Esecuzione codice Python sicuro.' }
+];
+
 const renderTabContent = () => {
     switch (state.activeSettingsTab) {
         case 'preferences':
@@ -47,11 +54,11 @@ const renderTabContent = () => {
                     <p class="text-xs text-gray-500 mb-6">Gestisci le scorciatoie da tastiera per un'azione rapida.</p>
                     <div class="space-y-2">
                         ${[
-                            { action: 'Cerca in tutto il progetto', key: 'CTRL + SHIFT + F' },
-                            { action: 'Formattazione (Prettier)', key: 'ALT + F' },
-                            { action: 'Apri Marketplace', key: 'CTRL + M' },
-                            { action: 'Switch Explorer/Tickets', key: 'CTRL + E' }
-                        ].map(kb => `
+                    { action: 'Cerca in tutto il progetto', key: 'CTRL + SHIFT + F' },
+                    { action: 'Formattazione (Prettier)', key: 'ALT + F' },
+                    { action: 'Apri Marketplace', key: 'CTRL + M' },
+                    { action: 'Switch Explorer/Tickets', key: 'CTRL + E' }
+                ].map(kb => `
                             <div class="flex items-center justify-between p-3 bg-[#161b22] border border-gray-800 rounded group hover:border-blue-500/30 transition">
                                 <span class="text-xs text-gray-300 font-bold">${kb.action}</span>
                                 <span class="px-2 py-1 bg-black text-blue-400 border border-gray-700 rounded text-[10px] font-mono">${kb.key}</span>
@@ -62,27 +69,67 @@ const renderTabContent = () => {
             `;
         case 'mcp':
             return `
-                <div class="space-y-6">
-                    <div class="flex items-center justify-between">
-                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Server MCP Salvati</h4>
-                        <button onclick="window.addNewMCPServer()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] rounded font-bold transition">Aggiungi Nuovo</button>
-                    </div>
-                    <div class="space-y-3">
-                        ${state.mcpServers.length === 0 ? '<div class="p-6 text-center text-gray-600 italic text-xs border border-dashed border-gray-800 rounded">Nessun server configurato.</div>' : ''}
-                        ${state.mcpServers.map(srv => `
-                            <div class="p-4 bg-[#161b22] border border-gray-800 rounded flex items-center justify-between">
-                                <div class="flex flex-col gap-1">
-                                    <span class="text-xs font-bold text-gray-200">${srv.name}</span>
-                                    <span class="text-[10px] text-gray-500 font-mono">${srv.url}</span>
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <div onclick="window.toggleMCPServer('${srv.id}')" class="w-10 h-5 p-0.5 rounded-full cursor-pointer transition-all ${srv.enabled ? 'bg-blue-600' : 'bg-gray-700'}">
-                                        <div class="w-4 h-4 bg-white rounded-full transition-all ${srv.enabled ? 'translate-x-5' : 'translate-x-0'}"></div>
+                <div class="space-y-8 animate-fade-in">
+                    <!-- Predefined Templates -->
+                    <div class="space-y-4">
+                        <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Server Predefiniti</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            ${MCP_TEMPLATES.map(t => `
+                                <div onclick="window.useMCPTemplate('${t.id}')" class="p-4 bg-[#161b22] border border-gray-800 rounded-xl hover:border-blue-500/50 cursor-pointer transition group relative overflow-hidden">
+                                    <div class="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-bl-full group-hover:bg-blue-500/10 transition"></div>
+                                    <div class="flex items-start gap-3 relative z-10">
+                                        <span class="text-2xl">${t.icon}</span>
+                                        <div>
+                                            <div class="text-xs font-bold text-gray-200">${t.name}</div>
+                                            <div class="text-[9px] text-gray-500 mt-0.5 line-clamp-1">${t.desc}</div>
+                                        </div>
                                     </div>
-                                    <button onclick="window.removeMCPServer('${srv.id}')" class="text-gray-600 hover:text-red-400 transition">✕</button>
                                 </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Add New Professional Form -->
+                    <div class="p-6 bg-[#161b22] border border-gray-800 rounded-2xl shadow-inner">
+                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Configura Nuovo Server</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[9px] font-bold text-gray-600 uppercase">Nome Identificativo</label>
+                                <input id="mcp-new-name" type="text" placeholder="Es. My Google Search" class="p-2.5 bg-black/40 border border-gray-700 rounded-lg text-xs text-gray-200 focus:border-blue-500 outline-none transition">
                             </div>
-                        `).join('')}
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[9px] font-bold text-gray-600 uppercase">Endpoint URL</label>
+                                <input id="mcp-new-url" type="text" placeholder="http://localhost:XXXX" class="p-2.5 bg-black/40 border border-gray-700 rounded-lg text-xs text-gray-200 focus:border-blue-500 outline-none transition">
+                            </div>
+                        </div>
+                        <button onclick="window.submitMCPForm()" class="mt-4 w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold rounded-lg transition shadow-lg shadow-blue-900/20">Registra Server MCP</button>
+                    </div>
+
+                    <!-- Active List -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Server MCP Attivi (${state.mcpServers.length})</h4>
+                        </div>
+                        <div class="space-y-3">
+                            ${state.mcpServers.length === 0 ? '<div class="p-10 text-center text-gray-600 italic text-[11px] bg-black/10 border border-dashed border-gray-800 rounded-xl">Configura il tuo primo server MCP per estendere le potenzialità dell\'IA.</div>' : ''}
+                            ${state.mcpServers.map(srv => `
+                                <div class="px-5 py-4 bg-[#161b22] border border-gray-800 rounded-xl flex items-center justify-between group hover:border-gray-700 transition">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-2 h-2 rounded-full ${srv.enabled ? 'bg-emerald-500 animate-pulse' : 'bg-gray-600'}"></div>
+                                        <div class="flex flex-col gap-0.5">
+                                            <span class="text-[12px] font-bold text-gray-200">${srv.name}</span>
+                                            <span class="text-[9px] text-gray-500 font-mono tracking-tight">${srv.url}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <button onclick="window.toggleMCPServer('${srv.id}')" class="px-2 py-1 ${srv.enabled ? 'text-blue-400 bg-blue-400/10' : 'text-gray-500 bg-gray-500/10'} rounded text-[9px] font-bold uppercase transition hover:scale-105">${srv.enabled ? 'Attivo' : 'Disattivo'}</button>
+                                        <button onclick="window.removeMCPServer('${srv.id}')" class="text-gray-600 hover:text-red-400 transition opacity-0 group-hover:opacity-100 p-1">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 </div>
             `;
@@ -119,10 +166,10 @@ const renderTabContent = () => {
                         <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Official Sources</h4>
                         <div class="space-y-3">
                             ${[
-                                { id: 'openvsx', name: 'Open VSX (Addons)', desc: 'Marketplace universale per estensioni VS Code.' },
-                                { id: 'skillssh', name: 'Skills.sh', desc: 'Libreria globale per Claude/Gemini AI Skills.' },
-                                { id: 'agentshub', name: 'GX Agents Hub', desc: 'Repository ufficiale per Agenti certificati.' }
-                            ].map(s => `
+                    { id: 'openvsx', name: 'Open VSX (Addons)', desc: 'Marketplace universale per estensioni VS Code.' },
+                    { id: 'skillssh', name: 'Skills.sh', desc: 'Libreria globale per Claude/Gemini AI Skills.' },
+                    { id: 'agentshub', name: 'GX Agents Hub', desc: 'Repository ufficiale per Agenti certificati.' }
+                ].map(s => `
                                 <div class="flex items-center justify-between p-3 bg-[#161b22] border border-gray-800 rounded group transition hover:border-blue-500/30">
                                     <div class="flex flex-col">
                                         <span class="text-xs font-bold text-gray-200">${s.name}</span>
@@ -336,15 +383,43 @@ window.setLanguage = (lang) => {
     setState({ language: lang });
 };
 
-window.addNewMCPServer = () => {
-    const name = prompt("Nome del Server:");
-    const url = prompt("URL del Server (es. http://localhost:3000):");
+window.submitMCPForm = () => {
+    const nameEl = document.getElementById('mcp-new-name');
+    const urlEl = document.getElementById('mcp-new-url');
+    if (!nameEl || !urlEl) return;
+
+    const name = nameEl.value.trim();
+    const url = urlEl.value.trim();
+
     if (name && url) {
         const newServer = { id: Date.now().toString(), name, url, enabled: true };
         const mcpServers = [...state.mcpServers, newServer];
         localStorage.setItem('gx-mcp-servers', JSON.stringify(mcpServers));
         setState({ mcpServers });
+        
+        nameEl.value = '';
+        urlEl.value = '';
+        window.gxToast("Server MCP registrato con successo! 🚀", 'info');
+    } else {
+        window.gxToast("Per favore, compila tutti i campi.", 'error');
     }
+};
+
+window.useMCPTemplate = (templateId) => {
+    const template = MCP_TEMPLATES.find(t => t.id === templateId);
+    if (template) {
+        const nameEl = document.getElementById('mcp-new-name');
+        const urlEl = document.getElementById('mcp-new-url');
+        if (nameEl) nameEl.value = template.name;
+        if (urlEl) urlEl.value = template.url;
+        window.gxToast(`Modello ${template.name} caricato. Completa la configurazione! ✨`, 'info');
+    }
+};
+
+window.addNewMCPServer = () => {
+    // Legacy support, now managed by form
+    const mcpTab = document.querySelector('[onclick*="switchSettingsTab(\'mcp\')"]');
+    if (mcpTab) mcpTab.click();
 };
 
 window.removeMCPServer = (id) => {
@@ -386,17 +461,17 @@ window.toggleAddRepoForm = (show) => {
 window.submitNewRepository = () => {
     const nameInput = document.getElementById('new-repo-name');
     const urlInput = document.getElementById('new-repo-url');
-    
+
     const name = nameInput.value.trim();
     const url = urlInput.value.trim();
 
     if (name && url) {
-        const newRepo = { 
-            id: 'repo-' + Date.now(), 
-            name, 
-            url, 
-            type: 'all', 
-            enabled: true 
+        const newRepo = {
+            id: 'repo-' + Date.now(),
+            name,
+            url,
+            type: 'all',
+            enabled: true
         };
         const repositories = [...state.repositories, newRepo];
         localStorage.setItem('gx-repositories', JSON.stringify(repositories));
@@ -424,7 +499,7 @@ window.openSourceSettings = () => {
 
 window.startAppUpdate = async () => {
     const btn = document.getElementById('btn-do-update');
-    
+
     // Se il tasto è in stato "Riavvia ora", esegui il restart
     if (btn && btn.dataset.state === 'restart') {
         window.electronAPI.quitAndInstall();
@@ -439,10 +514,10 @@ window.startAppUpdate = async () => {
     try {
         const hasUpdate = await window.electronAPI.performUpdate();
         if (!hasUpdate) {
-            window.gxToast("Sei già all'ultima versione di GXCode! ✨", 'info');
+            window.gxToast("Sei già all'ultima versione di GXCode!", 'info');
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = 'GXCode è aggiornato ✨';
+                btn.innerHTML = 'GXCode è aggiornato';
                 setTimeout(() => { if (btn) btn.innerHTML = 'Aggiorna Ora'; }, 3000);
             }
             return;
@@ -483,7 +558,7 @@ export const initSettings = () => {
         const btn = document.getElementById('btn-do-update');
         const container = document.getElementById('update-progress-container');
         const text = document.getElementById('update-progress-text');
-        
+
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = 'Riavvia ora 🛠️';

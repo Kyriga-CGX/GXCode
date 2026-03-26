@@ -3,19 +3,37 @@ import { state, subscribe, setState } from '../core/state.js';
 let editor = null;
 let ignoreStateUpdate = false;
 let _updateBreadcrumbs = null;
+let breakpointDecorations = [];
+let debugActiveDecorations = [];
+let updateBreakpointDecorations = () => {};
+let updateDebugActiveLine = () => {};
+let getDocumentSymbols = () => [];
 
-const renderFileTree = (files) => {
-    if (!files || files.length === 0) return `<div class="text-[11px] text-gray-500 italic p-2 text-center border border-dashed border-gray-800 rounded mx-2 mt-2">La directory è vuota o inaccessibile.</div>`;
+const normalizePath = (p) => {
+    if (!p) return "";
+    return p.replace(/\//g, '\\').toLowerCase();
+};
+
+const renderFileTree = (files, depth = 0) => {
+    if (!files || files.length === 0) return '';
     
-    return files.map(f => `
-        <div class="flex items-center gap-2 py-[5px] px-2 hover:bg-[#1a202a] cursor-pointer text-[11px] transition rounded-sm group border-transparent ${f.isDirectory ? 'is-folder' : 'is-file'}" data-path="${f.path}" data-name="${f.name}">
-            <span class="${f.isDirectory ? 'text-blue-400' : 'text-gray-500'} w-3.5 text-center flex-shrink-0 pointer-events-none">
-                ${f.isDirectory ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" opacity="0.8"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" class="text-gray-400" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>'}
-            </span>
-            <span class="text-gray-300 truncate font-mono tracking-tight pointer-events-none">${f.name}</span>
-            ${!f.isDirectory ? '<button class="ml-auto opacity-0 group-hover:opacity-100 text-[9px] text-blue-400 hover:text-white transition bg-gray-800 px-1.5 py-0.5 rounded pointer-events-none">visualizza</button>' : ''}
-        </div>
-    `).join('');
+    return files.map(f => {
+        const isExpanded = state.status === 'expanded' || (state.expandedFolders && state.expandedFolders.includes(f.path));
+        const padding = depth * 12 + 10;
+        
+        return `
+            <div class="flex items-center gap-2 py-[4px] pr-2 hover:bg-[#1a202a] cursor-pointer text-[11px] transition rounded-sm group ${f.isDirectory ? 'is-folder' : 'is-file'}" 
+                 data-path="${f.path}" data-name="${f.name}" style="padding-left: ${padding}px">
+                <span class="${f.isDirectory ? 'text-blue-400' : 'text-gray-500'} w-3.5 text-center flex-shrink-0 pointer-events-none flex items-center justify-center">
+                    ${f.isDirectory ? `
+                        <svg class="transition-transform ${isExpanded ? 'rotate-90' : ''}" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
+                    ` : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" class="text-gray-400" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>'}
+                </span>
+                <span class="text-gray-300 truncate font-mono tracking-tight pointer-events-none">${f.name}</span>
+            </div>
+            ${f.isDirectory && isExpanded && f.children ? renderFileTree(f.children, depth + 1) : ''}
+        `;
+    }).join('');
 };
 
 const renderWorkspace = () => {
@@ -87,10 +105,101 @@ export const initWorkspace = () => {
                     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
                     minimap: { enabled: false },
                     lineNumbers: 'on',
+                    glyphMargin: true,
                     roundedSelection: true,
                     scrollBeyondLastLine: false,
-                    padding: { top: 10 }
+                    padding: { top: 10 },
+                    lineDecorationsWidth: 10,
+                    glyphMargin: true
                 });
+                editor.updateOptions({ glyphMargin: true });
+
+                // Ghost Breakpoint on Hover
+                let ghostDecoration = [];
+                editor.onMouseMove((e) => {
+                    if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN || e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
+                        const line = e.target.position.lineNumber;
+                        ghostDecoration = editor.deltaDecorations(ghostDecoration, [{
+                            range: new monaco.Range(line, 1, line, 1),
+                            options: {
+                                glyphMarginClassName: 'monaco-breakpoint-ghost',
+                                glyphMarginHoverMessage: { value: 'Add Breakpoint' }
+                            }
+                        }]);
+                    } else {
+                        ghostDecoration = editor.deltaDecorations(ghostDecoration, []);
+                    }
+                });
+
+                editor.onMouseLeave(() => {
+                    ghostDecoration = editor.deltaDecorations(ghostDecoration, []);
+                });
+
+                editor.onMouseDown((e) => {
+                    const activeFileId = state.activeFileId;
+                    if (!activeFileId) return;
+
+                    if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN || e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
+                        const line = e.target.position.lineNumber;
+                        const normActive = normalizePath(activeFileId);
+                        console.log("[Monaco Debug] Toggle breakpoint on line:", line, "path:", normActive);
+                        
+                        let breakpoints = [...state.breakpoints];
+                        const idx = breakpoints.findIndex(bp => normalizePath(bp.path) === normActive && bp.line === line);
+
+                        if (idx !== -1) {
+                            breakpoints.splice(idx, 1);
+                        } else {
+                            breakpoints.push({ path: activeFileId, line: line });
+                        }
+                        setState({ breakpoints });
+                    }
+                });
+
+                updateBreakpointDecorations = () => {
+                    const activeFileId = state.activeFileId;
+                    if (!activeFileId || !editor) return;
+
+                    const normActive = normalizePath(activeFileId);
+                    const activeBreakpoints = state.breakpoints.filter(bp => normalizePath(bp.path) === normActive);
+                    
+                    console.log(`[Monaco Debug] Updating decorations for ${normActive}. Count: ${activeBreakpoints.length}`);
+                    
+                    const newDecorations = activeBreakpoints.map(bp => ({
+                        range: new monaco.Range(bp.line, 1, bp.line, 1),
+                        options: {
+                            isWholeLine: false,
+                            glyphMarginClassName: 'monaco-breakpoint-gutter',
+                            linesDecorationsClassName: 'monaco-breakpoint-line-hint',
+                            glyphMarginHoverMessage: { value: 'Breakpoint' },
+                            stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+                        }
+                    }));
+
+                    breakpointDecorations = editor.deltaDecorations(breakpointDecorations, newDecorations);
+                };
+
+                updateDebugActiveLine = () => {
+                    const activeLine = state.debugActiveLine;
+                    if (!activeLine || !editor || !editor.getModel()) {
+                        debugActiveDecorations = editor.deltaDecorations(debugActiveDecorations, []);
+                        return;
+                    }
+
+                    console.log("[Monaco Debug] Highlighting active line:", activeLine);
+                    debugActiveDecorations = editor.deltaDecorations(debugActiveDecorations, [
+                        {
+                            range: new monaco.Range(activeLine, 1, activeLine, 1),
+                            options: {
+                                isWholeLine: true,
+                                className: 'monaco-debug-active-line',
+                                glyphMarginClassName: 'monaco-debug-active-glyph'
+                            }
+                        }
+                    ]);
+                    
+                    editor.revealLineInCenterIfOutsideViewport(activeLine);
+                };
 
                 editor.onDidChangeModelContent(() => {
                     if (ignoreStateUpdate) return;
@@ -108,32 +217,34 @@ export const initWorkspace = () => {
                 console.log("[GXCode] Monaco Editor initialized successfully.");
 
                 // --- PHASE 3: SYMBOL PROVIDER & BREADCRUMBS ---
+                getDocumentSymbols = (model) => {
+                    const symbols = [];
+                    if (!model) return symbols;
+                    const lines = model.getValue().split('\n');
+                    const regexes = [
+                        { kind: 4, regex: /class\s+([a-zA-Z0-9_$]+)/ },
+                        { kind: 11, regex: /(?:const|let|var)\s+([a-zA-Z0-9_$]+)\s*=\s*\(.*?\)\s*=>/ },
+                        { kind: 11, regex: /function\s+([a-zA-Z0-9_$]+)\s*\(/ },
+                        { kind: 5, regex: /^\s*(?:async\s+)?([a-zA-Z0-9_$]+)\s*\(.*?\)\s*\{/ }
+                    ];
+                    lines.forEach((line, i) => {
+                        regexes.forEach(r => {
+                            const m = line.match(r.regex);
+                            if (m && m[1]) {
+                                symbols.push({
+                                    name: m[1],
+                                    kind: r.kind,
+                                    range: new monaco.Range(i + 1, 1, i + 1, line.length + 1)
+                                });
+                            }
+                        });
+                    });
+                    return symbols;
+                };
+
                 const registerSymbols = (lang) => {
                     monaco.languages.registerDocumentSymbolProvider(lang, {
-                        provideDocumentSymbols: (model) => {
-                            const symbols = [];
-                            const lines = model.getValue().split('\n');
-                            const regexes = [
-                                { kind: 4, regex: /class\s+([a-zA-Z0-9_$]+)/ }, // Class
-                                { kind: 11, regex: /(?:const|let|var)\s+([a-zA-Z0-9_$]+)\s*=\s*\(.*?\)\s*=>/ }, // Arrow Func
-                                { kind: 11, regex: /function\s+([a-zA-Z0-9_$]+)\s*\(/ }, // Function
-                                { kind: 5, regex: /^\s*(?:async\s+)?([a-zA-Z0-9_$]+)\s*\(.*?\)\s*\{/ } // Method
-                            ];
-                            lines.forEach((line, i) => {
-                                regexes.forEach(r => {
-                                    const m = line.match(r.regex);
-                                    if (m && m[1]) {
-                                        symbols.push({
-                                            name: m[1],
-                                            kind: r.kind,
-                                            range: new monaco.Range(i + 1, 1, i + 1, line.length + 1),
-                                            selectionRange: new monaco.Range(i + 1, 1, i + 1, line.length + 1)
-                                        });
-                                    }
-                                });
-                            });
-                            return symbols;
-                        }
+                        provideDocumentSymbols: (model) => getDocumentSymbols(model)
                     });
                 };
                 registerSymbols('javascript');
@@ -150,8 +261,8 @@ export const initWorkspace = () => {
                     const pos = editor.getPosition();
                     const fileName = activeFileId.split('\\').pop();
                     
-                    // Ottieni simboli (Monaco li richiede asincroni - API standard 0.43.0)
-                    const symbols = await monaco.editor.executeCommand(model.uri, 'vscode.executeDocumentSymbolProvider');
+                    // Ottieni simboli (Usa helper interno per evitare bug API monaco asincroni)
+                    const symbols = getDocumentSymbols(model);
                     const currentSymbol = symbols?.slice().reverse().find(s => s.range.startLineNumber <= pos.lineNumber);
                     
                     bc.classList.remove('hidden');
@@ -230,31 +341,74 @@ export const initWorkspace = () => {
     };
 
     treeContainer.addEventListener('click', async (e) => {
-        const item = e.target.closest('.is-file');
+        const item = e.target.closest('.is-file, .is-folder');
         if (!item) return;
 
-        // Normalizziamo il path per coerenza su Windows
-        const filePath = item.getAttribute('data-path').replace(/\//g, '\\');
-        const fileName = item.getAttribute('data-name');
-        
-        let openFiles = [...state.openFiles];
-        const existing = openFiles.find(f => f.path === filePath);
+        const path = item.getAttribute('data-path').replace(/\//g, '\\');
+        const name = item.getAttribute('data-name');
+        const isFolder = item.classList.contains('is-folder');
 
-        if (!existing) {
-            openFiles.push({ name: fileName, path: filePath, content: null, loading: true, error: null });
-            setState({ openFiles, activeFileId: filePath });
+        if (isFolder) {
+            let expandedFolders = [...state.expandedFolders];
+            const idx = expandedFolders.indexOf(path);
+            
+            if (idx !== -1) {
+                // Collasso
+                expandedFolders.splice(idx, 1);
+                setState({ expandedFolders });
+            } else {
+                // Espansione
+                expandedFolders.push(path);
+                setState({ expandedFolders });
 
-            try {
-                const content = await window.electronAPI.readFile(filePath);
-                openFiles = state.openFiles.map(f => f.path === filePath ? { ...f, content, loading: false } : f);
-                setState({ openFiles });
-            } catch (err) {
-                console.error("Errore lettura file:", err);
-                openFiles = state.openFiles.map(f => f.path === filePath ? { ...f, content: null, loading: false, error: err.message } : f);
-                setState({ openFiles });
+                // Carichiamo i figli se non presenti
+                const findAndAddChildren = (files) => {
+                    for (const f of files) {
+                        if (f.path === path) {
+                            return (async () => {
+                                if (!f.children) {
+                                    const data = await window.electronAPI.openSpecificFolder(path);
+                                    if (data && data.files) {
+                                        f.children = data.files;
+                                        setState({ workspaceData: { ...state.workspaceData } });
+                                    }
+                                }
+                            })();
+                        }
+                        if (f.children) {
+                            const res = findAndAddChildren(f.children);
+                            if (res) return res;
+                        }
+                    }
+                    return null;
+                };
+                
+                await findAndAddChildren(state.workspaceData.files);
             }
         } else {
-            setState({ activeFileId: filePath });
+            // Logica apertura File (esistente)
+            const filePath = path;
+            const fileName = name;
+            
+            let openFiles = [...state.openFiles];
+            const existing = openFiles.find(f => f.path === filePath);
+
+            if (!existing) {
+                openFiles.push({ name: fileName, path: filePath, content: null, loading: true, error: null });
+                setState({ openFiles, activeFileId: filePath });
+
+                try {
+                    const content = await window.electronAPI.readFile(filePath);
+                    openFiles = state.openFiles.map(f => f.path === filePath ? { ...f, content, loading: false } : f);
+                    setState({ openFiles });
+                } catch (err) {
+                    console.error("Errore lettura file:", err);
+                    openFiles = state.openFiles.map(f => f.path === filePath ? { ...f, content: null, loading: false, error: err.message } : f);
+                    setState({ openFiles });
+                }
+            } else {
+                setState({ activeFileId: filePath });
+            }
         }
     });
 
@@ -293,9 +447,9 @@ export const initWorkspace = () => {
         tabsContainer.innerHTML = state.openFiles.map(f => {
             const isActive = f.path === state.activeFileId;
             return `
-                <div onclick="window.switchTab('${f.path.replace(/\\/g, '/')}')" class="px-3 py-1.5 text-[11px] font-bold ${isActive ? 'bg-[#161b22] text-blue-400 border-gray-800' : 'bg-transparent text-gray-500 border-transparent'} border border-b-0 inline-flex items-center gap-3 cursor-pointer relative translate-y-[1px] shadow-2xl rounded-t-lg hover:text-gray-300 transition group">
+                <div onclick="window.switchTab('${f.path.replace(/\\/g, '/')}')" class="px-3 py-1.5 text-[11px] font-bold ${isActive ? 'bg-[#161b22] text-blue-400 border-gray-800' : 'bg-transparent text-gray-500 border-transparent'} border border-b-0 inline-flex items-center gap-3 cursor-pointer relative translate-y-[1px] shadow-2xl rounded-t-lg hover:text-gray-300 transition group ${f.type === 'problem' ? 'border-t-red-500/50' : ''}">
                     <span class="flex items-center gap-2">
-                         <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" class="${isActive ? 'text-blue-500' : 'text-gray-700'}"><circle cx="12" cy="12" r="10"/></svg>
+                         <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" class="${f.type === 'problem' ? 'text-red-500' : (isActive ? 'text-blue-500' : 'text-gray-700')}"><circle cx="12" cy="12" r="10"/></svg>
                          ${f.name}
                     </span>
                     <button onclick="event.stopPropagation(); window.closeTab('${f.path.replace(/\\/g, '/')}')" class="hover:text-red-400 transition ml-2 opacity-30 group-hover:opacity-100">×</button>
@@ -341,9 +495,11 @@ export const initWorkspace = () => {
             if (currentModel.getValue() !== value) {
                 ignoreStateUpdate = true;
                 editor.setValue(value);
+                updateBreakpointDecorations();
                 ignoreStateUpdate = false;
             }
             monaco.editor.setModelLanguage(currentModel, lang);
+            updateBreakpointDecorations();
         }
 
         // Focus della Search (salta alla linea giusta)
@@ -410,6 +566,8 @@ export const initWorkspace = () => {
         }
         renderWorkspace();
         renderActiveFile();
+        updateBreakpointDecorations();
+        updateDebugActiveLine();
     });
 
     // Aggiungiamo scorciatoia globale Alt + F per Formattazione
@@ -443,11 +601,12 @@ window.switchTab = (path) => {
 };
 
 window.closeTab = (path) => {
-    const normalizedPath = path.replace(/\//g, '\\');
-    const openFiles = state.openFiles.filter(f => f.path !== normalizedPath);
-    let activeFileId = state.activeFileId;
+    // Normalizzazione aggressiva per Windows
+    const normalizedPath = path.replace(/\//g, '\\').toLowerCase();
+    const openFiles = state.openFiles.filter(f => f.path.replace(/\//g, '\\').toLowerCase() !== normalizedPath);
     
-    if (activeFileId === normalizedPath) {
+    let activeFileId = state.activeFileId;
+    if (activeFileId && activeFileId.replace(/\//g, '\\').toLowerCase() === normalizedPath) {
         activeFileId = openFiles.length > 0 ? openFiles[openFiles.length - 1].path : null;
     }
     

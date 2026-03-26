@@ -13,6 +13,7 @@ import { initTests } from '../components/tests.js';
 import { initBottomPanel } from '../components/bottomPanel.js';
 import { initProblems } from '../components/problems.js';
 import { initUpdater } from '../components/updater.js';
+import { initDebug } from '../components/debug.js';
 
 // DOM Elements Right Sidebar
 const sidebarContent = document.getElementById('sidebar-content');
@@ -321,6 +322,10 @@ const bootstrap = async () => {
     // Inizializzazione dei Test
     if (typeof initTests === 'function') {
         initTests();
+    }
+    // Inizializzazione del Debug
+    if (typeof initDebug === 'function') {
+        initDebug();
     }
 
     // Toggle Sidebars Bindings

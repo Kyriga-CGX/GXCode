@@ -66,7 +66,14 @@ export const initSearch = () => {
         const focusState = { searchLineToFocus: line, searchColumnQuery: query };
 
         if (!existing) {
-            openFiles.push({ name: fileName, path: absolutePath, content: null, loading: true, error: null });
+            openFiles.push({ 
+                name: fileName, 
+                path: absolutePath, 
+                content: null, 
+                loading: true, 
+                error: null,
+                type: (line || query) ? 'problem' : 'file' 
+            });
             setState({ openFiles, activeFileId: absolutePath, ...focusState });
 
             try {

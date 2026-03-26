@@ -21,6 +21,7 @@ export const state = {
 
     // UI State (Persistiti su localStorage)
     activeSidebarTab: localStorage.getItem('gx-active-sidebar-tab') || 'agents',
+    activeActivity: localStorage.getItem('gx-active-activity') || 'explorer',
     isMarketplaceOpen: false,
     activeMarketplaceTab: 'agents',
     isSettingsOpen: false,
@@ -35,7 +36,14 @@ export const state = {
     activeTicketId: null,
     workspaceData: null,
     openFiles: JSON.parse(localStorage.getItem('gx-open-files') || '[]'),
-    activeFileId: localStorage.getItem('gx-active-file-id')
+    activeFileId: localStorage.getItem('gx-active-file-id'),
+    problems: [],
+    breakpoints: [],
+    expandedFolders: [],
+    isDebugModeActive: false,
+    debugCallStack: [],
+    debugVariables: [],
+    debugActiveLine: null
 };
 
 const listeners = new Set();
@@ -50,6 +58,7 @@ export const setState = (newState) => {
     
     // Persistenza Automatica dei flag UI
     if (newState.activeSidebarTab) localStorage.setItem('gx-active-sidebar-tab', state.activeSidebarTab);
+    if (newState.activeActivity) localStorage.setItem('gx-active-activity', state.activeActivity);
     if (newState.activeLeftTab) localStorage.setItem('gx-active-left-tab', state.activeLeftTab);
     if (newState.hasOwnProperty('isLeftSidebarOpen')) localStorage.setItem('gx-is-left-open', state.isLeftSidebarOpen);
     if (newState.hasOwnProperty('isRightSidebarOpen')) localStorage.setItem('gx-is-right-open', state.isRightSidebarOpen);

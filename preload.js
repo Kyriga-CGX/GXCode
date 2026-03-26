@@ -36,5 +36,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdateReady: (callback) => ipcRenderer.on('update-ready-to-install', () => callback()),
   onUpdateAvailable: (callback) => ipcRenderer.on('update-available', () => callback()),
   onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (event, progress) => callback(progress)),
-  quitAndInstall: () => ipcRenderer.send('quit-and-install')
+  quitAndInstall: () => ipcRenderer.send('quit-and-install'),
+  
+  // Phase 5: Debugging
+  debugStart: (filePath, breakpoints) => ipcRenderer.invoke('debug:start', filePath, breakpoints),
+  debugStop: () => ipcRenderer.invoke('debug:stop'),
+  debugStep: () => ipcRenderer.invoke('debug:step'),
+  debugContinue: () => ipcRenderer.invoke('debug:continue'),
+  onDebugPaused: (callback) => ipcRenderer.on('debug:paused', (event, data) => callback(data)),
+  onDebugResumed: (callback) => ipcRenderer.on('debug:resumed', () => callback())
 });

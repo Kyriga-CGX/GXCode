@@ -12,6 +12,7 @@ try {
 } catch (e) {
   console.error("ERRORE: Impossibile caricare node-pty. Il terminale non funzionerà.", e);
 }
+const WebSocket = require('ws');
 
 // ================== GESTIONE CONTESTO AI E DISCO Locale ==================
 let currentAiContext = '.GXCODE'; // Di base usa una cartella universale
@@ -1085,6 +1086,103 @@ app.whenReady().then(() => {
     if (ptyProcesses[id]) {
       ptyProcesses[id].resize(cols, rows);
     }
+  });
+
+  // --- PHASE 4: NODE.JS DEBUGGER (CDP) ---
+  let debugProcess = null;
+  let debugWs = null;
+
+  async function connectToDebugger(url, event, breakpoints) {
+    if (debugWs) debugWs.close();
+    
+    debugWs = new WebSocket(url);
+    
+    debugWs.on('open', () => {
+      console.log('[DEBUGGER] CDP Connected');
+      debugWs.send(JSON.stringify({ id: 1, method: 'Debugger.enable' }));
+      debugWs.send(JSON.stringify({ id: 2, method: 'Runtime.enable' }));
+      
+      // Sync Breakpoints
+      breakpoints.forEach((bp, index) => {
+         debugWs.send(JSON.stringify({
+           id: 100 + index,
+           method: 'Debugger.setBreakpointByUrl',
+           params: {
+             lineNumber: bp.line - 1,
+             urlRegex: bp.path.replace(/\\/g, '/').replace(/^[a-zA-Z]:/, '') // Cross-platform path matching
+           }
+         }));
+      });
+
+      debugWs.send(JSON.stringify({ id: 3, method: 'Debugger.resume' }));
+    });
+
+    debugWs.on('message', (data) => {
+      const msg = JSON.parse(data);
+      if (msg.method === 'Debugger.paused') {
+        const line = msg.params.callFrames[0].location.lineNumber + 1;
+        console.log('[DEBUGGER] Paused on line:', line);
+        event.sender.send('debug:paused', {
+          line: line,
+          callStack: msg.params.callFrames.map(cf => ({
+            functionName: cf.functionName || '(anonymous)',
+            location: cf.location
+          })),
+          variables: [] // TODO: Implement scope fetching
+        });
+      } else if (msg.method === 'Debugger.resumed') {
+        event.sender.send('debug:resumed');
+      }
+    });
+
+    debugWs.on('close', () => {
+      console.log('[DEBUGGER] CDP Disconnected');
+    });
+
+    debugWs.on('error', (err) => {
+      console.error('[DEBUGGER] CDP Error:', err);
+    });
+  }
+
+  ipcMain.handle('debug:start', async (event, filePath, breakpoints) => {
+    if (debugProcess) debugProcess.kill();
+    
+    console.log(`[DEBUGGER] Starting debug for: ${filePath}`);
+    const { spawn } = require('child_process');
+    
+    // Spawnamo con --inspect-brk su porta casuale o default
+    debugProcess = spawn('node', ['--inspect-brk=9229', filePath]);
+    
+    debugProcess.stderr.on('data', (data) => {
+       const str = data.toString();
+       if (str.includes('Debugger listening on')) {
+         const match = str.match(/ws:\/\/127\.0\.0\.1:9229\/[a-f0-9-]+/);
+         if (match) {
+           connectToDebugger(match[0], event, breakpoints);
+         }
+       }
+    });
+
+    debugProcess.on('exit', () => {
+      console.log('[DEBUGGER] Process exited');
+      debugProcess = null;
+      if (debugWs) debugWs.close();
+      event.sender.send('debug:resumed');
+    });
+
+    return { success: true };
+  });
+
+  ipcMain.handle('debug:step', () => {
+    if (debugWs) debugWs.send(JSON.stringify({ id: 10, method: 'Debugger.stepInto' }));
+  });
+
+  ipcMain.handle('debug:continue', () => {
+    if (debugWs) debugWs.send(JSON.stringify({ id: 11, method: 'Debugger.resume' }));
+  });
+
+  ipcMain.handle('debug:stop', () => {
+    if (debugProcess) debugProcess.kill();
   });
 
   createWindow();
