@@ -1,5 +1,6 @@
 // main.js
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const { exec } = require("child_process");
 const express = require("express");
@@ -891,42 +892,55 @@ app.whenReady().then(() => {
     });
   });
 
-  // --- PHASE 2: NATIVE GIT INTEGRATION ---
-  // --- AUTO-UPDATER SYSTEM (GIT POWERED) ---
+  // --- AUTO-UPDATER SYSTEM (Professional GitHub Releases) ---
+  
+  // Configurazione base per l'auto-updater
+  autoUpdater.autoDownload = false; // Chiediamo prima di scaricare
+  autoUpdater.logger = console;
+
   ipcMain.handle('check-for-updates', async () => {
-    return new Promise((resolve) => {
-        const appPath = process.cwd();
-        exec('git fetch', { cwd: appPath }, (error) => {
-            if (error) {
-                console.warn("[Updater] Errore git fetch:", error.message);
-                return resolve(false);
-            }
-            // Confrontiamo HEAD locale con il remoto
-            exec('git rev-list HEAD...origin/main --count', { cwd: appPath }, (err, stdout) => {
-                if (err) return resolve(false);
-                const count = parseInt(stdout.trim(), 10);
-                resolve(count > 0); // Se > 0 ci sono nuovi commit
-            });
-        });
-    });
+    if (!app.isPackaged) {
+        console.log("[Updater] In modalità dev, simuliamo controllo...");
+        // Fallback sul vecchio metodo git per dev, o semplicemente ritorna false
+        return false; 
+    }
+    
+    try {
+        const result = await autoUpdater.checkForUpdates();
+        // Se updateInfo esiste, c'è un aggiornamento
+        return !!result.updateInfo;
+    } catch (err) {
+        console.error("[Updater] Errore check ufficiale:", err);
+        return false;
+    }
   });
 
   ipcMain.handle('perform-update', async () => {
-    return new Promise((resolve, reject) => {
-        const appPath = process.cwd();
-        exec('git pull origin main', { cwd: appPath }, (error, stdout, stderr) => {
-            if (error) {
-                console.error("[Updater] Errore git pull:", stderr);
-                reject(new Error("Errore durante il download dell'aggiornamento"));
-            } else {
-                console.log("[Updater] Update successful:", stdout);
-                // Riavvio dell'app dopo l'aggiornamento
-                app.relaunch();
-                app.exit(0);
-                resolve(true);
-            }
-        });
+    if (!app.isPackaged) {
+        alert("L'aggiornamento automatico è disponibile solo nell'app installata (.exe)");
+        return false;
+    }
+    
+    try {
+        await autoUpdater.downloadUpdate();
+        // autoUpdater notificherà quando è pronto per installare.
+        // Possiamo aggiungere un listener per l'evento 'update-downloaded'
+        return true;
+    } catch (err) {
+        console.error("[Updater] Errore download:", err);
+        throw err;
+    }
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    // Una volta scaricato, chiediamo di riavviare
+    const choice = dialog.showMessageBoxSync({
+        type: 'info',
+        buttons: ['Riavvia ora', 'Più tardi'],
+        title: 'Aggiornamento scaricato',
+        message: 'L\'aggiornamento è stato scaricato. Vuoi riavviare l\'app per installarlo?'
     });
+    if (choice === 0) autoUpdater.quitAndInstall();
   });
 
   ipcMain.handle('git-status', async () => {

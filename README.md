@@ -27,9 +27,31 @@ Mentre i classici IDE aggiungono l'AI come un plugin esterno, GXCode è stato **
 ## 🧭 Visione
 GXCode rappresenta la transizione dall'IDE come "strumento passivo" all'IDE come **"compagno di squadra attivo"**. È un ecosistema leggero, privo di bloatware, che mette nelle mani dello sviluppatore (e del suo team AI) il controllo totale sul codice.
 
+
+---
+
+## 📦 Download & Installazione
+
+### Scarica l'Installer
+Puoi scaricare l'ultima versione stabile di GXCode direttamente dalla sezione **[Releases](https://github.com/Kyriga-CGX/GXCode/releases)**. Cerca il file `GXCode-Setup.exe` [Windows] per installare l'IDE sul tuo sistema.
+
+### Aggiornamenti Automatici
+Una volta installato, GXCode verificherà automaticamente la presenza di nuove versioni su GitHub. Se disponibile, riceverai una notifica per scaricare e installare l'aggiornamento con un solo click.
+
+---
+
+## 🛠️ Per Sviluppatori (Build Locale)
+
+Se desideri compilare GXCode dai sorgenti:
+1. **Clona il repository**: `git clone https://github.com/Kyriga-CGX/GXCode.git`
+2. **Installa dipendenze**: `npm install`
+3. **Avvia in modalità Dev**: `npm start`
+4. **Crea installer locale**: `npm run build`
+
 ---
 
 <div align="center">
+
   <img src="https://github.com/Kyriga-CGX.png" width="100" style="border-radius: 50%;" />
   <br />
   <sub>**Developed with ❤️ by Kyriga & GXCode Team.**</sub>
