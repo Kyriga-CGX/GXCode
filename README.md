@@ -17,25 +17,27 @@ Mentre i classici IDE aggiungono l'AI come un plugin esterno, GXCode è stato **
 
 ## 🛠️ Cosa fa GXCode?
 
--   **Workspace Intelligente**: Ripristina sessioni complesse, ricordando non solo i file aperti, ma l'esatta disposizione delle sidebar, lo stato dei terminali e la navigazione (Breadcrumbs).
--   **Test-Driven Development (TDD) Nativo**: L'integrazione con Playwright permette di scrivere, scansionare e debuggare test end-to-end con un solo click, aprendo l'ispettore nativo per il debugging step-by-step.
--   **Diagnostica Live**: Sfrutta la potenza di Monaco per fornire un pannello "Problemi" che monitora errori e warning in tempo reale, rendendo la correzione del codice immediata.
--   **Interfaccia Premium**: Un design pulito, veloce e altamente estetico che rimuove il rumore visivo per concentrarsi esclusivamente sulla creazione di valore.
+- **Workspace Intelligente**: Ripristina sessioni complesse, ricordando non solo i file aperti, ma l'esatta disposizione delle sidebar, lo stato dei terminali e la navigazione (Breadcrumbs).
+- **Test-Driven Development (TDD) Nativo**: L'integrazione con Playwright permette di scrivere, scansionare e debuggare test end-to-end con un solo click, aprendo l'ispettore nativo per il debugging step-by-step.
+- **Diagnostica Live**: Sfrutta la potenza di Monaco per fornire un pannello "Problemi" che monitora errori e warning in tempo reale, rendendo la correzione del codice immediata.
+- **Interfaccia Premium**: Un design pulito, veloce e altamente estetico che rimuove il rumore visivo per concentrarsi esclusivamente sulla creazione di valore.
 
 ---
 
 ## 🧭 Visione
-GXCode rappresenta la transizione dall'IDE come "strumento passivo" all'IDE come **"compagno di squadra attivo"**. È un ecosistema leggero, privo di bloatware, che mette nelle mani dello sviluppatore (e del suo team AI) il controllo totale sul codice.
 
+GXCode rappresenta la transizione dall'IDE come "strumento passivo" all'IDE come **"compagno di squadra attivo"**. È un ecosistema leggero, privo di bloatware, che mette nelle mani dello sviluppatore (e del suo team AI) il controllo totale sul codice.
 
 ---
 
 ## 📦 Download & Installazione
 
 ### Scarica l'Installer
+
 Puoi scaricare l'ultima versione stabile di GXCode direttamente dalla sezione **[Releases](https://github.com/Kyriga-CGX/GXCode/releases)**. Cerca il file `GXCode-Setup.exe` [Windows] per installare l'IDE sul tuo sistema.
 
 ### Aggiornamenti Automatici
+
 Una volta installato, GXCode verificherà automaticamente la presenza di nuove versioni su GitHub. Se disponibile, riceverai una notifica per scaricare e installare l'aggiornamento con un solo click.
 
 ---
@@ -43,6 +45,7 @@ Una volta installato, GXCode verificherà automaticamente la presenza di nuove v
 ## 🛠️ Per Sviluppatori (Build Locale)
 
 Se desideri compilare GXCode dai sorgenti:
+
 1. **Clona il repository**: `git clone https://github.com/Kyriga-CGX/GXCode.git`
 2. **Installa dipendenze**: `npm install`
 3. **Avvia in modalità Dev**: `npm start`
@@ -54,5 +57,5 @@ Se desideri compilare GXCode dai sorgenti:
 
   <img src="https://github.com/Kyriga-CGX.png" width="100" style="border-radius: 50%;" />
   <br />
-  <sub>**Developed with ❤️ by Kyriga & GXCode Team.**</sub>
+  <sub>**Developed with ❤️ by Kyriga & Cloud-GX Team.**</sub>
 </div>
