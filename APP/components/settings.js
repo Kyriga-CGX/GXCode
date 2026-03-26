@@ -299,7 +299,7 @@ const renderTabContent = () => {
                         <div class="grid grid-cols-2 gap-4">
                             <div class="p-4 bg-black/20 border border-gray-800 rounded-lg">
                                 <div class="text-[9px] text-gray-600 uppercase font-bold">Versione Corrente</div>
-                                <div class="text-xs text-gray-300 font-mono mt-1">1.2.0-stable</div>
+                                <div class="text-xs text-gray-300 font-mono mt-1">${state.appVersion}</div>
                             </div>
                             <div class="p-4 bg-black/20 border border-gray-800 rounded-lg">
                                 <div class="text-[9px] text-gray-600 uppercase font-bold">Canale</div>
@@ -539,7 +539,18 @@ window.startAppUpdate = async () => {
     }
 };
 
-export const initSettings = () => {
+export const initSettings = async () => {
+    // Fetch real version from Electron
+    if (window.electronAPI && window.electronAPI.getVersion) {
+        try {
+            const version = await window.electronAPI.getVersion();
+            setState({ appVersion: version });
+        } catch (err) {
+            console.error("Errore fetch versione:", err);
+            setState({ appVersion: "1.1.5-dev" }); // Fallback
+        }
+    }
+
     applyGlobalSkinEffects();
     const btnNav = document.getElementById('nav-settings');
     if (btnNav) btnNav.addEventListener('click', () => {

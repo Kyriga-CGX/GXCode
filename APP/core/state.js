@@ -43,7 +43,8 @@ export const state = {
     isDebugModeActive: false,
     debugCallStack: [],
     debugVariables: [],
-    debugActiveLine: null
+    debugActiveLine: null,
+    appVersion: "..." 
 };
 
 const listeners = new Set();

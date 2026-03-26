@@ -4,6 +4,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   // Funzione handle per trasmettere il comando
   executeCommand: (cmd) => ipcRenderer.invoke('execute-command', cmd),
+
+  getVersion: () => ipcRenderer.invoke('get-app-version'),
   // Apertura VERO sistema operativo cartelle
   openFolder: () => ipcRenderer.invoke('open-project-folder'),
   openSpecificFolder: (folderPath) => ipcRenderer.invoke('open-specific-folder', folderPath),

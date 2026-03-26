@@ -922,6 +922,8 @@ app.whenReady().then(() => {
   autoUpdater.autoDownload = false; // Chiediamo prima di scaricare
   autoUpdater.logger = console;
 
+  ipcMain.handle('get-app-version', () => app.getVersion());
+
   ipcMain.handle('check-for-updates', async () => {
     if (!app.isPackaged) return false;
     try {
@@ -943,6 +945,9 @@ app.whenReady().then(() => {
             throw new Error("Sei già all'ultima versione di GXCode.");
         }
     } catch (err) {
+        if (err.message.includes('No published versions')) {
+            throw new Error("Nessuna release trovata su GitHub. Assicurati che i file .exe e .yml siano stati caricati correttamente.");
+        }
         throw err;
     }
   });
