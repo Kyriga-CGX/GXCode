@@ -113,7 +113,7 @@ const getFolderIcon = (name, isExpanded) => {
 };
 
 // ── Delete button HTML ───────────────────────────────────────────────────────
-const delBtn = (p) => `<button class="gx-del-btn" data-del="${p}" title="Elimina">
+const delBtn = (p) => `<button class="gx-del-btn" data-del="${p}" data-i18n="[title]explorer.deleteBtn">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
     </svg></button>`;
@@ -193,11 +193,10 @@ const renderWorkspace = () => {
     if (!treeContainer) return;
     
     if (!state.workspaceData) {
-        // ... (Placeholder remains same)
         treeContainer.innerHTML = `
             <div class="px-3 py-4 text-center">
-                <p class="text-[11px] text-gray-500 leading-snug mb-3">Non hai ancora aperto nessuna cartella.</p>
-                <div class="text-[10px] text-gray-600 bg-black/20 rounded border border-gray-800 p-2 inline-block">Premi il tasto <span class="text-blue-500">Apri</span> In alto nel pannello.</div>
+                <p class="text-[11px] text-gray-500 leading-snug mb-3" data-i18n="explorer.emptyTitle">${window.t('explorer.emptyTitle')}</p>
+                <div class="text-[10px] text-gray-600 bg-black/20 rounded border border-gray-800 p-2 inline-block" data-i18n="[html]explorer.emptyDesc">${window.t('explorer.emptyDesc')}</div>
             </div>
         `;
         return;
@@ -566,8 +565,7 @@ export const initWorkspace = () => {
         if (delTarget) {
             e.stopPropagation();
             const delPath = delTarget.getAttribute('data-del').replace(/\//g, '\\');
-            const fname = delPath.split('\\').pop();
-            if (!confirm(`Eliminare definitivamente "${fname}"?\nQuesta operazione non è reversibile.`)) return;
+            if (!confirm(window.t('explorer.deleteConfirm'))) return;
             if (window.electronAPI?.fsDelete) {
                 const result = await window.electronAPI.fsDelete(delPath);
                 if (result?.error) { alert('Errore: ' + result.error); return; }

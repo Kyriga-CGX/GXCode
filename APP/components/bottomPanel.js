@@ -10,13 +10,17 @@ export const initBottomPanel = () => {
     const panes = {
         terminal: document.getElementById('pane-terminal'),
         problems: document.getElementById('pane-problems'),
-        output: document.getElementById('pane-output')
+        output: document.getElementById('pane-output'),
+        'debug-console': document.getElementById('pane-debug-console'),
+        ports: document.getElementById('pane-ports')
     };
 
     const buttons = {
-        terminal: btnTerminal,
-        problems: btnProblems,
-        output: btnOutput
+        terminal: document.getElementById('tab-terminal-btn'),
+        problems: document.getElementById('tab-problems-btn'),
+        output: document.getElementById('tab-output-btn'),
+        'debug-console': document.getElementById('tab-debug-console-btn'),
+        ports: document.getElementById('tab-ports-btn')
     };
 
     const switchBottomTab = (tabId) => {
@@ -41,9 +45,9 @@ export const initBottomPanel = () => {
         }
     };
 
-    if (btnTerminal) btnTerminal.onclick = () => switchBottomTab('terminal');
-    if (btnProblems) btnProblems.onclick = () => switchBottomTab('problems');
-    if (btnOutput) btnOutput.onclick = () => switchBottomTab('output');
+    Object.entries(buttons).forEach(([id, btn]) => {
+        if (btn) btn.onclick = () => switchBottomTab(id);
+    });
 
     if (btnClose) {
         btnClose.onclick = () => {

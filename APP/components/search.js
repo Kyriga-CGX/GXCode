@@ -10,24 +10,24 @@ export const initSearch = () => {
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value;
         if (!query.trim()) {
-            searchResults.innerHTML = '<div class="opacity-50 text-[10px] uppercase text-gray-600 font-bold text-center mt-10">Nessuna ricerca avviata</div>';
+            searchResults.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-gray-600 font-bold text-center mt-10" data-i18n="search.idle">${window.t('search.idle')}</div>`;
             return;
         }
 
         if (searchTimeout) clearTimeout(searchTimeout);
         searchTimeout = setTimeout(async () => {
             if (!state.workspaceData || !state.workspaceData.path) {
-                searchResults.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-red-500 font-bold text-center mt-10">Apri un progetto dall'Explorer prima di cercare</div>`;
+                searchResults.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-red-500 font-bold text-center mt-10" data-i18n="search.noProject">${window.t('search.noProject')}</div>`;
                 return;
             }
 
-            searchResults.innerHTML = '<div class="opacity-50 text-[10px] uppercase text-blue-400 font-bold text-center mt-10 animate-pulse">Ricerca in corso...</div>';
+            searchResults.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-blue-400 font-bold text-center mt-10 animate-pulse" data-i18n="search.searching">${window.t('search.searching')}</div>`;
 
             try {
                 const results = await window.electronAPI.searchFiles(state.workspaceData.path, query);
                 
                 if (!results || results.length === 0) {
-                    searchResults.innerHTML = '<div class="opacity-50 text-[10px] uppercase text-gray-600 font-bold text-center mt-10">Nessun risultato trovato</div>';
+                    searchResults.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-gray-600 font-bold text-center mt-10" data-i18n="search.noResults">${window.t('search.noResults')}</div>`;
                     return;
                 }
 

@@ -1,5 +1,6 @@
 import { api } from '../core/api.js';
 import { state, subscribe, setState } from '../core/state.js';
+import { loadLocale } from '../core/i18n.js';
 import { initMarketplace } from '../components/marketplace.js';
 import { initTerminal } from '../components/terminal.js';
 import { initSettings } from '../components/settings.js';
@@ -104,10 +105,10 @@ const renderSidebarItem = (item, type) => {
                 <span class="text-[10px] text-gray-500 truncate uppercase tracking-widest leading-none mt-0.5">${item.role || item.category || 'General'}</span>
             </div>
             <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button data-action="edit" data-id="${item.id}" data-type="${type}" class="p-1.5 text-gray-500 hover:text-blue-400 transition bg-[#161b22] hover:bg-[#1d232b] rounded-sm" title="Modifica e Assegna Skill">
+                <button data-action="edit" data-id="${item.id}" data-type="${type}" class="p-1.5 text-gray-500 hover:text-blue-400 transition bg-[#161b22] hover:bg-[#1d232b] rounded-sm" data-i18n="[title]sidebar.editTooltip" title="${window.t('sidebar.editTooltip')}">
                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                 </button>
-                <button data-action="delete" data-id="${item.id}" data-type="${type}" class="p-1.5 text-gray-500 hover:text-red-400 transition bg-[#161b22] hover:bg-[#1d232b] rounded-sm" title="Disinstalla fisicamente">
+                <button data-action="delete" data-id="${item.id}" data-type="${type}" class="p-1.5 text-gray-500 hover:text-red-400 transition bg-[#161b22] hover:bg-[#1d232b] rounded-sm" data-i18n="[title]sidebar.deleteTooltip" title="${window.t('sidebar.deleteTooltip')}">
                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
             </div>
@@ -125,13 +126,16 @@ const updateSidebarTabs = () => {
     });
 
     if (state.activeSidebarTab === 'agents') {
-        sidebarTitle.textContent = 'AGENTS';
+        sidebarTitle.textContent = window.t('sidebar.agents');
+        sidebarTitle.dataset.i18n = 'sidebar.agents';
         tabAgents.className = "flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-blue-400 border-blue-500 bg-[#161b22]";
     } else if (state.activeSidebarTab === 'skills') {
-        sidebarTitle.textContent = 'SKILLS';
+        sidebarTitle.textContent = window.t('sidebar.skills');
+        sidebarTitle.dataset.i18n = 'sidebar.skills';
         tabSkills.className = "flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-purple-400 border-purple-500 bg-[#161b22]";
     } else {
-        sidebarTitle.textContent = 'ADDONS';
+        sidebarTitle.textContent = window.t('sidebar.addons');
+        sidebarTitle.dataset.i18n = 'sidebar.addons';
         tabAddons.className = "flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-emerald-400 border-emerald-500 bg-[#161b22]";
     }
 };
@@ -180,8 +184,8 @@ const renderSidebar = () => {
     if (filtered.length === 0) {
         sidebarContent.innerHTML = `
             <div class="flex flex-col items-center justify-center p-8 text-center gap-2 opacity-60">
-                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-800/50 px-2 py-1 rounded">Nessun Risultato</div>
-                <p class="text-[9px] text-gray-600 uppercase tracking-tighter">Prova a cambiare i criteri di ricerca</p>
+                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-800/50 px-2 py-1 rounded" data-i18n="sidebar.noResults">${window.t('sidebar.noResults')}</div>
+                <p class="text-[9px] text-gray-600 uppercase tracking-tighter" data-i18n="sidebar.searchHint">${window.t('sidebar.searchHint')}</p>
             </div>
         `;
         return;
@@ -197,6 +201,9 @@ const renderSidebar = () => {
 window.setState = setState;
 
 const bootstrap = async () => {
+    // Carica le traduzioni prima di tutto
+    await loadLocale(state.language || 'it');
+
     // Leghiamo i tasti
     tabAgents.onclick = () => {
         setState({ activeSidebarTab: 'agents' });
@@ -273,8 +280,9 @@ const bootstrap = async () => {
 
             if (action === 'delete') {
                 if (!item) return;
-                const modalTitle = `Elimina ${type === 'agents' ? 'Agente' : (type === 'skills' ? 'Skill' : 'Addon')}`;
-                const modalMsg = `Sei sicuro di voler eliminare definitivamente <strong>${item.name || 'questo elemento'}</strong>? L'operazione non è reversibile.`;
+                const typeLabel = type === 'agents' ? window.t('crud.agent') : (type === 'skills' ? window.t('crud.skill') : window.t('crud.addon'));
+                const modalTitle = window.t('contextMenu.delete') + " " + typeLabel;
+                const modalMsg = window.t('contextMenu.deleteConfirm').replace('{path}', `<strong>${item.name || '...'}</strong>`);
                 
                 if (window.gxConfirm) {
                     window.gxConfirm(modalTitle, modalMsg, async () => {

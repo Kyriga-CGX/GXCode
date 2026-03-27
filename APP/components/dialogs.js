@@ -22,8 +22,8 @@ export const gxConfirm = (title, message, onConfirm) => {
                 </div>
                 
                 <div class="flex border-t border-gray-800 divide-x divide-gray-800">
-                    <button id="gx-modal-cancel" class="flex-1 py-4 text-xs font-bold uppercase tracking-widest text-gray-500 hover:bg-white/5 transition">Annulla</button>
-                    <button id="gx-modal-ok" class="flex-1 py-4 text-xs font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/10 transition">Conferma</button>
+                    <button id="gx-modal-cancel" class="flex-1 py-4 text-xs font-bold uppercase tracking-widest text-gray-500 hover:bg-white/5 transition">${window.t('dialogs.cancel')}</button>
+                    <button id="gx-modal-ok" class="flex-1 py-4 text-xs font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/10 transition">${window.t('dialogs.confirm')}</button>
                 </div>
             </div>
         </div>
@@ -58,7 +58,7 @@ export const gxAlert = (title, message, iconType = 'info') => {
                     <p class="text-gray-400 text-sm leading-relaxed">${message}</p>
                 </div>
                 <div class="p-4 border-t border-gray-800">
-                    <button id="gx-alert-ok" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition uppercase tracking-widest">OK</button>
+                    <button id="gx-alert-ok" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition uppercase tracking-widest">${window.t('dialogs.ok')}</button>
                 </div>
             </div>
         </div>

@@ -12,17 +12,18 @@ const openCrudModal = (type, item = null) => {
     const root = document.getElementById('modals-root');
     root.classList.remove('pointer-events-none');
     const isEdit = !!item;
-    const title = isEdit ? `Modifica ${type === 'agents' ? 'Agente' : 'Skill'}` : `Nuovo ${type === 'agents' ? 'Agente' : 'Skill'}`;
+    const typeLabel = type === 'agents' ? window.t('crud.agent') : (type === 'skills' ? window.t('crud.skill') : window.t('crud.addon'));
+    const title = isEdit ? window.t('crud.edit').replace('{type}', typeLabel) : window.t('crud.new').replace('{type}', typeLabel);
 
     // Common fields
     let formHtml = `
         <div class="mb-4">
-            <label class="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-bold">Name</label>
-            <input id="crud-name" type="text" class="w-full bg-[#0d1117] border border-gray-700/50 rounded px-3 py-2 text-sm text-gray-200 outline-none focus:border-blue-500 transition focus:bg-[#161b22]" value="${item?.name || ''}" placeholder="Esempio: React Expert" required>
+            <label class="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-bold" data-i18n="crud.name">${window.t('crud.name')}</label>
+            <input id="crud-name" type="text" class="w-full bg-[#0d1117] border border-gray-700/50 rounded px-3 py-2 text-sm text-gray-200 outline-none focus:border-blue-500 transition focus:bg-[#161b22]" value="${item?.name || ''}" data-i18n="[placeholder]crud.namePlaceholder" placeholder="${window.t('crud.namePlaceholder')}" required>
         </div>
         <div class="mb-4">
-            <label class="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-bold">Category / Tag</label>
-            <input id="crud-category" type="text" class="w-full bg-[#0d1117] border border-gray-700/50 rounded px-3 py-2 text-sm text-gray-200 outline-none focus:border-blue-500 transition focus:bg-[#161b22]" value="${item?.category || ''}" placeholder="Esempio: sviluppatore, tester, cloud...">
+            <label class="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-bold" data-i18n="crud.category">${window.t('crud.category')}</label>
+            <input id="crud-category" type="text" class="w-full bg-[#0d1117] border border-gray-700/50 rounded px-3 py-2 text-sm text-gray-200 outline-none focus:border-blue-500 transition focus:bg-[#161b22]" value="${item?.category || ''}" data-i18n="[placeholder]crud.catPlaceholder" placeholder="${window.t('crud.catPlaceholder')}">
         </div>
     `;
 
@@ -30,8 +31,8 @@ const openCrudModal = (type, item = null) => {
     if (type === 'agents') {
         formHtml += `
         <div class="mb-4">
-            <label class="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-bold">System Prompt</label>
-            <textarea id="crud-prompt" class="w-full bg-[#0d1117] border border-gray-700/50 rounded px-3 py-2 text-sm text-blue-400 outline-none focus:border-blue-500 transition focus:bg-[#161b22] resize-none h-24 font-mono" placeholder="Sei un esperto sviluppatore...">${item?.systemPrompt || item?.instructions || ''}</textarea>
+            <label class="block text-xs text-gray-400 mb-1 uppercase tracking-wider font-bold" data-i18n="crud.prompt">${window.t('crud.prompt')}</label>
+            <textarea id="crud-prompt" class="w-full bg-[#0d1117] border border-gray-700/50 rounded px-3 py-2 text-sm text-blue-400 outline-none focus:border-blue-500 transition focus:bg-[#161b22] resize-none h-24 font-mono" data-i18n="[placeholder]crud.promptPlaceholder" placeholder="${window.t('crud.promptPlaceholder')}">${item?.systemPrompt || item?.instructions || ''}</textarea>
         </div>
         `;
     }
@@ -52,7 +53,7 @@ const openCrudModal = (type, item = null) => {
         
         formHtml += `
         <div class="mb-4 mt-6">
-            <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold border-b border-gray-800 pb-1">🖇️ Assegna Skill all'Agente</label>
+            <label class="block text-xs text-gray-400 mb-2 uppercase tracking-wider font-bold border-b border-gray-800 pb-1" data-i18n="crud.assignSkills">${window.t('crud.assignSkills')}</label>
             <div class="max-h-48 overflow-y-auto custom-scrollbar space-y-1 pr-2">
                 ${skillChecks}
             </div>
@@ -73,16 +74,18 @@ const openCrudModal = (type, item = null) => {
                 </div>
                 
                 <div class="p-4 border-t border-gray-800 flex justify-between items-center bg-[#161b22] rounded-b-xl shrink-0">
-                    <button id="crud-cancel" class="px-5 py-2 hover:bg-white/5 text-[11px] uppercase tracking-widest font-bold text-gray-500 rounded-md transition">Annulla</button>
+                    <button id="crud-cancel" class="px-5 py-2 hover:bg-white/5 text-[11px] uppercase tracking-widest font-bold text-gray-500 rounded-md transition" data-i18n="crud.cancel">${window.t('crud.cancel')}</button>
                     
                     <div class="flex gap-2">
                         ${isEdit ? `
                             <button id="crud-publish" class="flex items-center gap-2 px-4 py-2 bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/20 text-[11px] uppercase tracking-widest font-bold rounded-md transition shadow-lg active:scale-95">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                                Pubblica
+                                <span data-i18n="crud.publish">${window.t('crud.publish')}</span>
                             </button>
                         ` : ''}
-                        <button id="crud-save" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-[11px] uppercase tracking-widest font-bold text-white rounded-md transition shadow-[0_0_15px_rgba(37,99,235,0.3)]">💾 Salva / Sincronizza</button>
+                        <button id="crud-save" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-[11px] uppercase tracking-widest font-bold text-white rounded-md transition shadow-[0_0_15px_rgba(37,99,235,0.3)]">
+                            <span data-i18n="crud.save">${window.t('crud.save')}</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -101,7 +104,7 @@ const openCrudModal = (type, item = null) => {
         let assignedSkills = [];
         document.querySelectorAll('.crud-skill-check:checked').forEach(chk => assignedSkills.push(chk.value));
 
-        if (!nameVal) { alert("Il nome è obbligatorio"); return; }
+        if (!nameVal) { alert(window.t('crud.nameRequired')); return; }
         
         const payload = { 
             name: nameVal, 
@@ -112,7 +115,7 @@ const openCrudModal = (type, item = null) => {
         
         const btn = document.getElementById('crud-save');
         const origText = btn.innerHTML;
-        btn.innerHTML = '<span class="animate-pulse">Sincronizzazione API...</span>';
+        btn.innerHTML = `<span class="animate-pulse">${window.t('crud.syncing')}</span>`;
         
         if (isEdit) {
             if (type === 'agents') await api.updateAgent(item.id, payload);
@@ -129,19 +132,19 @@ const openCrudModal = (type, item = null) => {
         document.getElementById('crud-publish').onclick = async () => {
             const repo = state.repositories.find(r => r.enabled);
             if (!repo) {
-                alert("Nessuna repository abilitata. Aggiungine una nei Settings.");
+                alert(window.t('crud.noRepo'));
                 return;
             }
 
             const btn = document.getElementById('crud-publish');
             const origHtml = btn.innerHTML;
-            btn.innerHTML = '<span class="animate-pulse">Uploading...</span>';
+            btn.innerHTML = `<span class="animate-pulse">${window.t('crud.publishing')}</span>`;
             btn.disabled = true;
 
             const res = await api.publishItem(item, repo.url);
             
             if (res && res.success) {
-                btn.innerHTML = '✅ Inviato!';
+                btn.innerHTML = window.t('crud.sent');
                 btn.className = "flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-[11px] uppercase tracking-widest font-bold rounded-md transition";
                 setTimeout(() => {
                     btn.innerHTML = origHtml;
@@ -149,7 +152,7 @@ const openCrudModal = (type, item = null) => {
                     btn.className = "flex items-center gap-2 px-4 py-2 bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/20 text-[11px] uppercase tracking-widest font-bold rounded-md transition shadow-lg active:scale-95";
                 }, 3000);
             } else {
-                btn.innerHTML = '❌ Errore';
+                btn.innerHTML = window.t('crud.error');
                 btn.disabled = false;
                 setTimeout(() => btn.innerHTML = origHtml, 2000);
             }

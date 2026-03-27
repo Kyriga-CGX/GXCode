@@ -13,11 +13,11 @@ export const initTerminal = async () => {
                 <div class="flex items-center gap-1 overflow-x-auto no-scrollbar" id="terminal-tabs">
                 </div>
                 <div class="flex gap-1 shrink-0 ml-2">
-                   <button id="btn-add-ps" class="p-1 px-1.5 text-[8px] font-bold text-blue-400 hover:bg-blue-500/10 rounded transition uppercase tracking-widest border border-blue-500/20 flex items-center gap-1" title="Nuova PowerShell">+ PS</button>
-                   <button id="btn-add-cmd" class="p-1 px-1.5 text-[8px] font-bold text-gray-400 hover:bg-gray-500/10 rounded transition uppercase tracking-widest border border-gray-500/20 flex items-center gap-1" title="Nuovo CMD">+ CMD</button>
-                   <button id="btn-add-bash" class="p-1 px-1.5 text-[8px] font-bold text-orange-400 hover:bg-orange-500/10 rounded transition uppercase tracking-widest border border-orange-500/20 flex items-center gap-1" title="Nuovo Git Bash">+ BASH</button>
-                   <button id="btn-clear-term" class="p-1 px-1.5 text-[8px] font-bold text-red-400 hover:bg-red-500/10 rounded transition uppercase tracking-widest border border-red-500/20 flex items-center gap-1" title="Pulisci Terminale">CLEAR</button>
-                   <button id="btn-split-term" class="p-1 px-1.5 text-[8px] font-bold text-emerald-400 hover:bg-emerald-500/10 rounded transition uppercase tracking-widest border border-emerald-500/20 flex items-center gap-1" title="Dividi Terminale">SPLIT</button>
+                   <button id="btn-add-ps" class="p-1 px-1.5 text-[8px] font-bold text-blue-400 hover:bg-blue-500/10 rounded transition uppercase tracking-widest border border-blue-500/20 flex items-center gap-1" data-i18n="[title]terminal.newPs" title="${window.t('terminal.newPs')}">+ PS</button>
+                   <button id="btn-add-cmd" class="p-1 px-1.5 text-[8px] font-bold text-gray-400 hover:bg-gray-500/10 rounded transition uppercase tracking-widest border border-gray-500/20 flex items-center gap-1" data-i18n="[title]terminal.newCmd" title="${window.t('terminal.newCmd')}">+ CMD</button>
+                   <button id="btn-add-bash" class="p-1 px-1.5 text-[8px] font-bold text-orange-400 hover:bg-orange-500/10 rounded transition uppercase tracking-widest border border-orange-500/20 flex items-center gap-1" data-i18n="[title]terminal.newBash" title="${window.t('terminal.newBash')}">+ BASH</button>
+                   <button id="btn-clear-term" class="p-1 px-1.5 text-[8px] font-bold text-red-400 hover:bg-red-500/10 rounded transition uppercase tracking-widest border border-red-500/20 flex items-center gap-1" data-i18n="[title]terminal.clear" title="${window.t('terminal.clear')}">CLEAR</button>
+                   <button id="btn-split-term" class="p-1 px-1.5 text-[8px] font-bold text-emerald-400 hover:bg-emerald-500/10 rounded transition uppercase tracking-widest border border-emerald-500/20 flex items-center gap-1" data-i18n="[title]terminal.split" title="${window.t('terminal.split')}">SPLIT</button>
                 </div>
             </div>
             <div id="terminals-stack" class="flex-1 w-full relative overflow-hidden bg-[#06080a]">
@@ -64,9 +64,9 @@ export const initTerminal = async () => {
         const res = await window.electronAPI.terminalCreate(id, shellType);
         
         if (res && !res.success) {
-            term.write(`\r\n\x1b[31;1m[GX ERROR] Impossibile avviare ${shellType.toUpperCase()}\x1b[0m\r\n`);
-            term.write(`\x1b[33mDettaglio: ${res.error}\x1b[0m\r\n`);
-            term.write(`\x1b[90mConsiglio: Verifica che Git Bash sia installato nei percorsi standard.\x1b[0m\r\n\r\n`);
+            term.write(`\r\n\x1b[31;1m${window.t('terminal.errorStart').replace('{shell}', shellType.toUpperCase())}\x1b[0m\r\n`);
+            term.write(`\x1b[33m${window.t('terminal.errorDetail').replace('{error}', res.error)}\x1b[0m\r\n`);
+            term.write(`\x1b[90m${window.t('terminal.errorAdvice')}\x1b[0m\r\n\r\n`);
         }
 
         term.onData(data => window.electronAPI.terminalWrite(id, data));
@@ -116,7 +116,8 @@ export const initTerminal = async () => {
                     onclick="window.switchGXTerm('${id}')" 
                     onauxclick="if(event.button === 1) window.closeGXTerm('${id}', event)"
                     class="group flex items-center gap-2 px-3 py-1 rounded-t border-t border-l border-r border-gray-800 cursor-pointer transition ${isActive ? 'bg-[#06080a] border-gray-700' : 'bg-transparent text-gray-500 hover:text-gray-300'} border-b-2 border-b-transparent"
-                    title="Clic destro o rotellina per chiudere"
+                    data-i18n="[title]terminal.closeHint"
+                    title="${window.t('terminal.closeHint')}"
                 >
                     <svg class="${isActive ? t.colorClass : 'text-gray-600'}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
                     <span class="text-[9px] font-bold uppercase tracking-widest ${isActive ? t.colorClass : ''}">${t.label}</span>
@@ -157,7 +158,7 @@ export const initTerminal = async () => {
     if (btnSplit) {
         btnSplit.onclick = () => {
         if (!activeTerminalId || Object.keys(terminals).length < 2) {
-             alert("Apri almeno un altro terminale prima di dividere la visuale!");
+             alert(window.t('terminal.splitError'));
              return;
         }
         // Per semplicità per ora, se clicchi split, proviamo a mostrare l'ultimo terminale affiancato al corrente.

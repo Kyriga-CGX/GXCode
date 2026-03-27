@@ -967,51 +967,52 @@ app.whenReady().then(() => {
 
   ipcMain.handle('get-app-version', () => app.getVersion());
 
-  let isUpdateCheckActive = false;
+  // --- SHARED PROMISE LOCK (Elimina race condition "Please check update first") ---
+  let pendingCheck = null; // Promise condivisa tra check e perform
 
   ipcMain.handle('check-for-updates', async () => {
-    if (!app.isPackaged || isUpdateCheckActive) return false;
-    isUpdateCheckActive = true;
+    if (!app.isPackaged) return false;
+    
+    // Se c'è già un controllo in corso, riusa la stessa Promise
+    if (pendingCheck) {
+      try { return !!(await pendingCheck).updateInfo; } catch { return false; }
+    }
+
+    pendingCheck = autoUpdater.checkForUpdates();
     try {
-      const result = await autoUpdater.checkForUpdates();
-      isUpdateCheckActive = false;
+      const result = await pendingCheck;
       return !!result.updateInfo;
     } catch (err) {
-      isUpdateCheckActive = false;
-      // Se è già in corso un controllo interno di electron-updater, non lanciamo errore
-      if (err.message && err.message.includes("Please check update first")) return true;
       return false;
+    } finally {
+      pendingCheck = null;
     }
   });
 
-  ipcMain.handle('perform-update', async (event) => {
+  ipcMain.handle('perform-update', async () => {
     if (!app.isPackaged) return false;
-    if (isUpdateCheckActive) {
-      throw new Error("Verifica aggiornamenti già in corso. Attendi un istante...");
-    }
-    
-    isUpdateCheckActive = true;
+
     try {
-      const checkResult = await autoUpdater.checkForUpdates();
-      isUpdateCheckActive = false;
-      
+      let checkResult;
+      if (pendingCheck) {
+        // Un controllo è già in corso (background), aspettiamo il suo risultato
+        checkResult = await pendingCheck;
+      } else {
+        // Nessun controllo in corso, ne lanciamo uno nuovo
+        pendingCheck = autoUpdater.checkForUpdates();
+        checkResult = await pendingCheck;
+        pendingCheck = null;
+      }
+
       if (checkResult && checkResult.updateInfo) {
         await autoUpdater.downloadUpdate();
         return true;
       } else {
-        return false; // Aggiornato
+        return false;
       }
     } catch (err) {
-      isUpdateCheckActive = false;
+      pendingCheck = null;
       const msg = err.message || "";
-      // Se è già in corso un controllo, proviamo a chiamare downloadUpdate direttamente se possibile
-      // o almeno non blocchiamo l'utente con un errore bloccante se sappiamo che sta già caricando.
-      if (msg.includes("Please check update first")) {
-          try {
-             await autoUpdater.downloadUpdate();
-             return true;
-          } catch(e) { return true; }
-      }
       if (msg.includes('No published versions') || msg.includes('latest.yml')) {
         throw new Error("Errore Release: GitHub non contiene i file necessari (latest.yml).");
       }

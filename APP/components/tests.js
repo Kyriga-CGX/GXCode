@@ -11,7 +11,7 @@ export const initTests = () => {
     // Aggiorniamo la UI dei Test in base allo stato
     const renderTestTree = () => {
         if (!state.workspaceData || !state.workspaceData.path) {
-            treeRoot.innerHTML = '<div class="opacity-30 text-[10px] uppercase text-gray-500 font-bold text-center mt-10">Apri workspace per scansionare i tests...</div>';
+            treeRoot.innerHTML = `<div class="opacity-30 text-[10px] uppercase text-gray-500 font-bold text-center mt-10" data-i18n="tests.openWorkspace">${window.t('tests.openWorkspace')}</div>`;
             if (btnRunAll) {
                 btnRunAll.classList.add('opacity-50', 'cursor-not-allowed');
                 btnRunAll.disabled = true;
@@ -20,7 +20,7 @@ export const initTests = () => {
         }
 
         if (testFilesCache.length === 0) {
-            treeRoot.innerHTML = '<div class="opacity-30 text-[10px] uppercase text-gray-500 font-bold text-center mt-10">Nessun file test (.spec.js) trovato.</div>';
+            treeRoot.innerHTML = `<div class="opacity-30 text-[10px] uppercase text-gray-500 font-bold text-center mt-10" data-i18n="tests.noTests">${window.t('tests.noTests')}</div>`;
             if (btnRunAll) {
                 btnRunAll.classList.add('opacity-50', 'cursor-not-allowed');
                 btnRunAll.disabled = true;
@@ -59,7 +59,7 @@ export const initTests = () => {
                             <span class="text-[10px] text-gray-400 font-mono truncate group-hover:text-blue-400 transition cursor-text">${test.name}</span>
                         </div>
                         <div class="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
-                            <button onclick="event.stopPropagation(); window.debugSingleTest('${safeAbsPath}', '${encodeURIComponent(test.name)}')" class="p-1 rounded bg-[#0d1117] text-gray-500 hover:text-yellow-500 transition" title="Debug Test (Playwright Inspector)">
+                            <button onclick="event.stopPropagation(); window.debugSingleTest('${safeAbsPath}', '${encodeURIComponent(test.name)}')" class="p-1 rounded bg-[#0d1117] text-gray-500 hover:text-yellow-500 transition" data-i18n="[title]tests.debugTooltip" title="${window.t('tests.debugTooltip')}">
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>
                             </button>
                             <button class="p-1 rounded bg-[#161b22] border border-gray-800 ${statusColor} hover:scale-110 transition-transform">
@@ -96,13 +96,13 @@ export const initTests = () => {
     const scanWorkspaceForTests = async () => {
         if (!state.workspaceData || !state.workspaceData.path) return;
         
-        treeRoot.innerHTML = '<div class="opacity-50 text-[10px] uppercase text-blue-400 font-bold text-center mt-10 animate-pulse">Scansione Spec...</div>';
+        treeRoot.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-blue-400 font-bold text-center mt-10 animate-pulse" data-i18n="tests.scanning">${window.t('tests.scanning')}</div>`;
         try {
             // Un nuovo handler IPC che chiameremo scan-tests e ci darà { fullPath, relativePath, testMatches: [{name, line, status}] }
             testFilesCache = await window.electronAPI.scanTests(state.workspaceData.path);
             renderTestTree();
         } catch(e) {
-            treeRoot.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-red-500 font-bold text-center mt-10">Errore: ${e.message}</div>`;
+            treeRoot.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-red-500 font-bold text-center mt-10">${window.t('tests.error').replace('{error}', e.message)}</div>`;
         }
     };
 
@@ -127,7 +127,7 @@ export const initTests = () => {
             
             console.log("Run All Tests triggered");
             btnRunAll.classList.add('animate-pulse', 'text-yellow-400');
-            btnRunAll.innerHTML = `<svg class="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Running All...`;
+            btnRunAll.innerHTML = `<svg class="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> ${window.t('tests.runningAll')}`;
             
             try {
                 // Eseguiamo i test e aspettiamo il report JSON
@@ -139,7 +139,7 @@ export const initTests = () => {
                 console.error("Errore run all:", e);
             } finally {
                 btnRunAll.classList.remove('animate-pulse', 'text-yellow-400');
-                btnRunAll.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 3 14 9-14 9V3z"/></svg> Run All Playwright`;
+                btnRunAll.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 3 14 9-14 9V3z"/></svg> <span data-i18n="tests.runAll">${window.t('tests.runAll')}</span>`;
             }
         };
     }

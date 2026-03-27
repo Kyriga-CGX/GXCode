@@ -1,0 +1,331 @@
+{
+    "app": {
+        "name": "GXCode Studio",
+        "description": "Ambiente professionale GX. Seleziona un file dall'Explorer laterale per iniziare a programmare.",
+        "engine": "GXCODE ENGINE • V3.0 CORE"
+    },
+    "header": {
+        "marketAgents": "Market Agenti",
+        "marketSkills": "Market Skills",
+        "marketAddons": "Market Addons",
+        "devtools": "Apri DevTools",
+        "settings": "Impostazioni"
+    },
+    "activity": {
+        "explorer": "Explorer",
+        "search": "Ricerca",
+        "git": "Controllo Sorgente",
+        "debug": "Debug",
+        "testing": "Testing"
+    },
+    "explorer": {
+        "title": "Progetto Locale",
+        "openFolder": "Apri Cartella",
+        "files": "📁 Files",
+        "tickets": "🎫 Tickets",
+        "emptyTitle": "Non hai ancora aperto nessuna cartella.",
+        "emptyDesc": "Premi il tasto Apri in alto nel pannello.",
+        "deleteConfirm": "Eliminare definitivamente questo file?\nQuesta operazione non è reversibile.",
+        "deleteBtn": "Elimina"
+    },
+    "sidebar": {
+        "explorer": "Explorer",
+        "search": "Ricerca",
+        "git": "Controllo Sorgente",
+        "debug": "Debug",
+        "testing": "Testing",
+        "agents": "Agenti",
+        "skills": "Skill",
+        "addons": "Addons",
+        "search_label": "Cerca...",
+        "noResults": "Nessun Risultato",
+        "searchHint": "Prova a cambiare i criteri di ricerca",
+        "editTooltip": "Modifica e Assegna Skill",
+        "deleteTooltip": "Disinstalla fisicamente",
+        "files": "📁 Files",
+        "tickets": "🎫 Tickets",
+        "syncingCore": "Sincronizzazione Core..."
+    },
+    "tickets": {
+        "type": "Tipo",
+        "priority": "Priorità",
+        "state": "Stato"
+    },
+    "search": {
+        "title": "Ricerca",
+        "placeholder": "Cerca nei file...",
+        "noResults": "Nessun risultato trovato",
+        "searching": "Ricerca in corso...",
+        "noProject": "Apri un progetto dall'Explorer prima di cercare",
+        "idle": "Nessuna ricerca avviata"
+    },
+    "git": {
+        "title": "Controllo Sorgente",
+        "initializing": "Inizializzazione Git...",
+        "refreshing": "Aggiornamento stato...",
+        "error": "Errore Git",
+        "retry": "Riprova",
+        "noChanges": "Nessuna modifica trovata",
+        "changes": "Modifiche",
+        "commitPlaceholder": "Messaggio di commit...",
+        "commitTo": "Commit su {branch}",
+        "refresh": "Aggiorna",
+        "stage": "Aggiungi all'area di stage",
+        "pull": "Git Pull",
+        "push": "Git Push",
+        "pullSuccess": "Pull completato!",
+        "pullError": "Pull fallito: {error}",
+        "pushSuccess": "Push completato!",
+        "pushError": "Push fallito: {error}",
+        "status": {
+            "m": "Modificato",
+            "a": "Aggiunto",
+            "d": "Eliminato",
+            "u": "Non tracciato",
+            "unknown": "Sconosciuto"
+        }
+    },
+    "testing": {
+        "title": "Test Explorer",
+        "runAll": "Esegui Tutti Playwright",
+        "scanHint": "Apri workspace per scansionare i tests..."
+    },
+    "terminal": {
+        "tab": "Terminale",
+        "problems": "Problemi",
+        "output": "Output",
+        "debugConsole": "Console di Debug",
+        "ports": "Porte",
+        "hidePanel": "Nascondi Pannello inferiore",
+        "noProblems": "Nessun problema rilevato nel workspace.",
+        "logsHint": "I log del sistema appariranno qui.",
+        "newPs": "Nuova PowerShell",
+        "newCmd": "Nuovo CMD",
+        "newBash": "Nuovo Git Bash",
+        "clear": "Pulisci Terminale",
+        "split": "Dividi Terminale",
+        "closeHint": "Clic destro o rotellina per chiudere",
+        "splitError": "Apri almeno un altro terminale prima di dividere la visuale!",
+        "errorStart": "[GX ERROR] Impossibile avviare {shell}",
+        "errorDetail": "Dettaglio: {error}",
+        "errorAdvice": "Consiglio: Verifica che Git Bash sia installato nei percorsi standard."
+    },
+    "problems": {
+        "empty": "Nessun problema rilevato nel workspace."
+    },
+    "settings": {
+        "title": "Opzioni",
+        "close": "Chiudi",
+        "tabs": {
+            "preferences": "Preferenze",
+            "keybinds": "Scorciatoie",
+            "mcp": "Server MCP",
+            "youtrack": "Server MCP Youtrack",
+            "marketplace": "Marketplace & Repo",
+            "appearance": "Aspetto",
+            "language": "Lingua",
+            "updates": "Aggiornamenti"
+        },
+        "preferences": {
+            "title": "Preferenze Editor",
+            "autoSave": "Salvataggio Automatico",
+            "autoSaveDesc": "Salva automaticamente i file dopo le modifiche",
+            "fontSize": "Dimensione Font Editor",
+            "tabSize": "Dimensione Tab",
+            "wordWrap": "A Capo Automatico",
+            "wordWrapDesc": "Abilita l'a capo automatico nell'editor",
+            "minimap": "Minimap",
+            "minimapDesc": "Mostra/nascondi la minimap del codice",
+            "autoUpdate": "Controllo Aggiornamenti Automatico",
+            "autoUpdateDesc": "Verifica aggiornamenti in background",
+            "termFontSize": "Dimensione Font Terminale"
+        },
+        "keybinds": {
+            "description": "Gestisci le scorciatoie da tastiera per un'azione rapida.",
+            "searchProject": "Cerca in tutto il progetto",
+            "format": "Formattazione (Prettier)",
+            "openMarketplace": "Apri Marketplace",
+            "switchExplorer": "Switch Explorer/Tickets"
+        },
+        "appearance": {
+            "title": "Seleziona Interfaccia",
+            "skinDesc": "Layout ottimizzato per {skin}",
+            "customGrad": "Colore Personalizzato Gradiente"
+        },
+        "language": {
+            "title": "Lingua Sistema",
+            "desc": "Scegli la lingua del sistema GXCode. Il cambio richiede il riavvio della dashboard.",
+            "it_label": "IT",
+            "en_label": "GB",
+            "italian": "Italiano",
+            "english": "English"
+        },
+        "updates": {
+            "softwareUpdate": "Aggiornamento Software",
+            "description": "Mantenere GXCode aggiornato garantisce le ultime feature e patch di sicurezza.",
+            "updateNow": "Aggiorna Ora",
+            "downloading": "Download in corso: {percent}%",
+            "upToDate": "GXCode è aggiornato",
+            "restart": "Riavvia ora 🛠️",
+            "retry": "Riprova",
+            "checking": "Verifica...",
+            "currentVersion": "Versione Corrente",
+            "channel": "Canale",
+            "systemInfo": "Informazioni Sistema",
+            "officialChannel": "Official Git"
+        },
+        "mcp": {
+            "title": "Configura Nuovo Server",
+            "predefined": "Server Predefiniti",
+            "activeList": "Server MCP Attivi ({count})",
+            "empty": "Configura il tuo primo server MCP per estendere le potenzialità dell'IA.",
+            "name": "Nome Identificativo",
+            "url": "Endpoint URL",
+            "register": "Registra Server MCP",
+            "placeholderName": "Es. My Google Search",
+            "placeholderUrl": "http://localhost:XXXX",
+            "active": "Attivo",
+            "inactive": "Disattivo",
+            "toastSuccess": "Server MCP registrato con successo! 🚀",
+            "toastError": "Per favore, compila tutti i campi.",
+            "toastTemplate": "Modello {name} caricato. Completa la configurazione! ✨"
+        },
+        "youtrack": {
+            "desc": "Configura l'integrazione specifica per i ticket Youtrack tramite MCP.",
+            "url": "URL Server",
+            "token": "Token App",
+            "sync": "Abilita Sincronizzazione Ticket",
+            "save": "Salva Configurazione",
+            "success": "Configurazione salvata con successo!"
+        },
+        "skins": {
+            "dark": "Dark Mode (Default)",
+            "light": "Light Mode",
+            "classic": "Classic Layout",
+            "apple": "Apple Style",
+            "aero": "Aero Glass",
+            "liquid-glass": "Liquid Glass",
+            "custom-gradient": "Sfumato a Scelta",
+            "anime": "Anime Style"
+        }
+    },
+    "updater": {
+        "available": "Aggiornamento Disponibile! 🚀 Clicca nelle impostazioni per scaricarlo.",
+        "completed": "Download Completato! 📦 L'aggiornamento è pronto per l'installazione.",
+        "alreadyLatest": "Sei già all'ultima versione di GXCode!",
+        "error": "Errore durante l'aggiornamento"
+    },
+    "dialogs": {
+        "cancel": "Annulla",
+        "confirm": "Conferma",
+        "ok": "OK"
+    },
+    "panes": {
+        "logs": "I log del sistema appariranno qui.",
+        "terminalInit": "Inizializzazione Terminale..."
+    },
+    "categories": {
+        "all": "Tutti",
+        "tester": "Tester",
+        "sviluppatore": "Sviluppatore",
+        "devops": "DevOps"
+    },
+    "panels": {
+        "toggleLeft": "Toggle Explorer/Tickets (Sinistra)",
+        "toggleTerminal": "Toggle Terminale (Basso)",
+        "toggleRight": "Toggle Agents/Skills (Destra)"
+    },
+    "contextMenu": {
+        "newFile": "Nuovo File",
+        "newFolder": "Nuova Cartella",
+        "delete": "Elimina",
+        "reveal": "Mostra in Explorer",
+        "copyPath": "Copia Percorso",
+        "enterName": "Inserisci il nome del",
+        "file": "file",
+        "folder": "cartella",
+        "deleteConfirm": "Sei sicuro di voler eliminare definitivamente questo elemento?\n\n{path}",
+        "deleteError": "Errore eliminazione: {error}",
+        "createError": "Errore creazione: {error}"
+    },
+    "debug": {
+        "title": "Debug",
+        "start": "Avvia",
+        "stop": "Stop",
+        "continue": "Continua (F5)",
+        "stepOver": "Step Over (F10)",
+        "callStack": "Call Stack",
+        "variables": "Variabili (Locali)",
+        "breakpoints": "Punti di Interruzione",
+        "reset": "Resetta",
+        "noProcess": "Nessun processo attivo.",
+        "scopeEmpty": "Scope vuoto.",
+        "noBreakpoints": "Nessun breakpoint impostato.",
+        "line": "riga",
+        "toastOpen": "Apri un file per avviare il debug",
+        "toastStart": "Avvio Debug Session... 🐛",
+        "toastError": "Errore avvio debug: {error}",
+        "toastStop": "Debug Terminato ⏹️",
+        "toastPause": "Pausa alla riga {line}"
+    },
+    "tests": {
+        "title": "Test",
+        "openWorkspace": "Apri workspace per scansionare i tests...",
+        "noTests": "Nessun file test (.spec.js) trovato.",
+        "scanning": "Scansione Spec...",
+        "error": "Errore: {error}",
+        "runningAll": "Esecuzione totale...",
+        "runAll": "Esegui tutti i test (Playwright)",
+        "debugTooltip": "Debug Test (Playwright Inspector)"
+    },
+    "tabs": {
+        "diff": "Mostra cambiamenti",
+        "split": "Dividi editor",
+        "prev": "Tab precedente (Alt+←)",
+        "next": "Tab successiva (Alt+→)",
+        "more": "Altre azioni"
+    },
+    "marketplace": {
+        "title": "GX Marketplace",
+        "noModules": "Nessun modulo trovato. Prova un'altra ricerca.",
+        "install": "Installa",
+        "installed": "Installato ✓",
+        "installing": "⏳",
+        "installOk": "✅ OK",
+        "installError": "❌ Errore",
+        "agentsTab": "🤖 Agenti",
+        "skillsTab": "📖 Skills",
+        "addonsTab": "🧩 Addons",
+        "manageSources": "Gestisci Sorgenti",
+        "searchPlaceholder": "Cerca in {tab}...",
+        "agentsSub": "Scegli tra i migliori agenti certificati da Agensi, DeepNLP e OpenSkills.",
+        "skillsSub": "Libreria unificata di tool e skill in formato SKILL.md per i tuoi agenti.",
+        "addonsSub": "Esplora e installa migliaia di estensioni tramite Open VSX.",
+        "vsxNote": "Nota: GXCode estrae metadati e asset direttamente dal registro Open VSX per un'esperienza nativa.",
+        "syncing": "Sincronizzazione...",
+        "refresh": "Aggiorna Catalogo"
+    },
+    "crud": {
+        "edit": "Modifica {type}",
+        "new": "Nuovo {type}",
+        "agent": "Agente",
+        "skill": "Skill",
+        "addon": "Addon",
+        "name": "Nome",
+        "category": "Categoria / Tag",
+        "prompt": "System Prompt",
+        "assignSkills": "🖇️ Assegna Skill all'Agente",
+        "namePlaceholder": "Esempio: React Expert",
+        "catPlaceholder": "Esempio: sviluppatore, tester, cloud...",
+        "promptPlaceholder": "Sei un esperto sviluppatore...",
+        "cancel": "Annulla",
+        "publish": "Pubblica",
+        "save": "💾 Salva / Sincronizza",
+        "nameRequired": "Il nome è obbligatorio",
+        "syncing": "Sincronizzazione API...",
+        "noRepo": "Nessuna repository abilitata. Aggiungine una nei Settings.",
+        "sent": "✅ Inviato!",
+        "error": "❌ Errore",
+        "publishing": "Invio in corso..."
+    }
+}

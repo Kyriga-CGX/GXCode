@@ -12,7 +12,7 @@ export const initProblems = () => {
         badge.classList.toggle('text-white', problems.some(p => p.severity === 4));
 
         if (problems.length === 0) {
-            pane.innerHTML = '<div class="opacity-30 text-[10px] uppercase text-gray-500 font-bold text-center mt-10">Nessun problema rilevato nel workspace.</div>';
+            pane.innerHTML = `<div class="opacity-30 text-[10px] uppercase text-gray-500 font-bold text-center mt-10" data-i18n="problems.empty">${window.t('problems.empty')}</div>`;
             return;
         }
 

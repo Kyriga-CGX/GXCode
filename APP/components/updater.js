@@ -18,7 +18,7 @@ export const initUpdater = () => {
 
     const showUpdatePopup = () => {
         if (window.gxToast) {
-            window.gxToast("Aggiornamento Disponibile! 🚀 Clicca nelle impostazioni per scaricarlo.", 'info', 6000);
+            window.gxToast(window.t('updater.available'), 'info', 6000);
         }
     };
 
@@ -29,7 +29,7 @@ export const initUpdater = () => {
 
     window.electronAPI.onUpdateReady(() => {
         // Notifica finale quando il download è completato
-        window.gxToast("Download Completato! 📦 L'aggiornamento è pronto per l'installazione.", 'info', 8000);
+        window.gxToast(window.t('updater.completed'), 'info', 8000);
     });
 
     // Primo controllo all'avvio dopo 10 secondi

@@ -1,0 +1,331 @@
+{
+    "app": {
+        "name": "GXCode Studio",
+        "description": "Professional GX Environment. Select a file from the Explorer sidebar to start coding.",
+        "engine": "GXCODE ENGINE • V3.0 CORE"
+    },
+    "header": {
+        "marketAgents": "Agent Market",
+        "marketSkills": "Skills Market",
+        "marketAddons": "Addons Market",
+        "devtools": "Open DevTools",
+        "settings": "Settings"
+    },
+    "activity": {
+        "explorer": "Explorer",
+        "search": "Search",
+        "git": "Source Control",
+        "debug": "Debug",
+        "testing": "Testing"
+    },
+    "explorer": {
+        "title": "Local Project",
+        "openFolder": "Open Folder",
+        "files": "📁 Files",
+        "tickets": "🎫 Tickets",
+        "emptyTitle": "You haven't opened any folder yet.",
+        "emptyDesc": "Press the Open button at the top of the panel.",
+        "deleteConfirm": "Permanently delete this file?\nThis operation is not reversible.",
+        "deleteBtn": "Delete"
+    },
+    "sidebar": {
+        "explorer": "Explorer",
+        "search": "Search",
+        "git": "Source Control",
+        "debug": "Debug",
+        "testing": "Testing",
+        "agents": "Agents",
+        "skills": "Skills",
+        "addons": "Addons",
+        "search_label": "Search...",
+        "noResults": "No results",
+        "searchHint": "Try changing your search criteria",
+        "editTooltip": "Edit and Assign Skills",
+        "deleteTooltip": "Uninstall permanently",
+        "files": "📁 Files",
+        "tickets": "🎫 Tickets",
+        "syncingCore": "Syncing Core..."
+    },
+    "tickets": {
+        "type": "Type",
+        "priority": "Priority",
+        "state": "State"
+    },
+    "search": {
+        "title": "Search",
+        "placeholder": "Search in files...",
+        "noResults": "No results found",
+        "searching": "Searching...",
+        "noProject": "Open a project from Explorer before searching",
+        "idle": "No search started"
+    },
+    "git": {
+        "title": "Source Control",
+        "initializing": "Initializing Git...",
+        "refreshing": "Refreshing Status...",
+        "error": "Git Error",
+        "retry": "Retry",
+        "noChanges": "No Changes Found",
+        "changes": "Changes",
+        "commitPlaceholder": "Commit message...",
+        "commitTo": "Commit to {branch}",
+        "refresh": "Refresh",
+        "stage": "Stage Change",
+        "pull": "Git Pull",
+        "push": "Git Push",
+        "pullSuccess": "Pull completed!",
+        "pullError": "Pull failed: {error}",
+        "pushSuccess": "Push completed!",
+        "pushError": "Push failed: {error}",
+        "status": {
+            "m": "Modified",
+            "a": "Added",
+            "d": "Deleted",
+            "u": "Untracked",
+            "unknown": "Unknown"
+        }
+    },
+    "testing": {
+        "title": "Test Explorer",
+        "runAll": "Run All Playwright",
+        "scanHint": "Open workspace to scan for tests..."
+    },
+    "terminal": {
+        "tab": "Terminal",
+        "problems": "Problems",
+        "output": "Output",
+        "debugConsole": "Debug Console",
+        "ports": "Ports",
+        "hidePanel": "Hide Bottom Panel",
+        "noProblems": "No problems detected in workspace.",
+        "logsHint": "System logs will appear here.",
+        "newPs": "New PowerShell",
+        "newCmd": "New CMD",
+        "newBash": "New Git Bash",
+        "clear": "Clear Terminal",
+        "split": "Split Terminal",
+        "closeHint": "Right click or mouse wheel to close",
+        "splitError": "Open at least one other terminal before splitting the view!",
+        "errorStart": "[GX ERROR] Failed to start {shell}",
+        "errorDetail": "Detail: {error}",
+        "errorAdvice": "Advice: Make sure Git Bash is installed in standard paths."
+    },
+    "problems": {
+        "empty": "No problems detected in workspace."
+    },
+    "settings": {
+        "title": "Options",
+        "close": "Close",
+        "tabs": {
+            "preferences": "Preferences",
+            "keybinds": "Keybinds",
+            "mcp": "MCP Server",
+            "youtrack": "MCP Youtrack Server",
+            "marketplace": "Marketplace & Repo",
+            "appearance": "Appearance",
+            "language": "Language",
+            "updates": "Updates"
+        },
+        "preferences": {
+            "title": "Editor Preferences",
+            "autoSave": "Auto-Save",
+            "autoSaveDesc": "Automatically save files after changes",
+            "fontSize": "Editor Font Size",
+            "tabSize": "Tab Size",
+            "wordWrap": "Word Wrap",
+            "wordWrapDesc": "Enable word wrapping in editor",
+            "minimap": "Minimap",
+            "minimapDesc": "Show/hide the code minimap",
+            "autoUpdate": "Auto Update Check",
+            "autoUpdateDesc": "Check for updates in background",
+            "termFontSize": "Terminal Font Size"
+        },
+        "keybinds": {
+            "description": "Manage keyboard shortcuts for quick actions.",
+            "searchProject": "Search entire project",
+            "format": "Format (Prettier)",
+            "openMarketplace": "Open Marketplace",
+            "switchExplorer": "Switch Explorer/Tickets"
+        },
+        "appearance": {
+            "title": "Select Interface",
+            "skinDesc": "Layout optimized for {skin}",
+            "customGrad": "Custom Gradient Color"
+        },
+        "language": {
+            "title": "System Language",
+            "desc": "Choose the GXCode system language. Switching requires a dashboard restart.",
+            "it_label": "IT",
+            "en_label": "GB",
+            "italian": "Italiano",
+            "english": "English"
+        },
+        "updates": {
+            "softwareUpdate": "Software Update",
+            "description": "Keeping GXCode updated ensures the latest features and security patches.",
+            "updateNow": "Update Now",
+            "downloading": "Downloading: {percent}%",
+            "upToDate": "GXCode is up to date",
+            "restart": "Restart now 🛠️",
+            "retry": "Retry",
+            "checking": "Checking...",
+            "currentVersion": "Current Version",
+            "channel": "Channel",
+            "systemInfo": "System Information",
+            "officialChannel": "Official Git"
+        },
+        "mcp": {
+            "title": "Configure New Server",
+            "predefined": "Predefined Servers",
+            "activeList": "Active MCP Servers ({count})",
+            "empty": "Configure your first MCP server to extend AI capabilities.",
+            "name": "ID Name",
+            "url": "Endpoint URL",
+            "register": "Register MCP Server",
+            "placeholderName": "e.g. My Google Search",
+            "placeholderUrl": "http://localhost:XXXX",
+            "active": "Active",
+            "inactive": "Inactive",
+            "toastSuccess": "MCP Server registered successfully! 🚀",
+            "toastError": "Please fill in all fields.",
+            "toastTemplate": "{name} template loaded. Complete the configuration! ✨"
+        },
+        "youtrack": {
+            "desc": "Configure specific integration for Youtrack tickets via MCP.",
+            "url": "Server URL",
+            "token": "App Token",
+            "sync": "Enable Ticket Sync",
+            "save": "Save Configuration",
+            "success": "Configuration saved successfully!"
+        },
+        "skins": {
+            "dark": "Dark Mode (Default)",
+            "light": "Light Mode",
+            "classic": "Classic Layout",
+            "apple": "Apple Style",
+            "aero": "Aero Glass",
+            "liquid-glass": "Liquid Glass",
+            "custom-gradient": "Custom Gradient",
+            "anime": "Anime Style"
+        }
+    },
+    "updater": {
+        "available": "Update Available! 🚀 Click in settings to download it.",
+        "completed": "Download Complete! 📦 The update is ready to install.",
+        "alreadyLatest": "You are already on the latest version of GXCode!",
+        "error": "Error during update"
+    },
+    "dialogs": {
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "ok": "OK"
+    },
+    "panes": {
+        "logs": "System logs will appear here.",
+        "terminalInit": "Terminal Initializing..."
+    },
+    "categories": {
+        "all": "All",
+        "tester": "Tester",
+        "sviluppatore": "Developer",
+        "devops": "DevOps"
+    },
+    "panels": {
+        "toggleLeft": "Toggle Explorer/Tickets (Left)",
+        "toggleTerminal": "Toggle Terminal (Bottom)",
+        "toggleRight": "Toggle Agents/Skills (Right)"
+    },
+    "contextMenu": {
+        "newFile": "New File",
+        "newFolder": "New Folder",
+        "delete": "Delete",
+        "reveal": "Reveal in Explorer",
+        "copyPath": "Copy Path",
+        "enterName": "Enter name for",
+        "file": "file",
+        "folder": "folder",
+        "deleteConfirm": "Are you sure you want to permanently delete this item?\n\n{path}",
+        "deleteError": "Delete error: {error}",
+        "createError": "Creation error: {error}"
+    },
+    "debug": {
+        "title": "Debug",
+        "start": "Start",
+        "stop": "Stop",
+        "continue": "Continue (F5)",
+        "stepOver": "Step Over (F10)",
+        "callStack": "Call Stack",
+        "variables": "Variables (Local)",
+        "breakpoints": "Breakpoints",
+        "reset": "Reset",
+        "noProcess": "No active process.",
+        "scopeEmpty": "Scope empty.",
+        "noBreakpoints": "No breakpoints set.",
+        "line": "line",
+        "toastOpen": "Open a file to start debugging",
+        "toastStart": "Starting Debug Session... 🐛",
+        "toastError": "Debug start error: {error}",
+        "toastStop": "Debug Terminated ⏹️",
+        "toastPause": "Paused at line {line}"
+    },
+    "tests": {
+        "title": "Test",
+        "openWorkspace": "Open workspace to scan tests...",
+        "noTests": "No test files (.spec.js) found.",
+        "scanning": "Scanning Spec...",
+        "error": "Error: {error}",
+        "runningAll": "Running All...",
+        "runAll": "Run All Tests (Playwright)",
+        "debugTooltip": "Debug Test (Playwright Inspector)"
+    },
+    "tabs": {
+        "diff": "Show changes",
+        "split": "Split editor",
+        "prev": "Previous tab (Alt+←)",
+        "next": "Next tab (Alt+→)",
+        "more": "More actions"
+    },
+    "marketplace": {
+        "title": "GX Marketplace",
+        "noModules": "No modules found. Try another search.",
+        "install": "Install",
+        "installed": "Installed ✓",
+        "installing": "⏳",
+        "installOk": "✅ OK",
+        "installError": "❌ Error",
+        "agentsTab": "🤖 Agents",
+        "skillsTab": "📖 Skills",
+        "addonsTab": "🧩 Addons",
+        "manageSources": "Manage Sources",
+        "searchPlaceholder": "Search in {tab}...",
+        "agentsSub": "Choose from the best certified agents from Agensi, DeepNLP and OpenSkills.",
+        "skillsSub": "Unified library of tools and skills in SKILL.md format for your agents.",
+        "addonsSub": "Explore and install thousands of extensions via Open VSX.",
+        "vsxNote": "Note: GXCode extracts metadata and assets directly from the Open VSX registry for a native experience.",
+        "syncing": "Syncing...",
+        "refresh": "Refresh Catalog"
+    },
+    "crud": {
+        "edit": "Edit {type}",
+        "new": "New {type}",
+        "agent": "Agent",
+        "skill": "Skill",
+        "addon": "Addon",
+        "name": "Name",
+        "category": "Category / Tag",
+        "prompt": "System Prompt",
+        "assignSkills": "🖇️ Assign Skills to Agent",
+        "namePlaceholder": "Example: React Expert",
+        "catPlaceholder": "Example: developer, tester, cloud...",
+        "promptPlaceholder": "You are an expert developer...",
+        "cancel": "Cancel",
+        "publish": "Publish",
+        "save": "💾 Save / Sync",
+        "nameRequired": "Name is required",
+        "syncing": "API Syncing...",
+        "noRepo": "No enabled repository. Add one in Settings.",
+        "sent": "✅ Sent!",
+        "error": "❌ Error",
+        "publishing": "Uploading..."
+    }
+}

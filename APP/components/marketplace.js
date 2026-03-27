@@ -6,7 +6,7 @@ const modalsRoot = document.getElementById('modals-root');
 window.__marketCache = new Map();
 
 const renderMarketplaceContent = (items, type) => {
-    if (!items || items.length === 0) return `<div class="text-[11px] text-gray-500 italic p-6 text-center border border-dashed border-gray-800 rounded-xl bg-black/20">Nessun modulo trovato. Prova un'altra ricerca.</div>`;
+    if (!items || items.length === 0) return `<div class="text-[11px] text-gray-500 italic p-6 text-center border border-dashed border-gray-800 rounded-xl bg-black/20" data-i18n="marketplace.noModules">${window.t('marketplace.noModules')}</div>`;
 
     return items.map(item => {
         const key = item.slug || String(item.id);
@@ -38,7 +38,7 @@ const renderMarketplaceContent = (items, type) => {
                 <button onclick="window.installMarketItem('${type}', '${key}', event)" 
                         class="text-[10px] px-3 py-1.5 font-bold uppercase tracking-wider rounded-md bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-lg shadow-blue-900/20 active:scale-95 ${item.isInstalled ? 'opacity-30 cursor-not-allowed bg-emerald-600' : ''}"
                         ${item.isInstalled ? 'disabled' : ''}>
-                    ${item.isInstalled ? 'Installato ✓' : 'Installa'}
+                    ${item.isInstalled ? window.t('marketplace.installed') : window.t('marketplace.install')}
                 </button>
             </div>
         </div>
@@ -95,14 +95,14 @@ const renderMarketplace = () => {
                     </div>
                     
                     <div class="flex bg-[#0d1117] p-1 rounded-xl border border-gray-800/80 shadow-inner">
-                        <button onclick="window.setState({ activeMarketplaceTab: 'agents', activeMarketplaceCategory: 'all' })" class="${getTabClass('agents')} rounded-l-lg">🤖 Agenti</button>
-                        <button onclick="window.setState({ activeMarketplaceTab: 'skills', activeMarketplaceCategory: 'all' })" class="${getTabClass('skills')}">📖 Skills</button>
-                        <button onclick="window.setState({ activeMarketplaceTab: 'addons', activeMarketplaceCategory: 'all' })" class="${getTabClass('addons')} rounded-r-lg">🧩 Addons</button>
+                        <button onclick="window.setState({ activeMarketplaceTab: 'agents', activeMarketplaceCategory: 'all' })" class="${getTabClass('agents')} rounded-l-lg" data-i18n="marketplace.agentsTab">${window.t('marketplace.agentsTab')}</button>
+                        <button onclick="window.setState({ activeMarketplaceTab: 'skills', activeMarketplaceCategory: 'all' })" class="${getTabClass('skills')}" data-i18n="marketplace.skillsTab">${window.t('marketplace.skillsTab')}</button>
+                        <button onclick="window.setState({ activeMarketplaceTab: 'addons', activeMarketplaceCategory: 'all' })" class="${getTabClass('addons')} rounded-r-lg" data-i18n="marketplace.addonsTab">${window.t('marketplace.addonsTab')}</button>
                     </div>
 
                     <button onclick="window.openSourceSettings()" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600/10 text-blue-400 border border-blue-500/20 hover:bg-blue-600/20 transition-all font-bold text-[10px] uppercase tracking-widest active:scale-95">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                        Manage Sources
+                        <span data-i18n="marketplace.manageSources">${window.t('marketplace.manageSources')}</span>
                     </button>
 
                     <button onclick="window.closeMarketplace()" class="w-10 h-10 rounded-xl bg-gray-800/30 text-gray-500 hover:text-white hover:bg-red-500/40 flex items-center justify-center transition border border-gray-700/50 active:scale-90">✕</button>
@@ -113,8 +113,8 @@ const renderMarketplace = () => {
                     <div class="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
                         <div class="flex items-center gap-2 pr-4 border-r border-gray-800">
                              ${state.isMarketplaceLoading 
-                                ? `<span class="flex items-center gap-1.5 text-[9px] font-bold text-blue-400 animate-pulse uppercase tracking-widest"><div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div> Syncing...</span>`
-                                : `<button onclick="api.loadMarketplace()" class="p-1.5 rounded-lg bg-gray-800/30 text-gray-500 hover:text-white hover:bg-gray-800 transition-all active:scale-90 shadow-sm" title="Refresh Catalog">
+                                ? `<span class="flex items-center gap-1.5 text-[9px] font-bold text-blue-400 animate-pulse uppercase tracking-widest" data-i18n="marketplace.syncing"><div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div> ${window.t('marketplace.syncing')}</span>`
+                                : `<button onclick="api.loadMarketplace()" class="p-1.5 rounded-lg bg-gray-800/30 text-gray-500 hover:text-white hover:bg-gray-800 transition-all active:scale-90 shadow-sm" data-i18n="[title]marketplace.refresh" title="${window.t('marketplace.refresh')}">
                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                                    </button>`
                              }
@@ -134,7 +134,7 @@ const renderMarketplace = () => {
                     
                     <div class="flex items-center bg-[#161b22] border border-gray-800 rounded-xl px-4 py-2 focus-within:border-blue-500/50 transition-all w-80 shadow-inner group">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="text-gray-600 group-focus-within:text-blue-500 transition-colors mr-3" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <input id="market-global-search" type="text" placeholder="Cerca in ${activeTab}..." class="bg-transparent border-none outline-none text-xs text-gray-300 w-full font-medium" value="${currentSearch}">
+                        <input id="market-global-search" type="text" data-i18n="[placeholder]marketplace.searchPlaceholder" placeholder="${window.t('marketplace.searchPlaceholder').replace('{tab}', activeTab)}" class="bg-transparent border-none outline-none text-xs text-gray-300 w-full font-medium" value="${currentSearch}">
                     </div>
                 </div>
                 
@@ -144,7 +144,7 @@ const renderMarketplace = () => {
                         <div class="animate-slide-up">
                             <div class="mb-8">
                                 <h3 class="text-2xl font-light text-gray-200 tracking-tight">Advanced AI Personas</h3>
-                                <p class="text-gray-500 text-sm mt-1">Scegli tra i migliori agenti certificati da Agensi, DeepNLP e OpenSkills.</p>
+                                <p class="text-gray-500 text-sm mt-1" data-i18n="marketplace.agentsSub">${window.t('marketplace.agentsSub')}</p>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 ${mAgents}
@@ -156,7 +156,7 @@ const renderMarketplace = () => {
                         <div class="animate-slide-up">
                             <div class="mb-8">
                                 <h3 class="text-2xl font-light text-gray-200 tracking-tight">System Capabilities</h3>
-                                <p class="text-gray-500 text-sm mt-1">Libreria unificata di tool e skill in formato SKILL.md per i tuoi agenti.</p>
+                                <p class="text-gray-500 text-sm mt-1" data-i18n="marketplace.skillsSub">${window.t('marketplace.skillsSub')}</p>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 ${mSkills}
@@ -169,11 +169,11 @@ const renderMarketplace = () => {
                             <div class="flex flex-col gap-6">
                                 <div class="mb-2">
                                     <h3 class="text-2xl font-light text-gray-200 tracking-tight">IDE Personalization</h3>
-                                    <p class="text-gray-500 text-sm mt-1">Esplora e installa migliaia di estensioni tramite Open VSX.</p>
+                                    <p class="text-gray-500 text-sm mt-1" data-i18n="marketplace.addonsSub">${window.t('marketplace.addonsSub')}</p>
                                 </div>
                                 <div class="mb-4 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl flex flex-col gap-1">
                                     <span class="text-[10px] font-bold text-blue-400 uppercase tracking-widest font-mono">Open VSX Store Integration</span>
-                                    <p class="text-[11px] text-gray-500 italic">Nota: GXCode estrae metadati e asset direttamente dal registro Open VSX per un'esperienza nativa.</p>
+                                    <p class="text-[11px] text-gray-500 italic" data-i18n="marketplace.vsxNote">${window.t('marketplace.vsxNote')}</p>
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     ${mAddons}
@@ -218,7 +218,7 @@ window.closeMarketplace = () => setState({ isMarketplaceOpen: false });
 window.installMarketItem = async (type, id, event) => {
     const btn = event.target;
     const originalHtml = btn.innerHTML;
-    btn.innerHTML = '<span class="animate-spin inline-block">⏳</span>';
+    btn.innerHTML = `<span class="animate-spin inline-block">${window.t('marketplace.installing')}</span>`;
     btn.disabled = true;
 
     try {
@@ -237,7 +237,7 @@ window.installMarketItem = async (type, id, event) => {
         }, 1000);
     } catch (err) {
         console.error(err);
-        btn.innerHTML = '❌ ERRORE';
+        btn.innerHTML = window.t('marketplace.installError');
         btn.disabled = false;
         setTimeout(() => btn.innerHTML = originalHtml, 2000);
     }
