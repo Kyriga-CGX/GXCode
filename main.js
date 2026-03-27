@@ -967,35 +967,55 @@ app.whenReady().then(() => {
 
   ipcMain.handle('get-app-version', () => app.getVersion());
 
+  let isUpdateCheckActive = false;
+
   ipcMain.handle('check-for-updates', async () => {
-    if (!app.isPackaged) return false;
+    if (!app.isPackaged || isUpdateCheckActive) return false;
+    isUpdateCheckActive = true;
     try {
       const result = await autoUpdater.checkForUpdates();
+      isUpdateCheckActive = false;
       return !!result.updateInfo;
     } catch (err) {
+      isUpdateCheckActive = false;
+      // Se è già in corso un controllo interno di electron-updater, non lanciamo errore
+      if (err.message && err.message.includes("Please check update first")) return true;
       return false;
     }
   });
 
   ipcMain.handle('perform-update', async (event) => {
     if (!app.isPackaged) return false;
+    if (isUpdateCheckActive) {
+      throw new Error("Verifica aggiornamenti già in corso. Attendi un istante...");
+    }
+    
+    isUpdateCheckActive = true;
     try {
-        const checkResult = await autoUpdater.checkForUpdates();
-        if (checkResult && checkResult.updateInfo) {
-            await autoUpdater.downloadUpdate();
-            return true;
-        } else {
-            throw new Error("Sei già all'ultima versione di GXCode.");
-        }
+      const checkResult = await autoUpdater.checkForUpdates();
+      isUpdateCheckActive = false;
+      
+      if (checkResult && checkResult.updateInfo) {
+        await autoUpdater.downloadUpdate();
+        return true;
+      } else {
+        return false; // Aggiornato
+      }
     } catch (err) {
-        const msg = err.message || "";
-        if (msg.includes('No published versions') || msg.includes('latest.yml')) {
-            throw new Error("Errore Release: GitHub non contiene i file necessari (latest.yml). Assicurati di aver pubblicato usando 'npm run publish'.");
-        }
-        if (msg.includes('404')) {
-          throw new Error("Errore 404: Impossibile scaricare l'aggiornamento. Controlla che la release non sia stata rimossa o che il repository sia pubblico.");
-        }
-        throw err;
+      isUpdateCheckActive = false;
+      const msg = err.message || "";
+      // Se è già in corso un controllo, proviamo a chiamare downloadUpdate direttamente se possibile
+      // o almeno non blocchiamo l'utente con un errore bloccante se sappiamo che sta già caricando.
+      if (msg.includes("Please check update first")) {
+          try {
+             await autoUpdater.downloadUpdate();
+             return true;
+          } catch(e) { return true; }
+      }
+      if (msg.includes('No published versions') || msg.includes('latest.yml')) {
+        throw new Error("Errore Release: GitHub non contiene i file necessari (latest.yml).");
+      }
+      throw err;
     }
   });
 

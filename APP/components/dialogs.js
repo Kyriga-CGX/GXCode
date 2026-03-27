@@ -78,8 +78,13 @@ export const gxToast = (message, type = 'info', duration = 4000) => {
     if (!container) {
         container = document.createElement('div');
         container.id = 'toast-container';
-        container.className = 'fixed bottom-6 left-6 z-[200] flex flex-col gap-3 pointer-events-none';
+        container.className = 'fixed bottom-6 left-6 flex flex-col gap-3 pointer-events-none';
+        container.style.zIndex = "99999"; // Garanzia assoluta sopra ogni modale (Tailwind JIT potrebbe mancare nel bundle)
         document.body.appendChild(container);
+    } else {
+        // Assicurati che sia l'ultimo elemento per lo stacking context
+        document.body.appendChild(container);
+        container.style.zIndex = "99999";
     }
 
     const toast = document.createElement('div');
