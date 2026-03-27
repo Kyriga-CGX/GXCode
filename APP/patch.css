@@ -787,3 +787,13 @@ html[data-cgx-theme="light"] select {
     width: 14px;
     height: 14px;
 }
+
+/* -- Context Menu Animations -- */
+@keyframes gx-zoom-in {
+    from { opacity: 0; transform: scale(0.95) translateY(-5px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+#gx-context-menu {
+    animation: gx-zoom-in 0.1s ease-out forwards;
+}

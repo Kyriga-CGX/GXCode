@@ -1,4 +1,5 @@
 import { state, subscribe, setState } from '../core/state.js';
+import { showContextMenu } from './contextMenu.js';
 
 let editor = null;
 let editorRight = null;
@@ -174,7 +175,6 @@ const renderFileTree = (files, depth = 0) => {
                 ${folderIconHtml}
                 <span class="gx-nm ${statusClass}">${f.name}</span>
                 ${status ? `<span class="text-[8px] font-bold ${statusClass} opacity-80 ml-auto mr-3">${status === 'M' ? '●' : '●'}</span>` : ''}
-                ${delBtn(f.path)}
             </div>
             ${isExpanded && f.children ? `<div class="gx-kids" style="--gx:${pl+10}px">${renderFileTree(f.children, depth+1)}</div>` : ''}`;
         } else {
@@ -183,7 +183,6 @@ const renderFileTree = (files, depth = 0) => {
                 <span class="gx-fic">${fileIconHtml}</span>
                 <span class="gx-nm ml-1 ${statusClass}">${f.name}</span>
                 ${statusLabel ? `<span class="text-[9px] font-bold ${statusClass} opacity-80 ml-auto mr-3">${statusLabel}</span>` : ''}
-                ${delBtn(f.path)}
             </div>`;
         }
     }).join('');
@@ -259,7 +258,7 @@ export const initWorkspace = () => {
                     automaticLayout: true,
                     fontSize: 13,
                     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                    minimap: { enabled: false },
+                    minimap: { enabled: true, showSlider: 'mouseover', maxColumn: 80 },
                     lineNumbers: 'on',
                     glyphMargin: true,
                     roundedSelection: true,
@@ -425,12 +424,40 @@ export const initWorkspace = () => {
                     const symbols = getDocumentSymbols(model);
                     const currentSymbol = symbols?.slice().reverse().find(s => s.range.startLineNumber <= pos.lineNumber);
                     
+                    const pathParts = activeFileId.split('\\');
+                    const workspaceBase = state.workspaceData?.path || '';
+                    const workspaceBaseMatch = workspaceBase.split('\\').pop();
+                    
+                    // Trova l'indice dove inizia il workspace nel path completo
+                    let startIndex = pathParts.indexOf(workspaceBaseMatch);
+                    if (startIndex === -1) startIndex = 0;
+
+                    let breadcrumbsHtml = '';
+                    let currentPath = pathParts.slice(0, startIndex).join('\\');
+
+                    for (let i = startIndex; i < pathParts.length; i++) {
+                        const part = pathParts[i];
+                        if (!part) continue;
+                        
+                        if (currentPath) currentPath += '\\' + part;
+                        else currentPath = part;
+
+                        const isLast = i === pathParts.length - 1;
+                        const isFirst = i === startIndex;
+
+                        breadcrumbsHtml += `
+                            ${!isFirst ? '<span class="opacity-30">/</span>' : ''}
+                            <span class="${isLast ? 'text-gray-400' : 'hover:text-blue-400 cursor-pointer transition'} overflow-hidden truncate max-w-[120px]" 
+                                  ${!isLast ? `onclick="window.revealInTree('${currentPath.replace(/\\/g, '\\\\')}')"` : ''}>
+                                ${part}
+                            </span>
+                        `;
+                    }
+
                     bc.classList.remove('hidden');
                     bc.innerHTML = `
                         <div class="flex items-center gap-1.5 text-[10px] text-gray-500 font-bold uppercase tracking-widest whitespace-nowrap">
-                            <span class="hover:text-blue-400 cursor-pointer">GXCode</span>
-                            <span class="opacity-30">/</span>
-                            <span class="text-gray-400 overflow-hidden truncate max-w-[100px]">${fileName}</span>
+                            ${breadcrumbsHtml}
                             ${currentSymbol ? `
                                 <span class="opacity-30">/</span>
                                 <span class="text-blue-500 flex items-center gap-1 cursor-pointer hover:underline" onclick="window.jumpToSymbol(${currentSymbol.range.startLineNumber})">
@@ -446,6 +473,31 @@ export const initWorkspace = () => {
                     editor.revealLineInCenter(line);
                     editor.setPosition({ lineNumber: line, column: 1 });
                     editor.focus();
+                };
+
+                window.revealInTree = (path) => {
+                    console.log("[GX Breadcrumbs] Revealing path in tree:", path);
+                    const parts = path.split('\\');
+                    let current = '';
+                    let expandedFolders = [...(state.expandedFolders || [])];
+                    
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        current = current ? current + '\\' + parts[i] : parts[i];
+                        if (!expandedFolders.includes(current)) {
+                            expandedFolders.push(current);
+                        }
+                    }
+                    setState({ expandedFolders });
+                    
+                    // Scroll to element after state update and render
+                    setTimeout(() => {
+                        const el = document.querySelector(`[data-path="${path.replace(/\\/g, '\\\\')}"]`);
+                        if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            el.classList.add('gx-highlight-pulse');
+                            setTimeout(() => el.classList.remove('gx-highlight-pulse'), 2000);
+                        }
+                    }, 300);
                 };
 
                 editor.onDidChangeCursorPosition(() => updateBreadcrumbs());
@@ -498,6 +550,14 @@ export const initWorkspace = () => {
             console.error(err);
         }
         btnOpen.innerHTML = originalHtml;
+    };
+
+    treeContainer.oncontextmenu = (e) => {
+        const item = e.target.closest('.is-file, .is-folder');
+        if (!item) return;
+        const path = item.getAttribute('data-path').replace(/\//g, '\\');
+        const isFolder = item.classList.contains('is-folder');
+        showContextMenu(e, path, isFolder);
     };
 
     treeContainer.addEventListener('click', async (e) => {

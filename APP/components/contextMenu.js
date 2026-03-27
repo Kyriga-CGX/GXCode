@@ -1,397 +1,112 @@
-// APP/components/contextMenu.js
-// Right-click context menu for the file explorer tree
 import { state, setState } from '../core/state.js';
 
-// ─── Menu Item Definitions ──────────────────────────────────────────────────
-const SEPARATOR = { type: 'separator' };
+export const showContextMenu = (e, path, isDirectory) => {
+    e.preventDefault();
+    
+    // Remove existing menu
+    const existing = document.getElementById('gx-context-menu');
+    if (existing) existing.remove();
 
-const buildMenuItems = (targetPath, isDir, workspacePath) => {
-    const relPath = workspacePath 
-        ? targetPath.replace(workspacePath, '').replace(/^[\/\\]/, '')
-        : targetPath;
+    const menu = document.createElement('div');
+    menu.id = 'gx-context-menu';
+    menu.className = 'fixed bg-[#161b22] border border-[#30363d] rounded-lg shadow-2xl py-2 z-[9999] text-[12px] min-w-[180px] animate-in fade-in zoom-in duration-150 backdrop-blur-md';
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
 
-    return [
-        // Group 1
-        { id: 'new-file',    label: 'Nuovo File...',                     icon: '📄', shortcut: '' },
-        { id: 'new-folder',  label: 'Nuova Cartella...',                 icon: '📁', shortcut: '' },
-        { id: 'reveal',      label: 'Reveal in File Explorer',           icon: '🔍', shortcut: 'Shift+Alt+R' },
-        { id: 'open-term',   label: 'Apri nel Terminale Integrato',      icon: '⌨️',  shortcut: '' },
-        SEPARATOR,
-        // Group 2 – Java
-        { id: 'java-file',   label: 'Nuovo File Java',                   icon: '☕', shortcut: '', submenu: [
-            { id: 'java-class',    label: 'Class...' },
-            { id: 'java-iface',    label: 'Interface...' },
-            { id: 'java-enum',     label: 'Enum...' },
-            { id: 'java-record',   label: 'Record...' },
-            { id: 'java-annot',    label: 'Annotation...' },
-            { id: 'java-abstract', label: 'Abstract Class...' },
-        ]},
-        { id: 'java-pkg',    label: 'Nuovo Pacchetto Java...',           icon: '📦', shortcut: '' },
-        { id: 'java-proj',   label: 'Nuovo Progetto Java...',            icon: '🏗️',  shortcut: '' },
-        { id: 'maven',       label: 'Maven',                             icon: '🔧', shortcut: '', submenu: [
-            { id: 'maven-project', label: 'New Project...' },
-            { id: 'maven-module',  label: 'New Module...' },
-        ]},
-        { id: 'share',       label: 'Condividi',                         icon: '🔗', shortcut: '', submenu: [
-            { id: 'share-link',    label: 'Copy vscode.dev Link' },
-        ]},
-        SEPARATOR,
-        // Group 3 – Workspace
-        { id: 'add-ws',      label: 'Aggiungi la Cartella al Workspace...', icon: '➕', shortcut: '' },
-        { id: 'open-set',    label: 'Apri Impostazioni Cartella',        icon: '⚙️',  shortcut: '' },
-        { id: 'remove-ws',   label: 'Rimuovi la Cartella dal Workspace', icon: '✖️',  shortcut: '' },
-        SEPARATOR,
-        // Group 4
-        { id: 'find',        label: 'Trova nella Cartella...',           icon: '🔎', shortcut: 'Shift+Alt+F' },
-        SEPARATOR,
-        { id: 'paste',       label: 'Incolla',                           icon: '📋', shortcut: 'Ctrl+V' },
-        SEPARATOR,
-        { id: 'copy-path',   label: 'Copia Percorso',                   icon: '📎', shortcut: 'Shift+Alt+C' },
-        { id: 'copy-rel',    label: 'Copia Percorso Relativo',          icon: '📎', shortcut: 'Ctrl+K Ctrl+Shift+C' },
-        SEPARATOR,
-        { id: 'python-proj', label: 'Aggiungi come Progetto Python',     icon: '🐍', shortcut: '' },
+    // Modern items construction
+    const items = [
+        { label: 'New File', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>', onClick: () => createItem(path, isDirectory, 'file') },
+        { label: 'New Folder', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>', onClick: () => createItem(path, isDirectory, 'folder') },
+        { divider: true },
+        { label: 'Reveal in Explorer', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>', onClick: () => revealInExplorer(path) },
+        { label: 'Copy Path', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>', onClick: () => navigator.clipboard.writeText(path) },
+        { divider: true },
+        { label: 'Delete', icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>', color: 'text-red-400 hover:text-white hover:bg-red-500/80', onClick: () => deleteItem(path) },
     ];
-};
-
-// ─── DOM Builder ────────────────────────────────────────────────────────────
-const buildMenuEl = (items, _targetPath, isDir, workspacePath) => {
-    const ul = document.createElement('ul');
-    ul.className = 'gx-ctx-list';
 
     items.forEach(item => {
-        if (item.type === 'separator') {
-            const li = document.createElement('li');
-            li.className = 'gx-ctx-sep';
-            ul.appendChild(li);
+        if (item.divider) {
+            const d = document.createElement('div');
+            d.className = 'h-[1px] bg-[#30363d] my-1 mx-2 opacity-50';
+            menu.appendChild(d);
             return;
         }
-
-        const li = document.createElement('li');
-        li.className = 'gx-ctx-item';
-        li.dataset.id = item.id;
-
-        const hasSubmenu = item.submenu && item.submenu.length > 0;
-
-        li.innerHTML = `
-            <span class="gx-ctx-icon">${item.icon || ''}</span>
-            <span class="gx-ctx-label">${item.label}</span>
-            ${item.shortcut ? `<span class="gx-ctx-shortcut">${item.shortcut}</span>` : ''}
-            ${hasSubmenu ? `<span class="gx-ctx-arrow">›</span>` : ''}
+        const div = document.createElement('div');
+        div.className = `flex items-center px-3 py-1.5 hover:bg-blue-600 cursor-pointer text-[#c9d1d9] transition-all rounded-md mx-1 group ${item.color || ''}`;
+        div.innerHTML = `
+            <span class="mr-2.5 opacity-60 group-hover:opacity-100 transition-opacity">${item.icon}</span>
+            <span class="flex-1">${item.label}</span>
         `;
-
-        if (hasSubmenu) {
-            const sub = document.createElement('ul');
-            sub.className = 'gx-ctx-list gx-ctx-submenu';
-            item.submenu.forEach(s => {
-                const sli = document.createElement('li');
-                sli.className = 'gx-ctx-item';
-                sli.dataset.id = s.id;
-                sli.innerHTML = `<span class="gx-ctx-icon"></span><span class="gx-ctx-label">${s.label}</span>`;
-                sub.appendChild(sli);
-            });
-            li.appendChild(sub);
-            li.classList.add('gx-ctx-has-sub');
-        }
-
-        ul.appendChild(li);
+        div.onclick = (ev) => {
+            ev.stopPropagation();
+            item.onClick();
+            menu.remove();
+        };
+        menu.appendChild(div);
     });
 
-    return ul;
+    document.body.appendChild(menu);
+
+    // Dynamic repositioning if menu overflows screen
+    const rect = menu.getBoundingClientRect();
+    if (rect.bottom > window.innerHeight) {
+        menu.style.top = `${e.clientY - rect.height}px`;
+    }
+    if (rect.right > window.innerWidth) {
+        menu.style.left = `${e.clientX - rect.width}px`;
+    }
+
+    const closeHandler = () => {
+        menu.remove();
+        window.removeEventListener('mousedown', closeHandler);
+    };
+    setTimeout(() => window.addEventListener('mousedown', closeHandler), 10);
 };
 
-// ─── Inject CSS ──────────────────────────────────────────────────────────────
-const injectCSS = () => {
-    if (document.getElementById('gx-ctx-style')) return;
-    const style = document.createElement('style');
-    style.id = 'gx-ctx-style';
-    style.textContent = `
-        #gx-context-menu {
-            position: fixed;
-            z-index: 9999;
-            background: #1c2128;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            padding: 4px 0;
-            min-width: 230px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
-            font-family: -apple-system, system-ui, sans-serif;
-            font-size: 12px;
-            animation: gxCtxIn 0.08s ease;
-            user-select: none;
-        }
-        @keyframes gxCtxIn {
-            from { opacity: 0; transform: scale(0.97) translateY(-4px); }
-            to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .gx-ctx-list {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-        .gx-ctx-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 10px 5px 8px;
-            cursor: pointer;
-            color: #c9d1d9;
-            border-radius: 3px;
-            margin: 0 4px;
-            position: relative;
-            white-space: nowrap;
-        }
-        .gx-ctx-item:hover {
-            background: #2188ff;
-            color: #fff;
-        }
-        .gx-ctx-icon {
-            width: 16px;
-            text-align: center;
-            font-size: 11px;
-            flex-shrink: 0;
-        }
-        .gx-ctx-label { flex: 1; }
-        .gx-ctx-shortcut {
-            color: #6e7681;
-            font-size: 10px;
-            margin-left: 16px;
-        }
-        .gx-ctx-item:hover .gx-ctx-shortcut { color: rgba(255,255,255,0.6); }
-        .gx-ctx-arrow {
-            font-size: 14px;
-            opacity: 0.6;
-            margin-left: 4px;
-        }
-        .gx-ctx-sep {
-            height: 1px;
-            background: #30363d;
-            margin: 4px 0;
-        }
-        /* Submenu */
-        .gx-ctx-submenu {
-            display: none;
-            position: absolute;
-            left: calc(100% + 4px);
-            top: -4px;
-            background: #1c2128;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            padding: 4px 0;
-            min-width: 180px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-            z-index: 10000;
-        }
-        .gx-ctx-has-sub:hover > .gx-ctx-submenu { display: block; }
-        /* Inline input for new file/folder */
-        .gx-tree-inline-input {
-            background: #0d1117;
-            border: 1px solid #2188ff;
-            color: #c9d1d9;
-            font-size: 11px;
-            font-family: monospace;
-            padding: 2px 6px;
-            border-radius: 3px;
-            outline: none;
-            width: calc(100% - 28px);
-            margin-left: 14px;
-        }
-    `;
-    document.head.appendChild(style);
-};
+const createItem = async (targetPath, isTargetDirectory, type) => {
+    const parentDir = isTargetDirectory ? targetPath : targetPath.substring(0, targetPath.lastIndexOf('\\'));
+    const name = prompt(`Inserisci il nome del ${type === 'file' ? 'file' : 'cartella'}:`);
+    if (!name) return;
 
-// ─── Main Menu Instance ──────────────────────────────────────────────────────
-let menuEl = null;
+    let res;
+    if (type === 'file') {
+        res = await window.electronAPI.fsCreateFile(parentDir, name);
+    } else {
+        res = await window.electronAPI.fsCreateFolder(parentDir, name);
+    }
 
-const closeMenu = () => {
-    if (menuEl) { menuEl.remove(); menuEl = null; }
-};
-
-const showMenu = (x, y, targetPath, isDir) => {
-    closeMenu();
-    injectCSS();
-
-    const workspacePath = state.workspaceData?.path || '';
-    const items = buildMenuItems(targetPath, isDir, workspacePath);
-
-    menuEl = document.createElement('div');
-    menuEl.id = 'gx-context-menu';
-    menuEl.appendChild(buildMenuEl(items, targetPath, isDir, workspacePath));
-
-    document.body.appendChild(menuEl);
-
-    // Position: keep inside viewport
-    const vw = window.innerWidth, vh = window.innerHeight;
-    menuEl.style.left = Math.min(x, vw - 240) + 'px';
-    menuEl.style.top  = Math.min(y, vh - menuEl.offsetHeight - 20) + 'px';
-
-    menuEl.addEventListener('click', (e) => handleAction(e, targetPath, isDir, workspacePath));
-};
-
-// ─── Action Handler ──────────────────────────────────────────────────────────
-const handleAction = async (e, targetPath, isDir, workspacePath) => {
-    const item = e.target.closest('.gx-ctx-item');
-    if (!item) return;
-    const id = item.dataset.id;
-    if (!id) return;
-
-    closeMenu();
-
-    // Determine the directory context
-    const contextDir = isDir ? targetPath : targetPath.split(/[\/\\]/).slice(0, -1).join('\\') || workspacePath;
-
-    switch (id) {
-        case 'new-file':   await cmdNewFile(contextDir);   break;
-        case 'new-folder': await cmdNewFolder(contextDir); break;
-
-        case 'reveal':
-            if (window.electronAPI?.shellOpenPath) await window.electronAPI.shellOpenPath(contextDir);
-            break;
-
-        case 'open-term':
-            // Send a cd command to the active terminal
-            if (window.gxTerminalSendCd) window.gxTerminalSendCd(contextDir);
-            break;
-
-        case 'find':
-            // Switch to search pane and pre-populate
-            window.setState?.({ activeActivity: 'search', isLeftSidebarOpen: true });
-            setTimeout(() => {
-                const inp = document.getElementById('global-search-input');
-                if (inp) { inp.focus(); inp.value = ''; }
-            }, 100);
-            break;
-
-        case 'paste':       document.execCommand?.('paste'); break;
-        case 'copy-path':   navigator.clipboard.writeText(targetPath); showToast('Percorso copiato!'); break;
-        case 'copy-rel': {
-            const rel = workspacePath ? targetPath.replace(workspacePath, '').replace(/^[\/\\]/, '') : targetPath;
-            navigator.clipboard.writeText(rel);
-            showToast('Percorso relativo copiato!');
-            break;
-        }
-        case 'remove-ws':
-            window.setState?.({ workspaceData: null, openFiles: [], activeFileId: null });
-            localStorage.removeItem('gx-last-workspace');
-            break;
-
-        case 'share-link':
-            showToast('Funzionalità disponibile nella versione cloud.');
-            break;
-
-        // Java / Maven / Python stubs
-        case 'java-class':     showToast('Crea nuova Classe Java (coming soon)'); break;
-        case 'java-iface':     showToast('Crea nuova Interface Java (coming soon)'); break;
-        case 'java-enum':      showToast('Crea nuovo Enum Java (coming soon)'); break;
-        case 'java-record':    showToast('Crea nuovo Record Java (coming soon)'); break;
-        case 'java-annot':     showToast('Crea nuova Annotation Java (coming soon)'); break;
-        case 'java-abstract':  showToast('Crea nuova Abstract Class Java (coming soon)'); break;
-        case 'java-pkg':       showToast('Nuovo pacchetto Java (coming soon)'); break;
-        case 'java-proj':      showToast('Nuovo progetto Java (coming soon)'); break;
-        case 'maven-project':  showToast('Nuovo progetto Maven (coming soon)'); break;
-        case 'maven-module':   showToast('Nuovo modulo Maven (coming soon)'); break;
-        case 'python-proj':    showToast('Aggiunto come progetto Python (coming soon)'); break;
-        case 'add-ws':         showToast('Aggiungi cartella al workspace (coming soon)'); break;
-        case 'open-set':       showToast('Impostazioni cartella (coming soon)'); break;
-
-        default: break;
+    if (res.error) {
+        console.error("[GX FS] Creation error:", res.error);
+        alert(`Errore: ${res.error}`);
+    } else {
+        console.log(`[GX FS] ${type} creato:`, res.path);
+        refreshWorkspaceAndGit();
     }
 };
 
-// ─── Inline rename/create input ──────────────────────────────────────────────
-const cmdNewFile = async (dirPath) => {
-    const treeContainer = document.getElementById('workspace-tree-container');
-    if (!treeContainer) return;
-    showInlineInput(treeContainer, '📄 Nuovo file...', async (name) => {
-        if (!name) return;
-        const result = await window.electronAPI?.fsCreateFile(dirPath, name);
-        if (result?.error) { showToast('Errore: ' + result.error, true); return; }
-        await refreshWorkspace(dirPath);
-    });
+const deleteItem = async (path) => {
+    if (!confirm(`Sei sicuro di voler eliminare definitivamente questo elemento?\n\n${path}`)) return;
+    const res = await window.electronAPI.fsDelete(path);
+    if (res.error) {
+        alert(`Errore eliminazione: ${res.error}`);
+    } else {
+        refreshWorkspaceAndGit();
+    }
 };
 
-const cmdNewFolder = async (dirPath) => {
-    const treeContainer = document.getElementById('workspace-tree-container');
-    if (!treeContainer) return;
-    showInlineInput(treeContainer, '📁 Nuova cartella...', async (name) => {
-        if (!name) return;
-        const result = await window.electronAPI?.fsCreateFolder(dirPath, name);
-        if (result?.error) { showToast('Errore: ' + result.error, true); return; }
-        await refreshWorkspace(dirPath);
-    });
+const revealInExplorer = async (path) => {
+    await window.electronAPI.shellOpenPath(path);
 };
 
-const showInlineInput = (container, placeholder, onConfirm) => {
-    const existing = container.querySelector('.gx-tree-inline-input');
-    if (existing) existing.remove();
-
-    const input = document.createElement('input');
-    input.className = 'gx-tree-inline-input';
-    input.placeholder = placeholder;
-    container.prepend(input);
-    input.focus();
-
-    const confirm = () => { const v = input.value.trim(); input.remove(); onConfirm(v); };
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') confirm();
-        if (e.key === 'Escape') input.remove();
-    });
-    input.addEventListener('blur', () => setTimeout(() => { if (document.body.contains(input)) input.remove(); }, 150));
-};
-
-const refreshWorkspace = async (dirPath) => {
-    if (!window.electronAPI?.openSpecificFolder || !state.workspaceData) return;
-    const data = await window.electronAPI.openSpecificFolder(state.workspaceData.path);
-    if (data && !data.error) window.setState?.({ workspaceData: data });
-};
-
-// ─── Toast Notification ───────────────────────────────────────────────────────
-const showToast = (msg, isError = false) => {
-    const t = document.createElement('div');
-    t.textContent = msg;
-    t.style.cssText = `position:fixed;bottom:70px;left:50%;transform:translateX(-50%);
-        background:${isError ? '#b00020' : '#161b22'};color:#c9d1d9;
-        border:1px solid ${isError ? '#f00' : '#30363d'};border-radius:6px;
-        padding:8px 16px;font-size:11px;z-index:99999;
-        box-shadow:0 4px 16px rgba(0,0,0,0.5);animation:gxCtxIn .15s ease;`;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 2500);
-};
-
-// ─── Export / Init ────────────────────────────────────────────────────────────
-export const initContextMenu = () => {
-    injectCSS();
-
-    const attach = () => {
-        const treeContainer = document.getElementById('workspace-tree-container');
-        if (!treeContainer || treeContainer._ctxBound) return;
-        treeContainer._ctxBound = true;
-
-        treeContainer.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const item = e.target.closest('[data-path]');
-            if (item) {
-                const p = item.getAttribute('data-path').replace(/\//g, '\\');
-                const isDir = item.classList.contains('is-folder');
-                showMenu(e.clientX, e.clientY, p, isDir);
-            } else {
-                // Empty area → root workspace
-                const rootPath = state.workspaceData?.path;
-                if (rootPath) showMenu(e.clientX, e.clientY, rootPath, true);
-            }
-        });
-    };
-
-    // Try immediately, then observe for DOM readiness
-    attach();
-    const obs = new MutationObserver(() => attach());
-    obs.observe(document.getElementById('left-sidebar') || document.body, { childList: true, subtree: true });
-
-    // Global close on outside click or Escape
-    document.addEventListener('click', (e) => {
-        if (menuEl && !menuEl.contains(e.target)) closeMenu();
-    }, true);
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeMenu();
-    });
+const refreshWorkspaceAndGit = async () => {
+    // Refresh folder data in state first
+    const currentPath = state.workspaceData?.path;
+    if (currentPath && window.electronAPI?.openSpecificFolder) {
+        const data = await window.electronAPI.openSpecificFolder(currentPath);
+        if (data && !data.error) {
+            setState({ workspaceData: data });
+        }
+    }
+    // Refresh Git Status
+    if (window.renderGit) window.renderGit();
 };

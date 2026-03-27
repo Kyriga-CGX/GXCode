@@ -16,6 +16,7 @@ export const initTerminal = async () => {
                    <button id="btn-add-ps" class="p-1 px-1.5 text-[8px] font-bold text-blue-400 hover:bg-blue-500/10 rounded transition uppercase tracking-widest border border-blue-500/20 flex items-center gap-1" title="Nuova PowerShell">+ PS</button>
                    <button id="btn-add-cmd" class="p-1 px-1.5 text-[8px] font-bold text-gray-400 hover:bg-gray-500/10 rounded transition uppercase tracking-widest border border-gray-500/20 flex items-center gap-1" title="Nuovo CMD">+ CMD</button>
                    <button id="btn-add-bash" class="p-1 px-1.5 text-[8px] font-bold text-orange-400 hover:bg-orange-500/10 rounded transition uppercase tracking-widest border border-orange-500/20 flex items-center gap-1" title="Nuovo Git Bash">+ BASH</button>
+                   <button id="btn-clear-term" class="p-1 px-1.5 text-[8px] font-bold text-red-400 hover:bg-red-500/10 rounded transition uppercase tracking-widest border border-red-500/20 flex items-center gap-1" title="Pulisci Terminale">CLEAR</button>
                    <button id="btn-split-term" class="p-1 px-1.5 text-[8px] font-bold text-emerald-400 hover:bg-emerald-500/10 rounded transition uppercase tracking-widest border border-emerald-500/20 flex items-center gap-1" title="Dividi Terminale">SPLIT</button>
                 </div>
             </div>
@@ -29,6 +30,7 @@ export const initTerminal = async () => {
     const btnAddPs = document.getElementById('btn-add-ps');
     const btnAddCmd = document.getElementById('btn-add-cmd');
     const btnAddBash = document.getElementById('btn-add-bash');
+    const btnClear = document.getElementById('btn-clear-term');
     const btnSplit = document.getElementById('btn-split-term');
 
     const createTerminal = async (id, shellType = 'ps') => {
@@ -142,6 +144,14 @@ export const initTerminal = async () => {
     if (btnAddPs) btnAddPs.onclick = () => createTerminal('t' + Date.now(), 'ps');
     if (btnAddCmd) btnAddCmd.onclick = () => createTerminal('t' + Date.now(), 'cmd');
     if (btnAddBash) btnAddBash.onclick = () => createTerminal('t' + Date.now(), 'bash');
+    
+    if (btnClear) {
+        btnClear.onclick = () => {
+            if (activeTerminalId && terminals[activeTerminalId]) {
+                terminals[activeTerminalId].term.clear();
+            }
+        };
+    }
     
     // Split Logic (Basic Side-by-Side in current Tab Container)
     if (btnSplit) {

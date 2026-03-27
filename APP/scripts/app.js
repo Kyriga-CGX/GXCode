@@ -14,7 +14,7 @@ import { initBottomPanel } from '../components/bottomPanel.js';
 import { initProblems } from '../components/problems.js';
 import { initUpdater } from '../components/updater.js';
 import { initDebug } from '../components/debug.js';
-import { initContextMenu } from '../components/contextMenu.js';
+// initContextMenu non necessario (gestito da workspace.js)
 
 // DOM Elements Right Sidebar
 const sidebarContent = document.getElementById('sidebar-content');
@@ -251,7 +251,7 @@ const bootstrap = async () => {
     initSettings();
     initTickets();
     initWorkspace();
-    initContextMenu();
+    // initContextMenu(); <-- Rimossa poiché non necessaria e non esportata
     initCrud();
     initGit();
     initBottomPanel();

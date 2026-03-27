@@ -988,8 +988,12 @@ app.whenReady().then(() => {
             throw new Error("Sei già all'ultima versione di GXCode.");
         }
     } catch (err) {
-        if (err.message.includes('No published versions')) {
-            throw new Error("Nessuna release trovata su GitHub. Assicurati che i file .exe e .yml siano stati caricati correttamente.");
+        const msg = err.message || "";
+        if (msg.includes('No published versions') || msg.includes('latest.yml')) {
+            throw new Error("Errore Release: GitHub non contiene i file necessari (latest.yml). Assicurati di aver pubblicato usando 'npm run publish'.");
+        }
+        if (msg.includes('404')) {
+          throw new Error("Errore 404: Impossibile scaricare l'aggiornamento. Controlla che la release non sia stata rimossa o che il repository sia pubblico.");
         }
         throw err;
     }
