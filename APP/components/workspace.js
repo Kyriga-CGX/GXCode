@@ -1,6 +1,7 @@
 import { state, subscribe, setState } from '../core/state.js';
 
 let editor = null;
+let editorRight = null;
 let ignoreStateUpdate = false;
 let _updateBreadcrumbs = null;
 let breakpointDecorations = [];
@@ -14,25 +15,177 @@ const normalizePath = (p) => {
     return p.replace(/\//g, '\\').toLowerCase();
 };
 
+// ── Selection state ──────────────────────────────────────────────────────────
+let selectedFilePath = null;
+
+// ── File-type icon map ───────────────────────────────────────────────────────
+const getFileIcon = (name) => {
+    const ext = (name.includes('.') ? name.split('.').pop() : '').toLowerCase();
+    const base = name.toLowerCase();
+
+    // Specific Files (Logos)
+    if (base === 'package.json' || base === 'package-lock.json') {
+        return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#42b883" stroke-width="2.5"><path d="M12 2l10 5v10l-10 5-10-5V7l10-5z"/><path d="M12 8v8m-4-4h8" stroke-width="2"/></svg>`;
+    }
+    if (base.includes('tailwind.config')) {
+        return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5"><path d="M12 3c7 0 9 9 0 9s-7 9 0 9" stroke-linecap="round"/><path d="M12 3c-7 0-9 9 0 9s7 9 0 9" stroke-linecap="round"/></svg>`;
+    }
+    if (base.includes('postcss.config')) {
+        return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dd3a0a" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12h8m-4-4v8"/></svg>`;
+    }
+    if (base === '.gitignore' || base === '.gitattributes') {
+        return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f05032" stroke-width="2.5"><path d="M12 22l10-10L12 2 2 12z"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>`;
+    }
+    if (base === 'readme.md') {
+        return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#42a5f5" stroke-width="2.5"><path d="M3 5h18v14H3z"/><path d="M7 15V9l3 3 3-3v6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    }
+
+    // Extensions
+    const icons = {
+        js:   { color: '#f7df1e', html: `<span class="text-[9px] font-black text-[#f7df1e] mr-1">JS</span>` },
+        mjs:  { color: '#f7df1e', html: `<span class="text-[9px] font-black text-[#f7df1e] mr-1">JS</span>` },
+        ts:   { color: '#3178c6', html: `<span class="text-[9px] font-black text-[#3178c6] mr-1">TS</span>` },
+        tsx:  { color: '#61dafb', html: `<span class="text-[9px] font-black text-[#61dafb] mr-1">TSX</span>` },
+        jsx:  { color: '#61dafb', html: `<span class="text-[9px] font-black text-[#61dafb] mr-1">JSX</span>` },
+        html: { color: '#e44d26', html: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e44d26" stroke-width="2.5"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>` },
+        css:  { color: '#264de4', html: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#264de4" stroke-width="2.5"><path d="M7 8l-4 4 4 4m10-8l4 4-4 4M13 4l-2 16"/></svg>` },
+        json: { color: '#f5a623', html: `<span class="text-[10px] font-bold text-[#f5a623]">{ }</span>` },
+        py:   { color: '#3572a5', html: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3572a5" stroke-width="2.5"><path d="M12 2v10m0 0v10m0-10H2m10 0h10"/></svg>` }, // Proxy
+        md:   { color: '#9ca3af', html: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><path d="M12 5l7 7-7 7M5 5l7 7-7 7"/></svg>` }
+    };
+
+    if (icons[ext]) return icons[ext].html;
+    return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6e7681" stroke-width="2"><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>`;
+};
+
+// ── Folder Icons (Professional SVG Set) ──────────────────────────────────────
+const getFolderIcon = (name, isExpanded) => {
+    const n = name.toLowerCase();
+    const FOLDER_COLOR = '#8b949e'; 
+    let iconColor = '#8b949e';
+    let overlay = ''; 
+
+    // Category mapping
+    if (n === 'components' || n === 'app' || n === 'core' || n === 'src' || n === 'hooks' || n === 'services') {
+        iconColor = '#82aaff'; 
+        overlay = '<path d="M10 14l-2-2 2-2M14 10l2 2-2 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    } else if (n === '.git' || n === '.github') {
+        iconColor = '#f05032'; 
+        overlay = '<circle cx="12" cy="15" r="2"/><path d="M12 13V9m0 0a2 2 0 1 1 2 2" stroke-width="2"/>';
+    } else if (n === 'node_modules') {
+        iconColor = '#a78bfa'; 
+        overlay = '<path d="M8 10l4 2 4-2m-8 4l4 2 4-2" stroke-width="2"/>';
+    } else if (n === 'tests' || n === 'test' || n === 'e2e' || n === '__tests__') {
+        iconColor = '#4eaa25'; 
+        overlay = '<path d="M9 12l2 2 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    } else if (n === 'assets' || n === 'img' || n === 'images' || n === 'public') {
+        iconColor = '#c3e88d'; 
+        overlay = '<circle cx="10" cy="12" r="2"/><path d="M14 15l-4-4-4 4" stroke-width="2"/>';
+    } else if (n === 'dist' || n === 'build' || n === 'out' || n === 'dist_electron') {
+        iconColor = '#f78c6c'; 
+        overlay = '<path d="M12 11v4m0 0l-2-2m2 2l2-2" stroke-width="2"/>';
+    } else if (n === 'api' || n === 'routes' || n === 'middleware') {
+        iconColor = '#bb80ff'; 
+        overlay = '<path d="M8 12h8m-2-2l2 2-2 2" stroke-width="2" stroke-linecap="round"/>';
+    } else if (n === 'lib' || n === 'utils' || n === 'helpers') {
+        iconColor = '#89ddff'; 
+        overlay = '<path d="M8 10V8a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2"/>';
+    } else if (n === 'config' || n === 'scripts' || n === '.vscode') {
+        iconColor = '#f7df1e'; 
+        overlay = '<circle cx="12" cy="12" r="3" stroke-width="2"/>';
+    }
+
+    const folderPath = isExpanded 
+        ? 'M20 20H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2.5L10 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2z' 
+        : 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z';
+
+    return `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" class="flex-shrink-0">
+            <!-- Base Folder -->
+            <path d="${folderPath}" stroke="${FOLDER_COLOR}" stroke-width="2" />
+            <!-- Corner Overlay Icon -->
+            <g stroke="${iconColor}" transform="translate(10, 10) scale(0.6)">
+                ${overlay}
+            </g>
+        </svg>
+    `;
+};
+
+// ── Delete button HTML ───────────────────────────────────────────────────────
+const delBtn = (p) => `<button class="gx-del-btn" data-del="${p}" title="Elimina">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    </svg></button>`;
+
+// ── Tree renderer (Refined with Git Status & Bubbling) ────────────────────────
 const renderFileTree = (files, depth = 0) => {
     if (!files || files.length === 0) return '';
     
+    // Helper per determinare se una cartella ha figli modificati (Bubbling)
+    const getGitStatus = (itemPath, isDirectory) => {
+        const statuses = state.gitStatus || {};
+        const normItem = normalizePath(itemPath);
+
+        if (!isDirectory) {
+            // Se è un file, cerchiamo il match esatto o parziale (se Git ritorna slash diversi)
+            for (const [gitPath, status] of Object.entries(statuses)) {
+                if (normalizePath(gitPath) === normItem) return status;
+            }
+            return null;
+        }
+
+        // Se è una cartella, cerchiamo se QUALSIASI file modificato "inizia con" questo path
+        let hasModified = false;
+        let hasAdded = false;
+        for (const [gitPath, status] of Object.entries(statuses)) {
+            const normGit = normalizePath(gitPath);
+            if (normGit.startsWith(normItem + '\\')) {
+                if (status === 'M') hasModified = true;
+                if (status === 'A' || status === '??') hasAdded = true;
+            }
+        }
+        if (hasModified) return 'M';
+        if (hasAdded) return 'A';
+        return null;
+    };
+
     return files.map(f => {
-        const isExpanded = state.status === 'expanded' || (state.expandedFolders && state.expandedFolders.includes(f.path));
-        const padding = depth * 12 + 10;
+        const isExpanded = state.expandedFolders?.includes(f.path);
+        const pl = depth * 16 + 8;
+        const isSel = selectedFilePath && normalizePath(selectedFilePath) === normalizePath(f.path);
+        const status = getGitStatus(f.path, f.isDirectory);
         
-        return `
-            <div class="flex items-center gap-2 py-[4px] pr-2 hover:bg-[#1a202a] cursor-pointer text-[11px] transition rounded-sm group ${f.isDirectory ? 'is-folder' : 'is-file'}" 
-                 data-path="${f.path}" data-name="${f.name}" style="padding-left: ${padding}px">
-                <span class="${f.isDirectory ? 'text-blue-400' : 'text-gray-500'} w-3.5 text-center flex-shrink-0 pointer-events-none flex items-center justify-center">
-                    ${f.isDirectory ? `
-                        <svg class="transition-transform ${isExpanded ? 'rotate-90' : ''}" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
-                    ` : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" class="text-gray-400" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>'}
+        // Colors & Labels
+        let statusClass = '';
+        let statusLabel = '';
+        if (status === 'M') { statusClass = 'text-[#e2c08d]'; statusLabel = 'M'; }
+        if (status === 'A' || status === '??') { statusClass = 'text-[#73c991]'; statusLabel = status === 'M' ? 'M' : 'U'; }
+        if (status === 'D') { statusClass = 'text-[#f14c4c]'; statusLabel = 'D'; }
+
+        if (f.isDirectory) {
+            const folderIconHtml = getFolderIcon(f.name, isExpanded);
+            const colorMatch = folderIconHtml.match(/stroke="(.+?)"/);
+            const color = colorMatch ? colorMatch[1] : '#8b949e';
+
+            return `<div class="gx-tree-item is-folder${isSel?' gx-sel':''}" data-path="${f.path}" data-name="${f.name}" style="padding-left:${pl}px">
+                <span class="gx-arr${isExpanded?' gx-arr-open':''}" style="color:${color}">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
                 </span>
-                <span class="text-gray-300 truncate font-mono tracking-tight pointer-events-none">${f.name}</span>
+                ${folderIconHtml}
+                <span class="gx-nm ${statusClass}">${f.name}</span>
+                ${status ? `<span class="text-[8px] font-bold ${statusClass} opacity-80 ml-auto mr-3">${status === 'M' ? '●' : '●'}</span>` : ''}
+                ${delBtn(f.path)}
             </div>
-            ${f.isDirectory && isExpanded && f.children ? renderFileTree(f.children, depth + 1) : ''}
-        `;
+            ${isExpanded && f.children ? `<div class="gx-kids" style="--gx:${pl+10}px">${renderFileTree(f.children, depth+1)}</div>` : ''}`;
+        } else {
+            const fileIconHtml = getFileIcon(f.name);
+            return `<div class="gx-tree-item is-file${isSel?' gx-sel':''}" data-path="${f.path}" data-name="${f.name}" style="padding-left:${pl}px">
+                <span class="gx-fic">${fileIconHtml}</span>
+                <span class="gx-nm ml-1 ${statusClass}">${f.name}</span>
+                ${statusLabel ? `<span class="text-[9px] font-bold ${statusClass} opacity-80 ml-auto mr-3">${statusLabel}</span>` : ''}
+                ${delBtn(f.path)}
+            </div>`;
+        }
     }).join('');
 };
 
@@ -41,7 +194,7 @@ const renderWorkspace = () => {
     if (!treeContainer) return;
     
     if (!state.workspaceData) {
-        // Mostra placeholder VS Code style
+        // ... (Placeholder remains same)
         treeContainer.innerHTML = `
             <div class="px-3 py-4 text-center">
                 <p class="text-[11px] text-gray-500 leading-snug mb-3">Non hai ancora aperto nessuna cartella.</p>
@@ -59,6 +212,11 @@ export const initWorkspace = () => {
     const btnOpen = document.getElementById('btn-open-folder');
     const treeContainer = document.getElementById('workspace-tree-container');
     if (!btnOpen || !treeContainer) return;
+
+    // Refresh Git Status in background on Load & Periodically
+    const refreshGit = () => { if (window.renderGit) window.renderGit(); };
+    refreshGit();
+    setInterval(refreshGit, 10000); // Poll ogni 10s per cambiamenti esterni/salvataggi
     
     // Inizializzazione Monaco Editor
     if (window.require) {
@@ -94,9 +252,7 @@ export const initWorkspace = () => {
                 const container = document.getElementById('hub-content-area');
                 if (!container) return;
                 
-                container.innerHTML = `<div id="monaco-editor-container" class="w-full h-full hidden"></div><div id="hub-placeholder" class="w-full h-full flex items-center justify-center"></div>`;
-                
-                editor = monaco.editor.create(document.getElementById('monaco-editor-container'), {
+                const createOptions = (isLight) => ({
                     value: '',
                     language: 'javascript',
                     theme: isLight ? 'gx-light' : 'gx-dark',
@@ -110,9 +266,13 @@ export const initWorkspace = () => {
                     scrollBeyondLastLine: false,
                     padding: { top: 10 },
                     lineDecorationsWidth: 10,
-                    glyphMargin: true
                 });
+
+                editor = monaco.editor.create(document.getElementById('monaco-editor-container'), createOptions(isLight));
+                editorRight = monaco.editor.create(document.getElementById('monaco-editor-container-right'), createOptions(isLight));
+                
                 editor.updateOptions({ glyphMargin: true });
+                editorRight.updateOptions({ glyphMargin: true });
 
                 // Ghost Breakpoint on Hover
                 let ghostDecoration = [];
@@ -341,12 +501,36 @@ export const initWorkspace = () => {
     };
 
     treeContainer.addEventListener('click', async (e) => {
+        // ── Delete button ────────────────────────────────────────────────────
+        const delTarget = e.target.closest('[data-del]');
+        if (delTarget) {
+            e.stopPropagation();
+            const delPath = delTarget.getAttribute('data-del').replace(/\//g, '\\');
+            const fname = delPath.split('\\').pop();
+            if (!confirm(`Eliminare definitivamente "${fname}"?\nQuesta operazione non è reversibile.`)) return;
+            if (window.electronAPI?.fsDelete) {
+                const result = await window.electronAPI.fsDelete(delPath);
+                if (result?.error) { alert('Errore: ' + result.error); return; }
+            }
+            if (selectedFilePath && normalizePath(selectedFilePath) === normalizePath(delPath)) {
+                selectedFilePath = null;
+                const openFiles = state.openFiles.filter(f => normalizePath(f.path) !== normalizePath(delPath));
+                setState({ openFiles, activeFileId: openFiles.length > 0 ? openFiles[openFiles.length-1].path : null });
+            }
+            const ws = await window.electronAPI?.openSpecificFolder?.(state.workspaceData?.path);
+            if (ws && !ws.error) setState({ workspaceData: ws });
+            return;
+        }
+
         const item = e.target.closest('.is-file, .is-folder');
         if (!item) return;
 
         const path = item.getAttribute('data-path').replace(/\//g, '\\');
         const name = item.getAttribute('data-name');
         const isFolder = item.classList.contains('is-folder');
+
+        // Update selection
+        selectedFilePath = path;
 
         if (isFolder) {
             let expandedFolders = [...state.expandedFolders];
@@ -412,44 +596,66 @@ export const initWorkspace = () => {
         }
     });
 
+    // ─── Refined Tab & Split Logic ───────────────────────────────────────────
+    window.navigateTab = (direction) => {
+        const { openFiles, activeFileId } = state;
+        if (openFiles.length <= 1) return;
+        const currentIndex = openFiles.findIndex(f => f.path === activeFileId);
+        if (currentIndex === -1) return;
+        
+        let nextIndex;
+        if (direction === 'left') {
+            nextIndex = (currentIndex - 1 + openFiles.length) % openFiles.length;
+        } else {
+            nextIndex = (currentIndex + 1) % openFiles.length;
+        }
+        window.switchTab(openFiles[nextIndex].path);
+    };
+
+    window.toggleSplitEditor = () => {
+        const newSplitMode = !state.isSplitMode;
+        setState({ 
+            isSplitMode: newSplitMode, 
+            activeFileIdRight: newSplitMode ? state.activeFileId : null 
+        });
+    };
+
     function renderActiveFile() {
         if (ignoreStateUpdate) return;
         if (_updateBreadcrumbs) _updateBreadcrumbs();
         
+        const area = document.getElementById('hub-content-area');
         const placeholder = document.getElementById('hub-placeholder');
-        const editorContainer = document.getElementById('monaco-editor-container');
+        const containerLeft = document.getElementById('monaco-editor-container');
+        const containerRight = document.getElementById('monaco-editor-container-right');
         const tabsContainer = document.getElementById('workspace-tabs');
-        if (!placeholder || !editorContainer || !tabsContainer || !editor) return;
+        const dragBar = document.getElementById('editor-split-drag-bar');
+        
+        if (!area || !placeholder || !containerLeft || !containerRight || !tabsContainer || !editor || !editorRight || !dragBar) return;
 
-        const activeFile = state.openFiles.find(f => f.path === state.activeFileId);
-        const tabsParent = tabsContainer.parentElement;
-
-        if (!activeFile) {
-            placeholder.classList.remove('hidden');
-            editorContainer.classList.add('hidden');
-            tabsParent.classList.add('hidden');
-            placeholder.innerHTML = `
-                <div class="max-w-2xl text-center text-gray-400 space-y-4">
-                    <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-500/5 border border-blue-500/20 mb-2">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="text-blue-500/50" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                    </div>
-                    <h2 class="text-3xl font-light text-gray-200 tracking-tight">Workspace Ready.</h2>
-                    <p class="text-[13px] text-gray-500">Apri un progetto dalla barra di sinistra dell'Explorer per visualizzare i tuoi file.</p>
-                </div>
-            `;
-            tabsContainer.innerHTML = '';
-            document.getElementById('hub-content-area').querySelector('.h-9')?.remove(); // Rimuoviamo footer se presente
-            return;
+        // Middle-click to close tab (Restore)
+        if (!tabsContainer._auxclickBound) {
+            tabsContainer._auxclickBound = true;
+            tabsContainer.addEventListener('auxclick', (e) => {
+                if (e.button !== 1) return;
+                e.preventDefault();
+                const tab = e.target.closest('[onclick^="window.switchTab"]');
+                if (!tab) return;
+                const match = tab.getAttribute('onclick').match(/window\.switchTab\('(.+?)'\)/);
+                if (match) window.closeTab(match[1]);
+            });
         }
 
-        // Render Tabs
-        tabsParent.classList.remove('hidden');
+        const activeFileLeft = state.openFiles.find(f => f.path === state.activeFileId);
+        const activeFileRight = state.openFiles.find(f => f.path === state.activeFileIdRight);
+        
+        // Tab UI Update
         tabsContainer.innerHTML = state.openFiles.map(f => {
             const isActive = f.path === state.activeFileId;
             return `
-                <div onclick="window.switchTab('${f.path.replace(/\\/g, '/')}')" class="px-3 py-1.5 text-[11px] font-bold ${isActive ? 'bg-[#161b22] text-blue-400 border-gray-800' : 'bg-transparent text-gray-500 border-transparent'} border border-b-0 inline-flex items-center gap-3 cursor-pointer relative translate-y-[1px] shadow-2xl rounded-t-lg hover:text-gray-300 transition group ${f.type === 'problem' ? 'border-t-red-500/50' : ''}">
+                <div onclick="window.switchTab('${f.path.replace(/\\/g, '/')}')" class="px-3 py-1.5 text-[11px] font-bold ${isActive ? 'bg-[#161b22] text-blue-400 border-gray-800' : 'bg-transparent text-gray-500 border-transparent'} border border-b-0 inline-flex items-center gap-3 cursor-pointer relative translate-y-[1px] shadow-2xl rounded-t-lg hover:text-gray-300 transition group">
                     <span class="flex items-center gap-2">
-                         <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" class="${f.type === 'problem' ? 'text-red-500' : (isActive ? 'text-blue-500' : 'text-gray-700')}"><circle cx="12" cy="12" r="10"/></svg>
+                         <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" class="${isActive ? 'text-blue-500' : 'text-gray-700'}"><circle cx="12" cy="12" r="10"/></svg>
                          ${f.name}
                     </span>
                     <button onclick="event.stopPropagation(); window.closeTab('${f.path.replace(/\\/g, '/')}')" class="hover:text-red-400 transition ml-2 opacity-30 group-hover:opacity-100">×</button>
@@ -457,77 +663,108 @@ export const initWorkspace = () => {
             `;
         }).join('');
 
-        if (activeFile.loading) {
+        // Layout Logic
+        if (!activeFileLeft) {
             placeholder.classList.remove('hidden');
-            editorContainer.classList.add('hidden');
-            placeholder.innerHTML = `<div class="p-10 flex flex-col items-center justify-center h-full text-gray-500 animate-pulse uppercase tracking-[0.3em] text-[10px]">Caricamento...</div>`;
-            return;
-        }
-
-        if (activeFile.error) {
-            placeholder.classList.remove('hidden');
-            editorContainer.classList.add('hidden');
-            placeholder.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-red-400/50 p-10 text-center gap-4">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                <div class="uppercase tracking-[0.2em] font-bold text-xs">Impossibile leggere il file</div>
-                <p class="text-[10px] text-gray-600 max-w-xs">${activeFile.error}</p>
-            </div>`;
+            containerLeft.classList.add('hidden');
+            containerRight.classList.add('hidden');
+            dragBar.classList.add('hidden');
+            
+            // Fix: Reset layout to centered flex-col when empty
+            area.style.display = 'flex';
+            area.classList.add('flex-col');
+            area.style.gridTemplateColumns = '';
             return;
         }
 
         placeholder.classList.add('hidden');
-        editorContainer.classList.remove('hidden');
+        containerLeft.classList.remove('hidden');
 
-        // Update Monaco content and language
-        let lang = 'javascript';
-        if (activeFile.name.endsWith('.html')) lang = 'html';
-        else if (activeFile.name.endsWith('.css')) lang = 'css';
-        else if (activeFile.name.endsWith('.json')) lang = 'json';
-        else if (activeFile.name.endsWith('.md')) lang = 'markdown';
-
-        const currentModel = editor.getModel();
-        const value = activeFile.content || '';
-        
-        // EVITIAMO RESET DEL CURSORE: Aggiorniamo il valore solo se il file è cambiato 
-        // o se il contenuto è sensibilmente diverso (es. caricamento completato)
-        // e non siamo in fase di "typing" (gestita da onDidChangeModelContent)
-        if (!ignoreStateUpdate) {
-            if (currentModel.getValue() !== value) {
-                ignoreStateUpdate = true;
-                editor.setValue(value);
-                updateBreakpointDecorations();
-                ignoreStateUpdate = false;
-            }
-            monaco.editor.setModelLanguage(currentModel, lang);
-            updateBreakpointDecorations();
+        // Layout Logic - HARDENED GRID SYSTEM
+        if (state.isSplitMode) {
+            area.classList.remove('flex-col');
+            area.style.display = 'grid';
+            // Default 50/50 if not dragged yet
+            const p = containerLeft.dataset.splitPerc || '50';
+            area.style.gridTemplateColumns = `${p}% 4px 1fr`;
+            
+            containerRight.classList.remove('hidden');
+            dragBar.classList.remove('hidden');
+            dragBar.style.width = '4px';
+        } else {
+            area.style.display = 'flex';
+            area.classList.add('flex-col');
+            area.style.gridTemplateColumns = '';
+            
+            containerRight.classList.add('hidden');
+            dragBar.classList.add('hidden');
+            containerLeft.style.flex = "1";
+            containerLeft.style.maxWidth = "100%";
         }
 
-        // Focus della Search (salta alla linea giusta)
+        // Editor Loading & Model Sync
+        const updateEditor = (ed, file) => {
+            if (!file || file.loading || file.error) return;
+            
+            let lang = 'javascript';
+            if (file.name.endsWith('.html')) lang = 'html';
+            else if (file.name.endsWith('.css')) lang = 'css';
+            else if (file.name.endsWith('.py')) lang = 'python';
+            else if (file.name.endsWith('.java')) lang = 'java';
+
+            const model = ed.getModel();
+            const val = file.content || '';
+            if (model.getValue() !== val) {
+                ignoreStateUpdate = true;
+                ed.setValue(val);
+                ignoreStateUpdate = false;
+            }
+            monaco.editor.setModelLanguage(model, lang);
+        };
+
+        updateEditor(editor, activeFileLeft);
+        if (state.isSplitMode && activeFileRight) {
+            updateEditor(editorRight, activeFileRight);
+        }
+
+        // Layout Refresh avec timeout pour refléter les changements du DOM
+        // Layout Refresh aggressivo - CRITICAL FIX v5
+        const refresh = () => {
+            console.log("[GX Split] Forced Layout Refresh Triggered v5");
+            if (editor) editor.layout();
+            if (editorRight) editorRight.layout();
+            window.dispatchEvent(new Event('resize'));
+        };
+        refresh(); 
+        setTimeout(refresh, 50);
+        setTimeout(refresh, 250);
+        setTimeout(refresh, 800);
+        setTimeout(refresh, 2500); 
+
+        // ─── Search Focus (Restore) ─────────────────────────────────────────
         if (state.searchLineToFocus) {
             const line = parseInt(state.searchLineToFocus);
             const query = state.searchColumnQuery || '';
             let col = 1;
+            const val = activeFileLeft.content || '';
             
-            if (query && value) {
-                const lines = value.split('\\n');
+            if (query && val) {
+                const lines = val.split('\n');
                 if (lines[line - 1]) {
                     const idx = lines[line - 1].toLowerCase().indexOf(query.toLowerCase());
                     if (idx !== -1) col = idx + 1;
                 }
             }
 
-            // Mute silencioso dello stato per non ripetere lo scroll
             state.searchLineToFocus = null;
             state.searchColumnQuery = null;
 
-            // Scrolliamo e focalizziamo in centro
             setTimeout(() => {
-                editor.layout(); // Ricalcola dimensioni
+                editor.layout();
                 editor.revealLineInCenter(line);
                 editor.setPosition({ lineNumber: line, column: col });
                 editor.focus();
                 
-                // Mettiamo focus sul cursore e selezioniamo il testo fisicamente
                 if (query) {
                     editor.setSelection({
                         startLineNumber: line,
@@ -537,25 +774,16 @@ export const initWorkspace = () => {
                     });
                 }
 
-                // Applichiamo un evidenziatore "Flash" alla riga (stile VS Code)
-                // Molto utile se setSelection non è abbastanza visibile!
-                const tempDecorations = editor.deltaDecorations([], [
-                    {
-                        range: new monaco.Range(line, 1, line, 1),
-                        options: {
-                            isWholeLine: true,
-                            className: 'bg-blue-500/20', // Classe tailwind per lo sfondo celeste opaco
-                            linesDecorationsClassName: 'bg-blue-500 w-1' // Bordo colorato sulla riga
-                        }
+                const tempDecorations = editor.deltaDecorations([], [{
+                    range: new monaco.Range(line, 1, line, 1),
+                    options: {
+                        isWholeLine: true,
+                        className: 'bg-blue-500/20',
+                        linesDecorationsClassName: 'bg-blue-500 w-1'
                     }
-                ]);
-
-                // Rimuoviamo l'evidenziatore dopo 2.5 secondi
-                setTimeout(() => {
-                    editor.deltaDecorations(tempDecorations, []);
-                }, 2500);
-
-            }, 400); // Alziamo a 400ms per dare a Monaco-WebWorker tutto il tempo di parsare file giganti (es. package-lock.json)
+                }]);
+                setTimeout(() => editor.deltaDecorations(tempDecorations, []), 2500);
+            }, 400);
         }
     }
     
@@ -572,6 +800,14 @@ export const initWorkspace = () => {
 
     // Aggiungiamo scorciatoia globale Alt + F per Formattazione
     window.addEventListener('keydown', (e) => {
+        if (e.altKey && e.key === 'ArrowLeft') {
+            e.preventDefault();
+            window.navigateTab('left');
+        }
+        if (e.altKey && e.key === 'ArrowRight') {
+            e.preventDefault();
+            window.navigateTab('right');
+        }
         if (e.altKey && e.key.toLowerCase() === 'f') {
             e.preventDefault();
             window.simulateFormatting();
@@ -634,3 +870,88 @@ window.simulateFormatting = () => {
         console.log("[GX Addon] Prettier integration finished.");
     }, 800);
 };
+
+// ─── Tab Bar Enhancements ────────────────────────────────────────────────────
+window.scrollTabs = (direction) => {
+    const tabs = document.getElementById('workspace-tabs');
+    if (!tabs) return;
+    const scrollAmount = 200;
+    if (direction === 'left') {
+        tabs.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    } else {
+        tabs.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+};
+
+window.showFileDiff = () => {
+    const activeFileId = state.activeFileId;
+    if (!activeFileId) return;
+    
+    // Placeholder logic for Show Changes
+    const t = document.createElement('div');
+    t.innerHTML = `<div style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#0d1117; border:1px solid #30363d; padding:20px; border-radius:8px; z-index:10000; box-shadow:0 10px 40px rgba(0,0,0,0.5); text-align:center;">
+        <h3 style="color:#c9d1d9; margin-bottom:10px;">Show Changes</h3>
+        <p style="color:#8b949e; font-size:12px;">Confronto modifiche per: <b>${activeFileId.split('/').pop()}</b></p>
+        <div style="margin-top:20px; color:#2188ff; font-size:11px; cursor:pointer;" onclick="this.parentElement.remove()">Chiudi</div>
+    </div>`;
+    document.body.appendChild(t);
+};
+
+// ─── Drag Resize Logic ───────────────────────────────────────────────────────
+const initSplitResize = () => {
+    if (window._splitResizeInitialized) return;
+    
+    const dragBar = document.getElementById('editor-split-drag-bar');
+    const containerLeft = document.getElementById('monaco-editor-container');
+    const area = document.getElementById('hub-content-area');
+    
+    if (!dragBar || !containerLeft || !area) {
+        console.warn("[GX Split] Components not ready for resize init, retrying...");
+        setTimeout(initSplitResize, 1000);
+        return;
+    }
+
+    console.log("[GX Split] Initializing Vertical Drag bar listeners.");
+    window._splitResizeInitialized = true;
+    let isDragging = false;
+
+    dragBar.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        document.body.style.cursor = 'col-resize';
+        dragBar.classList.add('!bg-blue-500');
+        document.body.style.userSelect = 'none'; 
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const rect = area.getBoundingClientRect();
+        const offset = e.clientX - rect.left;
+        const percentage = (offset / rect.width) * 100;
+        
+        if (percentage > 5 && percentage < 95) {
+            if (area.style.display === 'grid') {
+                area.style.gridTemplateColumns = `${percentage}% 4px 1fr`;
+            } else {
+                containerLeft.style.flex = `0 0 ${percentage}%`;
+                containerLeft.style.maxWidth = `${percentage}%`;
+            }
+            containerLeft.dataset.splitPerc = percentage;
+            
+            // Layout refresh immediate for smooth feel
+            if (editor) editor.layout();
+            if (editorRight) editorRight.layout();
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = 'default';
+            dragBar.classList.remove('!bg-blue-500');
+            document.body.style.userSelect = '';
+        }
+    });
+};
+
+// Start initialization attempt
+setTimeout(initSplitResize, 500);

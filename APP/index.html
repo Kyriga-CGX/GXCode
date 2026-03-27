@@ -200,12 +200,37 @@
             <main class="flex-1 flex flex-col bg-[#0f111a] relative min-w-0">
                 
                 <!-- TOP: CHAT / APRI CARTELLE -->
-                <div id="main-canvas" class="flex-1 overflow-y-auto p-6 scroll-smooth flex flex-col no-scrollbar">
+                <div id="main-canvas" class="flex-1 overflow-y-auto scroll-smooth flex flex-col no-scrollbar">
                     
                     <!-- Top Action Bar (Nuova) -->
-                    <div class="px-3 py-2 border-b border-gray-800 flex gap-2 shrink-0 bg-[#0d1117] items-center min-h-[40px]">
-                        <div id="workspace-tabs" class="flex space-x-1 overflow-x-auto overflow-y-hidden no-scrollbar">
-                            <!-- I tab appariranno qui dinamicamente -->
+                    <div class="px-3 py-0.5 border-b border-gray-800 flex gap-2 shrink-0 bg-[#0d1117] items-center min-h-[30px] overflow-hidden">
+                        <div id="workspace-tabs-container" class="flex-1 flex items-center overflow-hidden">
+                            <div id="workspace-tabs" class="flex space-x-1 overflow-x-auto overflow-y-hidden flex-1 scroll-smooth">
+                                <!-- I tab appariranno qui dinamicamente -->
+                            </div>
+                            
+                            <div class="tab-controls">
+                                <!-- Mostra cambiamenti (Diff) -->
+                                <div class="tab-control-btn" title="Mostra cambiamenti" onclick="window.showFileDiff()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 12m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0"/><path d="M12 7v5l3 3"/></svg>
+                                </div>
+                                <!-- Split Editor -->
+                                <div class="tab-control-btn" title="Dividi editor" onclick="window.toggleSplitEditor()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                                </div>
+                                <!-- Scroll Left -->
+                                <div class="tab-control-btn" title="Tab precedente (Alt+)" onclick="window.navigateTab('left')">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                                </div>
+                                <!-- Scroll Right -->
+                                <div class="tab-control-btn" title="Tab successiva (Alt+)" onclick="window.navigateTab('right')">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                </div>
+                                <!-- Menu (...) -->
+                                <div class="tab-control-btn" title="Altre azioni">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -214,14 +239,30 @@
                         <!-- Breadcrumbs will appear here -->
                     </div>
 
-                    <div id="hub-content-area" class="flex-1 flex flex-col items-center justify-center relative">
-                        <div class="max-w-2xl text-center text-gray-400 space-y-4">
-                            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-500/5 border border-blue-500/20 mb-2">
-                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="text-blue-500/50" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <div id="hub-content-area" class="flex-1 flex flex-col relative overflow-hidden bg-[#0d1117] min-h-0 min-w-0">
+                        <div id="monaco-editor-container" class="flex-1 h-full hidden min-w-0 min-h-0 bg-[#0d1117]"></div>
+                        <div id="editor-split-drag-bar" class="w-1 bg-gray-800 hover:bg-blue-500 cursor-col-resize shrink-0 hidden transition-colors duration-200 z-50"></div>
+                        <div id="monaco-editor-container-right" class="flex-1 h-full hidden border-l border-gray-800 min-w-0 min-h-0 bg-[#0d1117]"></div>
+                        <div id="hub-placeholder" class="w-full h-full flex flex-col items-center justify-center">
+                            <div class="max-w-2xl text-center text-gray-400 space-y-4 px-4">
+                                <!-- GX LOGO CENTRAL (SVG) -->
+                                <div class="inline-flex items-center justify-center w-24 h-24 mb-6 relative">
+                                    <div class="absolute inset-0 bg-blue-500/10 blur-xl rounded-full"></div>
+                                    <svg viewBox="0 0 100 100" class="w-20 h-20 relative z-10" fill="none">
+                                        <path d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z" stroke="currentColor" stroke-width="2" class="text-blue-500/30"/>
+                                        <path d="M50 20 L80 35 L80 65 L50 80 L20 65 L20 35 Z" stroke="currentColor" stroke-width="3" class="text-blue-500"/>
+                                        <path d="M40 40 L30 50 L40 60" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"/>
+                                        <path d="M60 40 L70 50 L60 60" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"/>
+                                        <path d="M55 35 L45 65" stroke="currentColor" stroke-width="3" stroke-linecap="round" class="text-gray-600"/>
+                                    </svg>
+                                </div>
+                                <h2 class="text-4xl font-light text-white tracking-tight">GX<span class="text-blue-500">Code</span> Studio</h2>
+                                <p class="text-[14px] text-gray-400 max-w-sm mx-auto">Ambiente professionale GX. Seleziona un file dall'Explorer laterale per iniziare a programmare.</p>
+                                <div class="pt-10 flex flex-col items-center gap-2">
+                                    <p class="text-[10px] text-gray-600 font-mono uppercase tracking-[0.3em]">GXCODE ENGINE • V3.0 CORE</p>
+                                    <div class="w-12 h-0.5 bg-blue-500/20 rounded-full"></div>
+                                </div>
                             </div>
-                            <h2 class="text-3xl font-light text-gray-200 tracking-tight">Workspace Ready.</h2>
-                            <p class="text-[13px] text-gray-500">Apri un progetto dalla barra di sinistra dell'Explorer per visualizzare i tuoi file.</p>
-                            <p class="text-[11px] text-gray-600 font-mono tracking-widest mt-8">IDE Architecture 2.0 • Pure Vanilla Core</p>
                         </div>
                     </div>
                 </div>

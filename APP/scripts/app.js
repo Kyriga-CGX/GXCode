@@ -14,6 +14,7 @@ import { initBottomPanel } from '../components/bottomPanel.js';
 import { initProblems } from '../components/problems.js';
 import { initUpdater } from '../components/updater.js';
 import { initDebug } from '../components/debug.js';
+import { initContextMenu } from '../components/contextMenu.js';
 
 // DOM Elements Right Sidebar
 const sidebarContent = document.getElementById('sidebar-content');
@@ -192,6 +193,9 @@ const renderSidebar = () => {
 };
 
 // --- BINDING STARTUP ---
+// Expose setState globally so context menu and other modules can reach it
+window.setState = setState;
+
 const bootstrap = async () => {
     // Leghiamo i tasti
     tabAgents.onclick = () => {
@@ -247,6 +251,7 @@ const bootstrap = async () => {
     initSettings();
     initTickets();
     initWorkspace();
+    initContextMenu();
     initCrud();
     initGit();
     initBottomPanel();

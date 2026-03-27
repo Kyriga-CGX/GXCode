@@ -29,6 +29,7 @@ export const renderGit = async () => {
 
     const res = await window.electronAPI.gitStatus();
     if (!res.success) {
+        // ... (Error handling remains same)
         container.innerHTML = `
             <div class="p-6 text-center text-red-500/60 mt-10">
                 <p class="text-[10px] uppercase font-bold mb-2">Git Error</p>
@@ -41,6 +42,15 @@ export const renderGit = async () => {
 
     const { files, branch } = res;
     
+    // 🔥 SYNC GLOBAL STATE FOR FILE EXPLORER 🔥
+    const statusMap = {};
+    files.forEach(f => {
+        // Normalizziamo il path per Windows per matchare workspaceData
+        const normPath = f.path.replace(/\//g, '\\');
+        statusMap[normPath] = f.status;
+    });
+    setState({ gitStatus: statusMap });
+
     const getStatusInfo = (s) => {
         if (s === 'M') return { label: 'M', color: 'text-amber-500', title: 'Modified' };
         if (s === 'A') return { label: 'A', color: 'text-emerald-500', title: 'Added' };

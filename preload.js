@@ -46,5 +46,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   debugStep: () => ipcRenderer.invoke('debug:step'),
   debugContinue: () => ipcRenderer.invoke('debug:continue'),
   onDebugPaused: (callback) => ipcRenderer.on('debug:paused', (event, data) => callback(data)),
-  onDebugResumed: (callback) => ipcRenderer.on('debug:resumed', () => callback())
+  onDebugResumed: (callback) => ipcRenderer.on('debug:resumed', () => callback()),
+
+  // File System / Shell (Context Menu)
+  shellOpenPath: (targetPath) => ipcRenderer.invoke('shell-open-path', targetPath),
+  fsCreateFile: (dirPath, name) => ipcRenderer.invoke('fs-create-file', dirPath, name),
+  fsCreateFolder: (dirPath, name) => ipcRenderer.invoke('fs-create-folder', dirPath, name),
+  fsDelete: (targetPath) => ipcRenderer.invoke('fs-delete', targetPath),
 });

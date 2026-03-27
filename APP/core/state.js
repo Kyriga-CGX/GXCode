@@ -41,9 +41,12 @@ export const state = {
     breakpoints: [],
     expandedFolders: [],
     isDebugModeActive: false,
+    isSplitMode: false,
+    activeFileIdRight: null,
     debugCallStack: [],
     debugVariables: [],
     debugActiveLine: null,
+    gitStatus: {}, // Map of path -> status (M, A, D, U)
     appVersion: "..." 
 };
 

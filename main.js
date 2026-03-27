@@ -1,5 +1,5 @@
 // main.js
-const { app, BrowserWindow, ipcMain, dialog, Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const { exec } = require("child_process");
@@ -715,6 +715,49 @@ app.whenReady().then(() => {
     } catch(e) {
         console.error(`[IPC] Errore lettura file ${filePath}:`, e.message);
         return `Errore lettura file: ${e.message}`;
+    }
+  });
+
+  // ---- FILE SYSTEM OPERATIONS (Context Menu) ----
+  ipcMain.handle('shell-open-path', async (event, targetPath) => {
+    await shell.openPath(targetPath);
+    return true;
+  });
+
+  ipcMain.handle('fs-create-file', async (event, dirPath, name) => {
+    try {
+      const filePath = path.join(dirPath, name);
+      if (fs.existsSync(filePath)) return { error: 'File già esistente.' };
+      fs.writeFileSync(filePath, '', 'utf-8');
+      return { success: true, path: filePath };
+    } catch (e) {
+      return { error: e.message };
+    }
+  });
+
+  ipcMain.handle('fs-create-folder', async (event, dirPath, name) => {
+    try {
+      const folderPath = path.join(dirPath, name);
+      if (fs.existsSync(folderPath)) return { error: 'Cartella già esistente.' };
+      fs.mkdirSync(folderPath, { recursive: true });
+      return { success: true, path: folderPath };
+    } catch (e) {
+      return { error: e.message };
+    }
+  });
+
+  ipcMain.handle('fs-delete', async (event, targetPath) => {
+    try {
+      if (!fs.existsSync(targetPath)) return { error: 'Percorso non trovato.' };
+      const stat = fs.statSync(targetPath);
+      if (stat.isDirectory()) {
+        fs.rmSync(targetPath, { recursive: true, force: true });
+      } else {
+        fs.unlinkSync(targetPath);
+      }
+      return { success: true };
+    } catch (e) {
+      return { error: e.message };
     }
   });
 
