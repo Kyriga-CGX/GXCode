@@ -1,0 +1,26 @@
+name: Fix Release
+on: workflow_dispatch
+jobs:
+  fix:
+      runs-on: ubuntu-latest
+          steps:
+                - name: Fix v1.2.3
+                        run: |
+                                  gh release download v1.2.3 --pattern 'GXCode-Setup-1.2.3.exe' --repo ${{ github.repository }}
+                                            SIZE=$(stat -c%s "GXCode-Setup-1.2.3.exe")
+                                                      SHA512=$(sha512sum "GXCode-Setup-1.2.3.exe" | awk '{print $1}')
+                                                                DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+                                                                          cat <<EOF > latest.yml
+                                                                                    version: 1.2.3
+                                                                                              files:
+                                                                                                          - url: GXCode-Setup-1.2.3.exe
+                                                                                                                        sha512: $SHA512
+                                                                                                                                      size: $SIZE
+                                                                                                                                                path: GXCode-Setup-1.2.3.exe
+                                                                                                                                                          sha512: $SHA512
+                                                                                                                                                                    releaseDate: '$DATE'
+                                                                                                                                                                              EOF
+                                                                                                                                                                                        gh release upload v1.2.3 latest.yml --clobber --repo ${{ github.repository }}
+                                                                                                                                                                                                env:
+                                                                                                                                                                                                          GH_TOKEN: ${{ github.token }}
+                                                                                                                                                                                                          
