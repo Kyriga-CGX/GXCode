@@ -1308,6 +1308,47 @@ app.whenReady().then(() => {
     try {
       if (!fs.existsSync(folderPath)) return null;
 
+      if (folderPath.endsWith('.code-workspace')) {
+        const content = fs.readFileSync(folderPath, 'utf8');
+        const config = JSON.parse(content);
+        const folders = [];
+
+        if (config.folders && Array.isArray(config.folders)) {
+          for (const item of config.folders) {
+            let fp = item.path;
+            if (!path.isAbsolute(fp)) {
+              fp = path.resolve(path.dirname(folderPath), fp);
+            }
+
+            if (fs.existsSync(fp) && fs.statSync(fp).isDirectory()) {
+              const files = fs.readdirSync(fp, { withFileTypes: true }).map(f => ({
+                name: f.name,
+                isDirectory: f.isDirectory(),
+                path: path.join(fp, f.name)
+              }));
+              
+              files.sort((a, b) => {
+                if (a.isDirectory && !b.isDirectory) return -1;
+                if (!a.isDirectory && b.isDirectory) return 1;
+                return a.name.localeCompare(b.name);
+              });
+
+              folders.push({
+                name: item.name || path.basename(fp),
+                path: fp,
+                files: files
+              });
+            }
+          }
+        }
+        return { 
+          name: path.basename(folderPath, '.code-workspace'),
+          path: folderPath,
+          isWorkspace: true, 
+          folders 
+        };
+      }
+
       const files = fs.readdirSync(folderPath, { withFileTypes: true }).map(f => ({
         name: f.name,
         isDirectory: f.isDirectory(),
