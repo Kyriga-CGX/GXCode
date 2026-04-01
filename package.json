@@ -59,7 +59,6 @@
       "allowToChangeInstallationDirectory": true,
       "installerHeader": "APP/assets/installer_header.bmp",
       "installerSidebar": "APP/assets/installer_sidebar.bmp",
-      "installerHeaderIcon": "APP/assets/logo.png",
       "allowElevation": true,
       "perMachine": true,
       "deleteAppDataOnUninstall": false,
