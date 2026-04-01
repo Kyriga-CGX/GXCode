@@ -164,9 +164,12 @@ const updateLeftSidebarTabs = () => {
 
 const renderSidebar = () => {
     sidebarContent.innerHTML = '';
-    const activeList = state.activeSidebarTab === 'agents' ? state.agents 
+    const rawList = state.activeSidebarTab === 'agents' ? state.agents 
                     : state.activeSidebarTab === 'skills' ? state.skills 
                     : state.plugins || [];
+    
+    // Safety Filter: Deduplicazione per ID per evitare "fantasmi" in UI
+    const activeList = Array.from(new Map(rawList.map(item => [item.id, item])).values());
     
     // Icon mapping per renderSidebarItem
     const type = state.activeSidebarTab === 'agents' ? 'agents' 
@@ -525,6 +528,11 @@ const bootstrap = async () => {
     // Inizializza i dati dal backend!
     // Triggers render automatico appena caricati!
     await api.loadAll();
+
+    // Ripristina l'ultimo progetto/workspace salvato
+    if (window.restoreSession) {
+        await window.restoreSession();
+    }
 };
 
 document.addEventListener('DOMContentLoaded', bootstrap);

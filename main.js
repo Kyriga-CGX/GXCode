@@ -293,7 +293,8 @@ apiApp.post("/api/skills", (req, res) => {
     logic: body.logic ?? body.content ?? "",
     category: body.category ?? "general",
     isActive: body.isActive ?? true,
-    slug: body.slug || body.name.toLowerCase().replace(/\s+/g, '-')
+    slug: body.slug || body.name.toLowerCase().replace(/\s+/g, '-'),
+    _managedBy: '.GXCODE'
   };
   savePersistedData('skills', skill);
   res.status(201).json(skill);
@@ -342,6 +343,7 @@ apiApp.post("/api/agents", (req, res) => {
 
   const newId = diskAgents.length ? Math.max(...diskAgents.map((a) => a.id)) + 100 : Math.floor(Math.random() * 100000);
   const agent = {
+    ...body,
     id: newId,
     name: body.name,
     description: body.description ?? "",
@@ -352,7 +354,8 @@ apiApp.post("/api/agents", (req, res) => {
     skillIds: body.skillIds ?? "[]",
     assignedSkills: body.assignedSkills ?? [],
     status: body.status ?? "idle",
-    slug: body.slug || body.name.toLowerCase().replace(/\s+/g, '-')
+    slug: body.slug || body.name.toLowerCase().replace(/\s+/g, '-'),
+    _managedBy: '.GXCODE'
   };
   savePersistedData('agents', agent);
   res.status(201).json(agent);
@@ -1328,8 +1331,12 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('open-specific-folder', async (event, folderPath) => {
+    console.log(`[GX FS] Richiesta apertura path specifico: ${folderPath}`);
     try {
-      if (!fs.existsSync(folderPath)) return null;
+      if (!fs.existsSync(folderPath)) {
+        console.warn(`[GX FS] Path non trovato: ${folderPath}`);
+        return null;
+      }
 
       if (folderPath.endsWith('.code-workspace')) {
         const content = fs.readFileSync(folderPath, 'utf8');
