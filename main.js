@@ -265,55 +265,54 @@ let mcpServers = [];   // idem
 // ---- ENDPOINT SKILLS ----
 apiApp.get("/api/skills", (req, res) => {
   const diskSkills = loadPersistedData('skills');
-  // Uniamo quelli creati su disco (dinamici per cartella) e i classici (se servono)
-  res.json([...diskSkills, ...skills]);
+  res.json(diskSkills);
 });
 
 apiApp.post("/api/skills", (req, res) => {
   const body = req.body;
-  const newId = skills.length ? Math.max(...skills.map((s) => s.id)) + 100 : Math.floor(Math.random() * 100000);
+  const diskSkills = loadPersistedData('skills');
+  const newId = diskSkills.length ? Math.max(...diskSkills.map((s) => s.id)) + 100 : Math.floor(Math.random() * 100000);
   const skill = {
     id: newId,
     name: body.name,
     description: body.description ?? "",
-    logic: body.logic ?? body.content ?? "", // Use logic as primary, fallback to content
+    logic: body.logic ?? body.content ?? "",
     category: body.category ?? "general",
     isActive: body.isActive ?? true,
     slug: body.slug || body.name.toLowerCase().replace(/\s+/g, '-')
   };
-  skills.push(skill);
   savePersistedData('skills', skill);
   res.status(201).json(skill);
 });
 
 apiApp.patch("/api/skills/:id", (req, res) => {
   const id = req.params.id;
-  const idx = skills.findIndex((s) => String(s.id) === String(id));
-  if (idx !== -1) {
-    skills[idx] = { ...skills[idx], ...req.body };
-    savePersistedData('skills', skills[idx]); // Aggiorna il file
-    return res.json(skills[idx]);
+  const diskSkills = loadPersistedData('skills');
+  const target = diskSkills.find((s) => String(s.id) === String(id));
+  if (target) {
+    const updated = { ...target, ...req.body };
+    savePersistedData('skills', updated);
+    return res.json(updated);
   }
   return res.status(404).send("Skill not found");
 });
 
 apiApp.delete("/api/skills/:id", (req, res) => {
   const id = req.params.id;
-  skills = skills.filter((s) => String(s.id) !== String(id));
-  deletePersistedData('skills', id); // Cancella file fisico
+  deletePersistedData('skills', id);
   res.status(204).end();
 });
 
 // ---- ENDPOINT AGENTS ----
 apiApp.get("/api/agents", (req, res) => {
   const diskAgents = loadPersistedData('agents');
-  // Uniamo dischi dinamici e memoria mock
-  res.json([...diskAgents, ...agents]);
+  res.json(diskAgents);
 });
 
 apiApp.post("/api/agents", (req, res) => {
   const body = req.body;
-  const newId = agents.length ? Math.max(...agents.map((a) => a.id)) + 100 : Math.floor(Math.random() * 100000);
+  const diskAgents = loadPersistedData('agents');
+  const newId = diskAgents.length ? Math.max(...diskAgents.map((a) => a.id)) + 100 : Math.floor(Math.random() * 100000);
   const agent = {
     id: newId,
     name: body.name,
@@ -327,26 +326,25 @@ apiApp.post("/api/agents", (req, res) => {
     status: body.status ?? "idle",
     slug: body.slug || body.name.toLowerCase().replace(/\s+/g, '-')
   };
-  agents.push(agent);
-  savePersistedData('agents', agent); // Salva in ~/.<ai>/agents
+  savePersistedData('agents', agent);
   res.status(201).json(agent);
 });
 
 apiApp.patch("/api/agents/:id", (req, res) => {
   const id = req.params.id;
-  const idx = agents.findIndex((a) => String(a.id) === String(id));
-  if (idx !== -1) {
-    agents[idx] = { ...agents[idx], ...req.body };
-    savePersistedData('agents', agents[idx]); // Update file
-    return res.json(agents[idx]);
+  const diskAgents = loadPersistedData('agents');
+  const target = diskAgents.find((a) => String(a.id) === String(id));
+  if (target) {
+    const updated = { ...target, ...req.body };
+    savePersistedData('agents', updated);
+    return res.json(updated);
   }
   return res.status(404).send("Agent not found");
 });
 
 apiApp.delete("/api/agents/:id", (req, res) => {
   const id = req.params.id;
-  agents = agents.filter((a) => String(a.id) !== String(id));
-  deletePersistedData('agents', id); // Elimina file
+  deletePersistedData('agents', id);
   res.status(204).end();
 });
 
