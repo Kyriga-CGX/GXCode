@@ -269,6 +269,29 @@ export const initWorkspace = () => {
                 editor = monaco.editor.create(document.getElementById('monaco-editor-container'), createOptions(isLight));
                 editorRight = monaco.editor.create(document.getElementById('monaco-editor-container-right'), createOptions(isLight));
                 
+                // --- SAVE & LINT INTEGRATION ---
+                const gxToast = (msg, type) => {
+                    if (window.gxToast) window.gxToast(msg, type);
+                    else console.log(`[GX Toast] ${type}: ${msg}`);
+                };
+
+                const handleSave = async (ed) => {
+                    const activeFileId = state.activeFileId;
+                    if (!activeFileId) return;
+                    const content = ed.getValue();
+                    try {
+                        await window.electronAPI.fsWriteFile(activeFileId, content);
+                        gxToast(window.t('explorer.saveSuccess'), "success");
+                        // Trigger lint after save
+                        if (window.runLint) window.runLint(activeFileId);
+                    } catch (err) {
+                        gxToast(window.t('explorer.saveError')?.replace('{error}', err.message) || err.message, "error");
+                    }
+                };
+
+                editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => handleSave(editor));
+                editorRight.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => handleSave(editorRight));
+
                 editor.updateOptions({ glyphMargin: true });
                 editorRight.updateOptions({ glyphMargin: true });
 
@@ -320,8 +343,6 @@ export const initWorkspace = () => {
 
                     const normActive = normalizePath(activeFileId);
                     const activeBreakpoints = state.breakpoints.filter(bp => normalizePath(bp.path) === normActive);
-                    
-                    console.log(`[Monaco Debug] Updating decorations for ${normActive}. Count: ${activeBreakpoints.length}`);
                     
                     const newDecorations = activeBreakpoints.map(bp => ({
                         range: new monaco.Range(bp.line, 1, bp.line, 1),
@@ -501,25 +522,28 @@ export const initWorkspace = () => {
 
                 editor.onDidChangeCursorPosition(() => updateBreadcrumbs());
 
-                // Listener Globale per i Problemi (Diagnostica)
+                // Listener Globale per i Problemi (Optimized v10)
                 monaco.editor.onDidChangeMarkers(([uri]) => {
-                    const markers = monaco.editor.getModelMarkers({ resource: uri });
                     const allMarkers = monaco.editor.getModelMarkers({});
-                    
-                    // Solo errori e avvisi (Severity >= 3 in Monaco è Error/Warning)
                     const seriousIssues = allMarkers.filter(m => m.severity >= 3);
                     
-                    setState({ 
-                        problems: seriousIssues.map(m => ({
-                            message: m.message,
-                            severity: m.severity, // 3: Warning, 4: Error
-                            resource: m.resource.toString(),
-                            path: m.resource.path,
-                            startLine: m.startLineNumber,
-                            startColumn: m.startColumn,
-                            source: m.source || 'Monaco'
-                        })) 
-                    });
+                    const newProblems = seriousIssues.map(m => ({
+                        message: m.message,
+                        severity: m.severity,
+                        resource: m.resource.toString(),
+                        path: m.resource.path,
+                        startLine: m.startLineNumber,
+                        startColumn: m.startColumn,
+                        source: m.source || 'Monaco'
+                    }));
+
+                    // Evita Loop: Aggiorna solo se i messaggi o il numero di problemi sono cambiati
+                    const oldJson = JSON.stringify(state.problems);
+                    const newJson = JSON.stringify(newProblems);
+                    
+                    if (oldJson !== newJson) {
+                        setState({ problems: newProblems });
+                    }
                 });
 
                 _updateBreadcrumbs = updateBreadcrumbs;
@@ -553,10 +577,16 @@ export const initWorkspace = () => {
 
     treeContainer.oncontextmenu = (e) => {
         const item = e.target.closest('.is-file, .is-folder');
-        if (!item) return;
-        const path = item.getAttribute('data-path').replace(/\//g, '\\');
-        const isFolder = item.classList.contains('is-folder');
-        showContextMenu(e, path, isFolder);
+        const rootPath = state.workspaceData?.path;
+
+        if (item) {
+            const path = item.getAttribute('data-path').replace(/\//g, '\\');
+            const isFolder = item.classList.contains('is-folder');
+            showContextMenu(e, path, isFolder);
+        } else if (rootPath) {
+            // Se clicco sullo spazio vuoto, apro il menu sulla root
+            showContextMenu(e, rootPath, true);
+        }
     };
 
     treeContainer.addEventListener('click', async (e) => {
@@ -643,6 +673,9 @@ export const initWorkspace = () => {
                     const content = await window.electronAPI.readFile(filePath);
                     openFiles = state.openFiles.map(f => f.path === filePath ? { ...f, content, loading: false } : f);
                     setState({ openFiles });
+                    
+                    // Trigger lint on first open
+                    setTimeout(() => { if (window.runLint) window.runLint(filePath); }, 500);
                 } catch (err) {
                     console.error("Errore lettura file:", err);
                     openFiles = state.openFiles.map(f => f.path === filePath ? { ...f, content: null, loading: false, error: err.message } : f);
@@ -785,20 +818,10 @@ export const initWorkspace = () => {
             updateEditor(editorRight, activeFileRight);
         }
 
-        // Layout Refresh avec timeout pour refléter les changements du DOM
-        // Layout Refresh aggressivo - CRITICAL FIX v5
-        const refresh = () => {
-            console.log("[GX Split] Forced Layout Refresh Triggered v5");
-            if (editor) editor.layout();
-            if (editorRight) editorRight.layout();
-            window.dispatchEvent(new Event('resize'));
-        };
-        refresh(); 
-        setTimeout(refresh, 50);
-        setTimeout(refresh, 250);
-        setTimeout(refresh, 800);
-        setTimeout(refresh, 2500); 
-
+        // [GX Split] Layout Refresh v6-STABLE-FIX
+        if (editor) editor.layout();
+        if (editorRight) editorRight.layout();
+        
         // ─── Search Focus (Restore) ─────────────────────────────────────────
         if (state.searchLineToFocus) {
             const line = parseInt(state.searchLineToFocus);
@@ -845,15 +868,30 @@ export const initWorkspace = () => {
         }
     }
     
+    // [GX Split] Update Listener (Optimized v8-STABLE)
     subscribe((newState, oldState) => {
-        if (editor && oldState && newState.activeCgxTheme !== oldState.activeCgxTheme) {
+        const themeChanged = newState.activeCgxTheme !== oldState?.activeCgxTheme;
+        const fileChanged = newState.activeFileId !== oldState?.activeFileId;
+        const listChanged = newState.openFiles !== oldState?.openFiles;
+        const bpsChanged = newState.breakpoints !== oldState?.breakpoints;
+
+        if (editor && themeChanged) {
             const isLight = newState.activeCgxTheme === 'light' || newState.activeCgxTheme === 'apple' || newState.activeCgxTheme === 'aero';
             editor.updateOptions({ theme: isLight ? 'gx-light' : 'gx-dark' });
         }
-        renderWorkspace();
-        renderActiveFile();
-        updateBreakpointDecorations();
-        updateDebugActiveLine();
+
+        if (fileChanged || listChanged) {
+            renderWorkspace();
+            renderActiveFile();
+        }
+
+        if (fileChanged || bpsChanged) {
+            updateBreakpointDecorations();
+        }
+
+        if (fileChanged || newState.debugActiveLine !== oldState?.debugActiveLine) {
+            updateDebugActiveLine();
+        }
     });
 
     // Aggiungiamo scorciatoia globale Alt + F per Formattazione
@@ -872,7 +910,36 @@ export const initWorkspace = () => {
         }
     });
 
-    // Ripristino Automatico Ultima Sessione di Lavoro (Workspace)
+    
+// ── Global Actions for Shortcuts ───────────────────────────────────────────
+window.saveActiveFile = async () => {
+    if (!editor || !state.activeFileId) return;
+    
+    const content = editor.getValue();
+    const path = state.activeFileId;
+    
+    console.log(`[GX-SHORTCUT] Saving active file: ${path}`);
+    try {
+        await window.electronAPI.fsWriteFile(path, content);
+        // Dispatch event for UI feedback (optional)
+        console.log(`[GX-SHORTCUT] File saved successfully.`);
+    } catch (err) {
+        console.error(`[GX-SHORTCUT] Error saving file: ${err.message}`);
+    }
+};
+
+window.formatActiveFile = () => {
+    if (!editor) return;
+    console.log(`[GX-SHORTCUT] Formatting active file.`);
+    editor.getAction('editor.action.formatDocument').run();
+};
+
+window.toggleSidebar = () => {
+    setState({ isLeftSidebarOpen: !state.isLeftSidebarOpen });
+};
+
+// Esportiamo per compatibilità legacy se necessario
+window.renderWorkspace = renderWorkspace;
     setTimeout(async () => {
         const lastWorkspace = localStorage.getItem('gx-last-workspace');
         if (lastWorkspace && window.electronAPI && window.electronAPI.openSpecificFolder) {
@@ -941,18 +1008,94 @@ window.scrollTabs = (direction) => {
     }
 };
 
-window.showFileDiff = () => {
+window.showFileDiff = async () => {
     const activeFileId = state.activeFileId;
-    if (!activeFileId) return;
+    if (!activeFileId || !state.workspaceData?.path) return;
     
-    // Placeholder logic for Show Changes
-    const t = document.createElement('div');
-    t.innerHTML = `<div style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#0d1117; border:1px solid #30363d; padding:20px; border-radius:8px; z-index:10000; box-shadow:0 10px 40px rgba(0,0,0,0.5); text-align:center;">
-        <h3 style="color:#c9d1d9; margin-bottom:10px;">Show Changes</h3>
-        <p style="color:#8b949e; font-size:12px;">Confronto modifiche per: <b>${activeFileId.split('/').pop()}</b></p>
-        <div style="margin-top:20px; color:#2188ff; font-size:11px; cursor:pointer;" onclick="this.parentElement.remove()">Chiudi</div>
-    </div>`;
-    document.body.appendChild(t);
+    // Mostriamo un caricamento rapido
+    const originalBtnHtml = document.querySelector('[onclick="window.showFileDiff()"]')?.innerHTML;
+    const btn = document.querySelector('[onclick="window.showFileDiff()"]');
+    if (btn) btn.innerHTML = '<svg class="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+
+    try {
+        const workspacePath = state.workspaceData.path;
+        const headRes = await window.electronAPI.gitShowHead(workspacePath, activeFileId);
+        const currentContent = editor.getValue();
+        
+        // Creiamo la modale
+        const modal = document.createElement('div');
+        modal.id = 'gx-diff-modal';
+        modal.className = 'fixed inset-0 z-[1000000] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in p-6 md:p-12';
+        modal.innerHTML = `
+            <div class="bg-[#0d1117] border border-gray-800 rounded-xl w-full h-full flex flex-col shadow-2xl overflow-hidden animate-scale-up">
+                <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-[#161b22]">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-blue-500/10 rounded-lg">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2188ff" stroke-width="2.5"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v5h5"/><path d="M12 12v6"/><path d="M9 15h6"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-[11px] font-bold text-gray-200 uppercase tracking-[0.2em]">Cambiamenti File (Git Diff)</h3>
+                            <p class="text-[9px] text-gray-500 font-mono mt-0.5 opacity-70">${activeFileId}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-[9px] font-bold py-1 px-2 rounded bg-gray-800 text-gray-400 border border-gray-700">ESC per uscire</div>
+                        <button onclick="document.getElementById('gx-diff-modal').remove()" class="p-1.5 hover:bg-white/5 text-gray-500 hover:text-white transition rounded-md text-xl">✕</button>
+                    </div>
+                </div>
+                <div id="monaco-diff-container" class="flex-1 min-h-0 bg-[#0d1117]"></div>
+                <div class="px-6 py-3 border-t border-gray-800 bg-[#0a0d12] flex justify-between items-center">
+                    <div class="flex gap-4">
+                        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500/50"></span> <span class="text-[9px] text-gray-500 uppercase font-bold tracking-wider">Originale (HEAD)</span></div>
+                        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500/50"></span> <span class="text-[9px] text-gray-500 uppercase font-bold tracking-wider">Modificato</span></div>
+                    </div>
+                    <button onclick="document.getElementById('gx-diff-modal').remove()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase rounded transition">Chiudi</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Handler per chiusura con ESC
+        const escHandler = (e) => {
+           if (e.key === 'Escape') {
+               modal.remove();
+               window.removeEventListener('keydown', escHandler);
+           }
+        };
+        window.addEventListener('keydown', escHandler);
+
+        // Inizializziamo Monaco Diff Editor
+        const container = document.getElementById('monaco-diff-container');
+        const diffEditor = monaco.editor.createDiffEditor(container, {
+            theme: state.activeCgxTheme.includes('light') ? 'gx-light' : 'gx-dark',
+            automaticLayout: true,
+            readOnly: true,
+            renderSideBySide: true,
+            fontSize: 12,
+            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+            minimap: { enabled: false },
+            originalEditable: false
+        });
+
+        const originalContent = headRes.success ? headRes.content : '';
+        const ext = activeFileId.split('.').pop();
+        let lang = 'javascript';
+        if (['js','ts','jsx','tsx'].includes(ext)) lang = 'javascript';
+        else if (ext === 'html') lang = 'html';
+        else if (ext === 'css') lang = 'css';
+        else if (ext === 'json') lang = 'json';
+
+        diffEditor.setModel({
+            original: monaco.editor.createModel(originalContent, lang),
+            modified: monaco.editor.createModel(currentContent, lang)
+        });
+
+    } catch (err) {
+        console.error("Diff Error:", err);
+        alert("Impossibile generare il diff.");
+    } finally {
+        if (btn) btn.innerHTML = originalBtnHtml;
+    }
 };
 
 // ─── Drag Resize Logic ───────────────────────────────────────────────────────

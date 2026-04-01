@@ -25,8 +25,8 @@ const renderTicketItem = (t) => {
     const statusClass = statusMap[t.status] || 'bg-gray-500/10 text-gray-400 border-gray-500/30';
     const borderClass = borderColorMap[t.status] || 'border-l-gray-700';
 
-    const priorityIcon = t.priority === 'High' ? '<span class="text-red-500">高</span>' : 
-                        t.priority === 'Medium' ? '<span class="text-yellow-500">中</span>' : 
+    const priorityIcon = t.priority === 'High' || t.priority === 'Critical' ? '<span class="text-red-500">高</span>' : 
+                        t.priority === 'Medium' || t.priority === 'Normal' ? '<span class="text-yellow-500">中</span>' : 
                         '<span class="text-gray-600">低</span>';
 
     return `
@@ -35,12 +35,12 @@ const renderTicketItem = (t) => {
                 <div class="flex justify-between items-center mb-2">
                     <div class="flex items-center gap-2">
                         <span class="text-[10px] font-mono ${isActive ? 'text-blue-400 font-bold' : 'text-gray-500'} tracking-tighter">${t.id}</span>
-                        ${isActive ? '<span class="text-[7px] bg-blue-500 text-white px-1 rounded-sm animate-pulse font-black uppercase">Active</span>' : ''}
+                        <span class="text-[8px] text-gray-600 uppercase font-bold ml-1">${t.project || ''}</span>
                     </div>
                     <span class="text-[9px] px-2 py-0.5 rounded-full border ${statusClass} font-bold uppercase tracking-tighter shadow-sm pointer-events-auto">${t.status}</span>
                 </div>
                 
-                <h4 class="text-[12px] font-bold ${isActive ? 'text-white' : 'text-gray-200'} leading-tight mb-3 group-hover:text-blue-400 transition-colors pointer-events-auto">${t.title}</h4>
+                <h4 class="text-[12px] font-bold ${isActive ? 'text-white' : 'text-gray-200'} leading-tight mb-3 group-hover:text-blue-400 transition-colors pointer-events-auto">${t.name}</h4>
                 
                 <div class="flex justify-between items-center mt-auto pt-2 border-t border-gray-800/50">
                     <div class="flex items-center gap-1.5 grayscale group-hover:grayscale-0 transition">
@@ -130,11 +130,35 @@ export const initTickets = async () => {
     const render = () => {
         filterRoot.innerHTML = renderFilterBar();
         
+        const config = state.youtrackConfig || {};
+        const isNotConfigured = !config.url || !config.token || !config.enabled;
+
+        if (isNotConfigured) {
+            contentBox.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12 px-6 text-center animate-fade-in">
+                    <div class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center text-3xl mb-6 shadow-inner border border-blue-500/20">🎫</div>
+                    <h3 class="text-xs font-bold text-gray-200 uppercase tracking-widest mb-3" data-i18n="tickets.onboardingTitle">Configura YouTrack</h3>
+                    <p class="text-[10px] text-gray-500 leading-relaxed mb-8 max-w-[200px]" data-i18n="tickets.onboardingDesc">Gestisci i tuoi task direttamente dall'IDE. Collega il tuo account YouTrack per iniziare.</p>
+                    
+                    <button onclick="window.setState({ isSettingsOpen: true, activeSettingsTab: 'youtrack' })" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-lg transition shadow-lg shadow-blue-900/20 uppercase tracking-tighter" data-i18n="tickets.btnConfigure">
+                        Apri Impostazioni
+                    </button>
+                    
+                    <a href="https://www.jetbrains.com/help/youtrack/devportal/resource-api-token.html" target="_blank" class="mt-4 text-[9px] text-gray-600 hover:text-blue-400 underline transition group flex items-center gap-1">
+                        <span>Come ottenere un Token?</span>
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="opacity-0 group-hover:opacity-100 transition"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                    </a>
+                </div>
+            `;
+            return;
+        }
+
         if (!state.tickets || state.tickets.length === 0) {
             contentBox.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-10 opacity-40">
-                    <div class="text-4xl mb-4">🎫</div>
-                    <p class="text-[11px] text-gray-500 uppercase tracking-widest font-bold">Nessun Ticket Assegnato</p>
+                    <div class="text-4xl mb-4">✅</div>
+                    <p class="text-[11px] text-gray-500 uppercase tracking-widest font-bold">Tutto Pulito!</p>
+                    <p class="text-[9px] text-gray-600">Nessun ticket assegnato trovato.</p>
                 </div>
             `;
             return;

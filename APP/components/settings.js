@@ -13,14 +13,35 @@ const getSkins = () => [
 ];
 
 const getSettingsTabs = () => [
-    { id: 'preferences', label: window.t('settings.tabs.preferences'), icon: '⚙️' },
-    { id: 'keybinds', label: window.t('settings.tabs.keybinds'), icon: '⌨️' },
-    { id: 'mcp', label: window.t('settings.tabs.mcp'), icon: '🔗' },
-    { id: 'youtrack', label: window.t('settings.tabs.youtrack'), icon: '🎯' },
-    { id: 'marketplace', label: window.t('settings.tabs.marketplace'), icon: '📦' },
-    { id: 'appearance', label: window.t('settings.tabs.appearance'), icon: '🎨' },
-    { id: 'language', label: window.t('settings.tabs.language'), icon: '🌐' },
-    { id: 'updates', label: window.t('settings.tabs.updates'), icon: '🚀' }
+    {
+        title: window.t('settings.groups.general'),
+        tabs: [
+            { id: 'preferences', label: window.t('settings.tabs.preferences'), icon: '⚙️' },
+            { id: 'keybinds', label: window.t('settings.tabs.keybinds'), icon: '⌨️' },
+            { id: 'updates', label: window.t('settings.tabs.updates'), icon: '🚀' }
+        ]
+    },
+    {
+        title: window.t('settings.groups.interface'),
+        tabs: [
+            { id: 'appearance', label: window.t('settings.tabs.appearance'), icon: '🎨' },
+            { id: 'language', label: window.t('settings.tabs.language'), icon: '🌐' }
+        ]
+    },
+    {
+        title: window.t('settings.groups.ai'),
+        tabs: [
+            { id: 'ai', label: window.t('settings.tabs.ai'), icon: '🤖' },
+            { id: 'mcp', label: window.t('settings.tabs.mcp'), icon: '🧩' },
+            { id: 'youtrack', label: window.t('settings.tabs.youtrack'), icon: '🎫' }
+        ]
+    },
+    {
+        title: window.t('settings.groups.extensions'),
+        tabs: [
+            { id: 'marketplace', label: window.t('settings.tabs.marketplace'), icon: '🛒' }
+        ]
+    }
 ];
 
 const getSavedSkin = () => localStorage.getItem('cgx-skin') || 'dark';
@@ -131,25 +152,98 @@ const renderTabContent = () => {
                 </div>
             `;
         }
-        case 'keybinds':
+        case 'ai': {
             return `
-                <div class="space-y-6">
-                    <p class="text-xs text-gray-500 mb-6" data-i18n="settings.keybinds.description">${window.t('settings.keybinds.description')}</p>
-                    <div class="space-y-2">
-                        ${[
-                    { action: window.t('settings.keybinds.searchProject'), key: 'CTRL + SHIFT + F' },
-                    { action: window.t('settings.keybinds.format'), key: 'ALT + F' },
-                    { action: window.t('settings.keybinds.openMarketplace'), key: 'CTRL + M' },
-                    { action: window.t('settings.keybinds.switchExplorer'), key: 'CTRL + E' }
-                ].map(kb => `
-                            <div class="flex items-center justify-between p-3 bg-[#161b22] border border-gray-800 rounded group hover:border-blue-500/30 transition">
-                                <span class="text-xs text-gray-300 font-bold">${kb.action}</span>
-                                <span class="px-2 py-1 bg-black text-blue-400 border border-gray-700 rounded text-[10px] font-mono">${kb.key}</span>
+                <div class="space-y-8 animate-fade-in">
+                    <div class="p-6 bg-[#161b22] border border-gray-800 rounded-2xl shadow-inner">
+                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4" data-i18n="settings.ai.title">${window.t('settings.ai.title')}</h4>
+                        
+                        <div class="flex flex-col gap-3">
+                            <label class="text-[9px] font-bold text-gray-600 uppercase" data-i18n="settings.ai.geminiKey">${window.t('settings.ai.geminiKey')}</label>
+                            <input id="ai-gemini-key" type="password" value="${state.geminiApiKey || ''}" data-i18n="[placeholder]settings.ai.placeholder" placeholder="${window.t('settings.ai.placeholder')}" class="p-3 bg-black/40 border border-gray-700 rounded-lg text-xs text-gray-200 focus:border-blue-500 outline-none transition font-mono tracking-widest">
+                            <p class="text-[10px] text-gray-500 leading-relaxed" data-i18n="settings.ai.geminiDesc">${window.t('settings.ai.geminiDesc')}</p>
+                        </div>
+
+                        <button onclick="window.saveGeminiKey()" class="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold rounded-lg transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
+                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                             <span data-i18n="settings.ai.save">${window.t('settings.ai.save')}</span>
+                        </button>
+                    </div>
+
+                    <div class="p-6 bg-[#161b22] border border-gray-800 rounded-2xl shadow-inner mt-4">
+                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Anthropic Claude CLI</h4>
+                        
+                        <div class="flex flex-col gap-3">
+                            <label class="text-[9px] font-bold text-gray-600 uppercase">Anthropic API Key</label>
+                            <input id="ai-anthropic-key" type="password" value="${state.anthropicApiKey || ''}" placeholder="sk-ant-..." class="p-3 bg-black/40 border border-gray-700 rounded-lg text-xs text-gray-200 focus:border-orange-500 outline-none transition font-mono tracking-widest">
+                            <p class="text-[10px] text-gray-500 leading-relaxed">Inserisci qui la tua chiave Anthropic per usare <b>claudecode</b> direttamente nel tab dedicato.</p>
+                        </div>
+
+                        <button onclick="window.saveAnthropicKey()" class="mt-6 w-full py-3 bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-bold rounded-lg transition shadow-lg shadow-orange-900/20 flex items-center justify-center gap-2">
+                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                             <span>SALVA CHIAVE ANTHROPIC</span>
+                        </button>
+                    </div>
+
+                    <div class="p-6 border border-blue-500/20 bg-blue-500/5 rounded-2xl">
+                         <div class="flex items-start gap-4">
+                            <div class="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                             </div>
-                        `).join('')}
+                            <div>
+                                <div class="text-[11px] font-bold text-blue-300 uppercase tracking-widest mb-1">Google AI Studio</div>
+                                <p class="text-[10px] text-blue-200/60 leading-relaxed">Puoi ottenere una chiave gratuita su <a href="https://aistudio.google.com/" target="_blank" class="text-blue-400 hover:underline italic">aistudio.google.com</a>. Il piano gratuito di Gemini 1.5 Pro è perfetto per l'uso personale dell'IDE.</p>
+                            </div>
+                         </div>
                     </div>
                 </div>
             `;
+        }
+        case 'keybinds': {
+            const currentShortcuts = state.shortcuts || {};
+            
+            return `
+                <div class="space-y-6 animate-fade-in">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-200 uppercase tracking-widest leading-none">${window.t('settings.tabs.keybinds')}</h4>
+                            <p class="text-[9px] text-gray-500 mt-1 uppercase tracking-tighter">Personalizza i comandi rapidi dell'IDE</p>
+                        </div>
+                        <button onclick="window.resetShortcuts()" class="px-2 py-1 bg-black/20 hover:bg-red-900/20 text-red-400 border border-red-900/30 text-[8px] font-bold rounded uppercase transition">
+                            Reset Default
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 pt-2">
+                        ${Object.entries(currentShortcuts).map(([key, binding]) => `
+                            <div class="flex items-center justify-between p-4 bg-[#161b22] border border-gray-800 rounded-xl group hover:border-blue-500/30 transition shadow-sm overflow-hidden relative">
+                                <div class="relative z-10">
+                                    <div class="text-[11px] font-bold text-gray-300 mb-0.5">${binding.label}</div>
+                                    <div class="text-[9px] text-gray-600 font-mono tracking-tighter">${binding.action}</div>
+                                </div>
+                                <div class="relative z-10 flex items-center gap-2">
+                                    <input type="text" 
+                                           value="${key}" 
+                                           readonly
+                                           onclick="window.recordShortcut(this, '${binding.action}')"
+                                           class="w-32 bg-black border border-gray-700 rounded-lg text-center font-mono text-[10px] text-blue-400 cursor-pointer hover:border-blue-500 transition focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                           title="Clicca per cambiare scorciatoia">
+                                </div>
+                                <!-- Background accent -->
+                                <div class="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <!-- Extra Actions / Bonus -->
+                    <div class="p-4 border border-yellow-500/10 bg-yellow-500/5 rounded-xl opacity-60">
+                         <p class="text-[9px] text-yellow-200/60 leading-relaxed italic text-center">
+                             Pro Tip: Clicca su una scorciatoia per registrarne una nuova. La registrazione terminerà automaticamente tasto dopo tasto.
+                         </p>
+                    </div>
+                </div>
+            `;
+        }
         case 'mcp':
             return `
                 <div class="space-y-8 animate-fade-in">
@@ -417,33 +511,50 @@ const renderSettingsModal = () => {
         return;
     }
 
+    const groups = getSettingsTabs();
+    const activeTab = groups.flatMap(g => g.tabs).find(t => t.id === state.activeSettingsTab);
+
     root.innerHTML = `
         <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-6 pointer-events-auto animate-fade-in">
-            <div class="bg-[#0d1117] w-full max-w-4xl h-[600px] rounded-xl border border-gray-700 shadow-2xl flex overflow-hidden">
+            <div class="bg-[#0d1117] w-full max-w-4xl h-[640px] rounded-2xl border border-gray-700/50 shadow-2xl flex overflow-hidden">
                 <!-- Sidebar -->
                 <div class="w-64 border-r border-gray-800 bg-[#161b22] flex flex-col">
-                    <div class="h-14 flex items-center px-6 border-b border-gray-800">
-                        <h2 class="text-sm font-bold text-gray-200 uppercase tracking-widest" data-i18n="settings.title">${window.t('settings.title')}</h2>
+                    <div class="h-14 flex items-center px-6 border-b border-gray-800 bg-black/20">
+                        <h2 class="text-sm font-black text-white uppercase tracking-widest" data-i18n="settings.title">${window.t('settings.title')}</h2>
                     </div>
-                    <div class="flex-1 py-4">
-                        ${getSettingsTabs().map(tab => `
-                            <div onclick="window.switchSettingsTab('${tab.id}')" class="px-6 py-3 flex items-center gap-3 cursor-pointer transition-all hover:bg-black/20 ${state.activeSettingsTab === tab.id ? 'bg-blue-600/10 text-blue-400 border-r-2 border-blue-500' : 'text-gray-400'}">
-                                <span class="text-base">${tab.icon}</span>
-                                <span class="text-xs font-bold">${tab.label}</span>
+                    <div class="flex-1 py-4 overflow-y-auto no-scrollbar">
+                        ${groups.map(group => `
+                            <div class="px-6 py-2 mt-4 first:mt-0">
+                                <h4 class="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2 px-1 opacity-50">${group.title}</h4>
+                                <div class="space-y-1">
+                                    ${group.tabs.map(tab => `
+                                        <div onclick="window.switchSettingsTab('${tab.id}')" 
+                                             class="px-3 py-2 flex items-center gap-3 rounded-lg cursor-pointer transition-all 
+                                             ${state.activeSettingsTab === tab.id 
+                                                 ? 'bg-blue-600/15 text-blue-400 border border-blue-500/20 shadow-lg shadow-blue-900/10' 
+                                                 : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent'}">
+                                            <span class="text-sm scale-110">${tab.icon}</span>
+                                            <span class="text-[11px] font-bold tracking-tight">${tab.label}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
                             </div>
                         `).join('')}
                     </div>
-                    <div class="p-6 border-t border-gray-800">
-                        <button onclick="window.closeSettings()" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-xs transition uppercase font-bold tracking-tighter" data-i18n="settings.close">${window.t('settings.close')}</button>
+                    <div class="p-6 border-t border-gray-800 bg-black/10">
+                        <button onclick="window.closeSettings()" class="w-full py-2 bg-gray-800/50 hover:bg-red-600/20 hover:text-red-400 border border-transparent hover:border-red-500/30 text-gray-400 rounded-lg text-[10px] transition-all uppercase font-black tracking-widest" data-i18n="settings.close">${window.t('settings.close')}</button>
                     </div>
                 </div>
 
                 <!-- Content Area -->
                 <div class="flex-1 flex flex-col bg-[#0d1117]">
-                    <div class="h-14 border-b border-gray-800 flex items-center px-8 bg-[#0d1117]">
-                        <h3 class="font-bold text-gray-300 capitalize">${getSettingsTabs().find(t => t.id === state.activeSettingsTab)?.label || ''}</h3>
+                    <div class="h-14 border-b border-gray-800 flex items-center px-8 bg-[#0d1117] relative z-10 shadow-sm">
+                        <div class="flex items-center gap-3">
+                           <span class="text-lg">${activeTab?.icon || ''}</span>
+                           <h3 class="font-black text-white text-sm uppercase tracking-wide">${activeTab?.label || ''}</h3>
+                        </div>
                     </div>
-                    <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                    <div class="flex-1 overflow-y-auto p-10 custom-scrollbar bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/5 via-transparent to-transparent">
                         ${renderTabContent()}
                     </div>
                 </div>
@@ -577,6 +688,18 @@ window.toggleAddRepoForm = (show) => {
     setState({ isAddingRepo: show });
 };
 
+window.saveGeminiKey = () => {
+    const key = document.getElementById('ai-gemini-key').value.trim();
+    setState({ geminiApiKey: key });
+    window.gxToast(window.t('settings.ai.success'), 'info');
+};
+
+window.saveAnthropicKey = () => {
+    const key = document.getElementById('ai-anthropic-key').value.trim();
+    setState({ anthropicApiKey: key });
+    window.gxToast("Chiave Anthropic salvata!", 'info');
+};
+
 window.submitNewRepository = () => {
     const nameInput = document.getElementById('new-repo-name');
     const urlInput = document.getElementById('new-repo-url');
@@ -701,4 +824,72 @@ export const initSettings = async () => {
     });
 
     subscribe(renderSettingsModal);
+};
+
+// --- Shortcut Manager Helpers ---
+window.recordShortcut = (input, action) => {
+    input.value = "Premi tasti...";
+    input.classList.add('animate-pulse', 'border-blue-500', 'text-white');
+    
+    // Mostriamo un piccolo overlay o feedback visivo? Per ora usiamo l'input.
+    
+    const onKey = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const isModifier = ['Control', 'Shift', 'Alt', 'Meta'].includes(e.key);
+        
+        let keys = [];
+        if (e.ctrlKey || e.metaKey) keys.push('Ctrl');
+        if (e.shiftKey) keys.push('Shift');
+        if (e.altKey) keys.push('Alt');
+
+        // Se è un modificatore e non abbiamo ancora un tasto finale, aggiorniamo solo l'anteprima
+        if (isModifier) {
+            input.value = keys.join('+') + (keys.length > 0 ? '+...' : '...');
+            return;
+        }
+
+        const key = e.key === ' ' ? 'Space' : e.key.charAt(0).toUpperCase() + e.key.slice(1);
+        keys.push(key);
+
+        const newShortcut = keys.join('+');
+        input.value = newShortcut;
+        input.classList.remove('animate-pulse', 'border-blue-500', 'text-white');
+        
+        // Salva nello stato
+        const newShortcuts = { ...state.shortcuts };
+        
+        // Rimuovi eventuali vecchie assegnazioni per questa combinazione (evita conflitti)
+        Object.keys(newShortcuts).forEach(k => {
+            if (newShortcuts[k].action === action) delete newShortcuts[k];
+        });
+
+        // Aggiungi la nuova
+        const originalLabel = Object.values(state.shortcuts).find(s => s.action === action)?.label || action;
+        newShortcuts[newShortcut] = {
+            action,
+            label: originalLabel
+        };
+
+        setState({ shortcuts: newShortcuts });
+        localStorage.setItem('gx-shortcuts', JSON.stringify(newShortcuts));
+        
+        window.removeEventListener('keydown', onKey, true);
+        window.gxToast(`Scorciatoia aggiornata: ${newShortcut}`, 'info');
+    };
+
+    window.addEventListener('keydown', onKey, true);
+};
+
+window.resetShortcuts = () => {
+    const defaults = {
+        'Ctrl+S': { action: 'editor:save', label: 'Salva File Attivo' },
+        'Ctrl+P': { action: 'search:quick-open', label: 'Ricerca Globale Rapida' },
+        'Ctrl+B': { action: 'sidebar:toggle', label: 'Mostra/Nascondi Sidebar' },
+        'Alt+F': { action: 'editor:format', label: 'Formatta Documento' }
+    };
+    setState({ shortcuts: defaults });
+    localStorage.setItem('gx-shortcuts', JSON.stringify(defaults));
+    window.gxToast('Scorciatoie resettate ai valori predefiniti', 'info');
 };

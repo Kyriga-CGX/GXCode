@@ -27,7 +27,7 @@ export const renderGit = async () => {
         </div>
     `;
 
-    const res = await window.electronAPI.gitStatus();
+    const res = await window.electronAPI.gitStatus(state.workspaceData?.path);
     if (!res.success) {
         // ... (Error handling remains same)
         container.innerHTML = `
@@ -128,23 +128,24 @@ export const renderGit = async () => {
 };
 
 window.handleGitAction = async (action, data) => {
+    const workspacePath = state.workspaceData?.path;
     if (action === 'stage') {
-        await window.electronAPI.gitStage(data);
+        await window.electronAPI.gitStage(workspacePath, data);
         renderGit();
     } else if (action === 'commit') {
         const msgInput = document.getElementById('git-commit-msg-input');
         const message = msgInput?.value.trim();
         if (!message) return;
         
-        await window.electronAPI.gitCommit(message);
+        await window.electronAPI.gitCommit(workspacePath, message);
         if (msgInput) msgInput.value = '';
         renderGit();
     } else if (action === 'pull') {
-        const res = await window.electronAPI.gitPull();
+        const res = await window.electronAPI.gitPull(workspacePath);
         alert(res.success ? window.t('git.pullSuccess') : (window.t('git.pullError').replace('{error}', res.error)));
         renderGit();
     } else if (action === 'push') {
-        const res = await window.electronAPI.gitPush();
+        const res = await window.electronAPI.gitPush(workspacePath);
         alert(res.success ? window.t('git.pushSuccess') : (window.t('git.pushError').replace('{error}', res.error)));
         renderGit();
     }

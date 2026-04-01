@@ -38,11 +38,18 @@ export const api = {
     loadMarketplace: async (query = '') => {
           setState({ isMarketplaceLoading: true });
           const type = state.activeMarketplaceTab || 'agents';
+          const enabledRepos = (state.repositories || [])
+                                .filter(r => r.enabled)
+                                .map(r => r.url)
+                                .join(',');
           
           try {
               const cat = state.activeMarketplaceCategory || 'all';
+              const queryStr = `/marketplace/search?type=${type}&q=${encodeURIComponent(query)}&category=${cat}` + 
+                               (enabledRepos ? `&registries=${encodeURIComponent(enabledRepos)}` : '');
+              
               // Chiamiamo l'aggregatore unico del backend
-              const items = await fetchJson(`/marketplace/search?type=${type}&q=${encodeURIComponent(query)}&category=${cat}`);
+              const items = await fetchJson(queryStr);
               
               const update = {};
               if (type === 'agents') update.marketplaceAgents = items || [];
@@ -67,27 +74,31 @@ export const api = {
     
     // Phase 6: Sync Tickets
     loadTickets: async () => {
-         const tickets = await fetchJson('/tickets');
+         const url = localStorage.getItem('gx-youtrack-url') || '';
+         const token = localStorage.getItem('gx-youtrack-token') || '';
+         const query = (url && token) ? `?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}` : '';
+         
+         const tickets = await fetchJson(`/tickets${query}`);
          setState({ tickets: tickets || [] });
     },
     
     // 3. I metodi di Installa risolvono istantaneamente il problema di asincronia
-    installSkill: async (id) => {
-         await fetchJson(`/marketplace-skills/${id}`, {
+    installSkill: async (item) => {
+         await fetchJson(`/marketplace-skills/${item.id}`, {
              method: 'PATCH',
              headers: {'Content-Type': 'application/json'},
-             body: JSON.stringify({ isInstalled: true, isEnabled: true })
+             body: JSON.stringify({ ...item, isInstalled: true, isEnabled: true })
          });
          // Dopo aver installato, chiamando loadAll(), triggeriamo l'aggiornamento simultaneo globale della Sidebar. ZERO RELOADS.
          await api.loadAll();
          await api.loadMarketplace();
     },
     
-    installAgent: async (id) => {
-         await fetchJson(`/marketplace-agents/${id}`, {
+    installAgent: async (item) => {
+         await fetchJson(`/marketplace-agents/${item.id}`, {
              method: 'PATCH',
              headers: {'Content-Type': 'application/json'},
-             body: JSON.stringify({ isInstalled: true, isEnabled: true })
+             body: JSON.stringify({ ...item, isInstalled: true, isEnabled: true })
          });
          await api.loadAll();
          await api.loadMarketplace();

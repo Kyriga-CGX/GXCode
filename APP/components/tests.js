@@ -211,7 +211,42 @@ export const initTests = () => {
 
     window.runFileTests = async (encodedFilePath) => {
         const filePath = decodeURIComponent(encodedFilePath);
-        console.log("Run file tests", filePath);
-        // Da implementare col backend per fare run di file interi
+        console.log("[GX-TESTS] Running all tests in file:", filePath);
+
+        // UI Feedback: mark all tests in this file as running
+        testFilesCache = testFilesCache.map(f => {
+            if (f.fullPath === filePath) {
+                f.testMatches = f.testMatches.map(t => ({ ...t, status: 'running' }));
+            }
+            return f;
+        });
+        renderTestTree();
+
+        try {
+            const report = await window.electronAPI.runFileTests(state.workspaceData.path, filePath);
+            console.log("[GX-TESTS] File report:", report);
+            
+            // Map report results back to cache
+            testFilesCache = testFilesCache.map(f => {
+                if (f.fullPath === filePath) {
+                    f.testMatches = f.testMatches.map(t => {
+                        // Playwright usually reports tests with titles
+                        // Here we simulate simple pass/fail based on error count for the file for now
+                        // or better, if report is detailed, map by title
+                        return { ...t, status: report.errors && report.errors.length > 0 ? 'failed' : 'passed' };
+                    });
+                }
+                return f;
+            });
+        } catch(e) {
+            console.error("Errore run file:", e);
+            testFilesCache = testFilesCache.map(f => {
+                if (f.fullPath === filePath) {
+                    f.testMatches = f.testMatches.map(t => ({ ...t, status: 'failed' }));
+                }
+                return f;
+            });
+        }
+        renderTestTree();
     };
 };

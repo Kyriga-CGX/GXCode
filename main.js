@@ -1507,16 +1507,19 @@ app.whenReady().then(() => {
     }
   });
 
-  autoUpdater.on('update-available', () => {
-    win.webContents.send('update-available');
+  autoUpdater.on('update-available', (info) => {
+    const wins = BrowserWindow.getAllWindows();
+    if (wins.length > 0) wins[0].webContents.send('update-available', info);
   });
 
   autoUpdater.on('download-progress', (progressObj) => {
-    win.webContents.send('download-progress', progressObj.percent);
+    const wins = BrowserWindow.getAllWindows();
+    if (wins.length > 0) wins[0].webContents.send('download-progress', progressObj.percent);
   });
 
-  autoUpdater.on('update-downloaded', () => {
-    win.webContents.send('update-ready-to-install');
+  autoUpdater.on('update-downloaded', (info) => {
+    const wins = BrowserWindow.getAllWindows();
+    if (wins.length > 0) wins[0].webContents.send('update-ready-to-install', info);
   });
 
   ipcMain.handle('git-status', async (event, workspacePath) => {

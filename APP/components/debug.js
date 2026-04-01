@@ -35,15 +35,19 @@ export const initDebug = () => {
     window.electronAPI.onDebugPaused((data) => {
         setState({ 
             debugCallStack: data.callStack || [],
-            debugVariables: data.variables || [],
             debugActiveLine: data.line
         });
         window.gxToast(window.t('debug.toastPause').replace('{line}', data.line), "info");
     });
 
+    window.electronAPI.onDebugVariables((vars) => {
+        setState({ debugVariables: vars || [] });
+    });
+
     window.electronAPI.onDebugResumed(() => {
         setState({ 
-            debugActiveLine: null 
+            debugActiveLine: null,
+            debugVariables: []
         });
     });
 
@@ -53,6 +57,7 @@ export const initDebug = () => {
 
     const renderDebugInfo = () => {
         const breakpoints = state.breakpoints || [];
+        const variables = state.debugVariables || [];
         
         pane.innerHTML = `
             <div class="flex flex-col h-full animate-fade-in">
@@ -89,7 +94,18 @@ export const initDebug = () => {
                     <!-- Variables -->
                     <section class="space-y-3">
                         <h5 class="text-[9px] font-bold text-gray-500 uppercase tracking-widest" data-i18n="debug.variables">${window.t('debug.variables')}</h5>
-                        <div class="text-[10px] text-gray-600 italic px-2 border-l border-gray-800" data-i18n="debug.scopeEmpty">${window.t('debug.scopeEmpty')}</div>
+                        <div class="space-y-1">
+                            ${variables.length > 0 ? 
+                                variables.map(v => `
+                                    <div class="flex items-baseline gap-2 text-[10px] px-2 py-1 hover:bg-gray-800/50 rounded transition group">
+                                        <span class="text-blue-400 font-bold font-mono">${v.name}:</span>
+                                        <span class="text-gray-300 font-mono truncate" title="${v.value}">${v.value}</span>
+                                        <span class="text-[8px] text-gray-600 uppercase ml-auto opacity-0 group-hover:opacity-100">${v.type}</span>
+                                    </div>
+                                `).join('') : 
+                                `<div class="text-[10px] text-gray-600 italic px-2 border-l border-gray-800" data-i18n="debug.scopeEmpty">${window.t('debug.scopeEmpty')}</div>`
+                            }
+                        </div>
                     </section>
 
                     <!-- Breakpoints -->
@@ -124,6 +140,7 @@ export const initDebug = () => {
             newState.breakpoints !== oldState?.breakpoints || 
             newState.isDebugModeActive !== oldState?.isDebugModeActive ||
             newState.debugCallStack !== oldState?.debugCallStack ||
+            newState.debugVariables !== oldState?.debugVariables ||
             newState.debugActiveLine !== oldState?.debugActiveLine
         ) {
             renderDebugInfo();

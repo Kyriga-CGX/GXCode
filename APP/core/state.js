@@ -12,12 +12,22 @@ export const state = {
     language: localStorage.getItem('gx-language') || 'it',
     mcpServers: JSON.parse(localStorage.getItem('gx-mcp-servers') || '[]'),
     youtrackConfig: JSON.parse(localStorage.getItem('gx-youtrack-config') || '{"url":"", "token":"", "enabled":false}'),
+    geminiApiKey: localStorage.getItem('gx-gemini-api-key') || '',
+    anthropicApiKey: localStorage.getItem('gx-anthropic-api-key') || '',
     repositories: JSON.parse(localStorage.getItem('gx-repositories') || '[{"id":"gx-official", "name":"GX Official Repo", "url":"https://api.gxcode.io/v1", "type":"all", "enabled":true}]'),
     marketplaceSources: {
         openvsx: true,
         skillssh: true,
         agentshub: true
     },
+
+    // Shortcuts (Dinamiche e Persistenti)
+    shortcuts: JSON.parse(localStorage.getItem('gx-shortcuts') || JSON.stringify({
+        'Ctrl+S': { action: 'editor:save', label: 'Salva File Attivo' },
+        'Ctrl+P': { action: 'search:quick-open', label: 'Ricerca Globale Rapida' },
+        'Ctrl+B': { action: 'sidebar:toggle', label: 'Mostra/Nascondi Sidebar' },
+        'Alt+F': { action: 'editor:format', label: 'Formatta Documento' }
+    })),
 
     // UI State (Persistiti su localStorage)
     activeSidebarTab: localStorage.getItem('gx-active-sidebar-tab') || 'agents',
@@ -34,6 +44,7 @@ export const state = {
     
     tickets: [],
     activeTicketId: null,
+    activeAgentId: localStorage.getItem('gx-active-agent-id'),
     workspaceData: null,
     openFiles: JSON.parse(localStorage.getItem('gx-open-files') || '[]'),
     activeFileId: localStorage.getItem('gx-active-file-id'),
@@ -47,6 +58,36 @@ export const state = {
     debugVariables: [],
     debugActiveLine: null,
     gitStatus: {}, // Map of path -> status (M, A, D, U)
+    customAiConfig: JSON.parse(localStorage.getItem('gx-custom-ai-config') || '{"apiKey":"","endpoint":"http://localhost:11434/v1","models":[],"activeModel":"","isSetup":false}'),
+    // Configurazione Gemini con merge dei default (Evita crash per schema-mismatch)
+    geminiConfig: (() => {
+        const defaults = {
+            isAuthenticated: false,
+            apiKey: "",
+            activeModel: "gemini-1.5-pro",
+            models: ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
+            user: null,
+            mode: "fast",
+            messages: []
+        };
+        const saved = JSON.parse(localStorage.getItem('gx-gemini-config') || '{}');
+        return { ...defaults, ...saved };
+    })(),
+
+    claudeCliConfig: (() => {
+        const defaults = {
+            command: "npx @anthropic-ai/claude-code",
+            lastSession: null,
+            env: {}
+        };
+        const saved = JSON.parse(localStorage.getItem('gx-claude-cli-config') || '{}');
+        return { ...defaults, ...saved };
+    })(),
+
+    _geminiLoading: false,
+    _geminiAuthenticating: false,
+    _geminiAuthError: null,
+    _geminiNeedsKey: false,
     appVersion: "..." 
 };
 
@@ -69,6 +110,11 @@ export const setState = (newState) => {
     if (newState.hasOwnProperty('isTerminalMinimized')) localStorage.setItem('gx-is-terminal-minimized', state.isTerminalMinimized);
     if (newState.openFiles) localStorage.setItem('gx-open-files', JSON.stringify(state.openFiles));
     if (newState.activeFileId) localStorage.setItem('gx-active-file-id', state.activeFileId);
+    if (newState.hasOwnProperty('geminiApiKey')) localStorage.setItem('gx-gemini-api-key', state.geminiApiKey);
+    if (newState.hasOwnProperty('anthropicApiKey')) localStorage.setItem('gx-anthropic-api-key', state.anthropicApiKey);
+    if (newState.customAiConfig) localStorage.setItem('gx-custom-ai-config', JSON.stringify(state.customAiConfig));
+    if (newState.geminiConfig) localStorage.setItem('gx-gemini-config', JSON.stringify(state.geminiConfig));
+    if (newState.claudeCliConfig) localStorage.setItem('gx-claude-cli-config', JSON.stringify(state.claudeCliConfig));
 
     for (const listener of listeners) {
         listener(state);

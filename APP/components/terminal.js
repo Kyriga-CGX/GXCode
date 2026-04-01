@@ -1,4 +1,4 @@
-import { subscribe } from '../core/state.js';
+import { state, subscribe } from '../core/state.js';
 
 const terminals = {}; // terminalId -> { term, fitAddon, container, shellType, ... }
 let activeTerminalId = null;
@@ -61,7 +61,7 @@ export const initTerminal = async () => {
         term.loadAddon(fitAddon);
         term.open(termContainer);
 
-        const res = await window.electronAPI.terminalCreate(id, shellType);
+        const res = await window.electronAPI.terminalCreate(id, shellType, state.workspaceData?.path);
         
         if (res && !res.success) {
             term.write(`\r\n\x1b[31;1m${window.t('terminal.errorStart').replace('{shell}', shellType.toUpperCase())}\x1b[0m\r\n`);
@@ -77,7 +77,8 @@ export const initTerminal = async () => {
         termContainer.addEventListener('contextmenu', async (e) => {
             e.preventDefault();
             try {
-                const text = await navigator.clipboard.readText();
+                // Usiamo l'API IPC per evitare restrizioni del browser sulla lettura clipboard
+                const text = await window.electronAPI.clipboardRead();
                 if (text) {
                     window.electronAPI.terminalWrite(id, text);
                 }

@@ -7,11 +7,17 @@ export const showContextMenu = (e, path, isDirectory) => {
     const existing = document.getElementById('gx-context-menu');
     if (existing) existing.remove();
 
+    const modalsRoot = document.getElementById('modals-root');
     const menu = document.createElement('div');
     menu.id = 'gx-context-menu';
-    menu.className = 'fixed bg-[#161b22] border border-[#30363d] rounded-lg shadow-2xl py-2 z-[9999] text-[12px] min-w-[180px] animate-in fade-in zoom-in duration-150 backdrop-blur-md';
-    menu.style.left = `${e.clientX}px`;
-    menu.style.top = `${e.clientY}px`;
+    // Offset x slightly (+2px) to prevent being cut by the sidebar shadow/border
+    const x = e.clientX + 2; 
+    const y = e.clientY;
+
+    menu.className = 'fixed bg-[#12161d] border border-gray-800 rounded-lg shadow-2xl py-1.5 text-[12px] min-w-[200px] animate-in fade-in zoom-in duration-150 backdrop-blur-xl pointer-events-auto';
+    menu.style.zIndex = "2147483647"; 
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
 
     // Modern items construction
     const items = [
@@ -45,7 +51,12 @@ export const showContextMenu = (e, path, isDirectory) => {
         menu.appendChild(div);
     });
 
-    document.body.appendChild(menu);
+    if (modalsRoot) {
+        modalsRoot.classList.remove('pointer-events-none');
+        modalsRoot.appendChild(menu);
+    } else {
+        document.body.appendChild(menu);
+    }
 
     // Dynamic repositioning if menu overflows screen
     const rect = menu.getBoundingClientRect();
@@ -58,31 +69,43 @@ export const showContextMenu = (e, path, isDirectory) => {
 
     const closeHandler = () => {
         menu.remove();
+        if (modalsRoot && !modalsRoot.innerHTML.trim()) {
+            modalsRoot.classList.add('pointer-events-none');
+        }
         window.removeEventListener('mousedown', closeHandler);
     };
     setTimeout(() => window.addEventListener('mousedown', closeHandler), 10);
 };
 
 const createItem = async (targetPath, isTargetDirectory, type) => {
-    const parentDir = isTargetDirectory ? targetPath : targetPath.substring(0, targetPath.lastIndexOf('\\'));
+    let parentDir = isTargetDirectory ? targetPath : targetPath.substring(0, Math.max(targetPath.lastIndexOf('\\'), targetPath.lastIndexOf('/')));
+    
+    // Fallback alla root se parentDir è vuoto o non valido
+    if (!parentDir && state.workspaceData?.path) {
+        parentDir = state.workspaceData.path;
+    }
+
     const typeLabel = type === 'file' ? window.t('contextMenu.file') : window.t('contextMenu.folder');
-    const name = prompt(`${window.t('contextMenu.enterName')} ${typeLabel}:`);
-    if (!name) return;
+    
+    // Dismiss context menu then open prompt
+    const menu = document.getElementById('gx-context-menu');
+    if (menu) menu.remove();
 
-    let res;
-    if (type === 'file') {
-        res = await window.electronAPI.fsCreateFile(parentDir, name);
-    } else {
-        res = await window.electronAPI.fsCreateFolder(parentDir, name);
-    }
+    window.gxPrompt(window.t('contextMenu.enterName'), typeLabel, '', async (name) => {
+        let res;
+        if (type === 'file') {
+            res = await window.electronAPI.fsWriteFile(`${parentDir}\\${name}`, '');
+        } else {
+            res = await window.electronAPI.fsCreateFolder(parentDir, name);
+        }
 
-    if (res.error) {
-        console.error("[GX FS] Creation error:", res.error);
-        alert(window.t('contextMenu.createError').replace('{error}', res.error));
-    } else {
-        console.log(`[GX FS] ${type} creato:`, res.path);
-        refreshWorkspaceAndGit();
-    }
+        if (res?.error) {
+            window.gxAlert('Errore', res.error, 'error');
+        } else {
+            window.gxToast(window.t('common.success'), 'success');
+            refreshWorkspaceAndGit();
+        }
+    });
 };
 
 const deleteItem = async (path) => {

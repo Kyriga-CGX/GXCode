@@ -45,6 +45,36 @@ export const initProblems = () => {
         `;
     };
 
+    window.runLint = async (filePath) => {
+        if (!filePath || (!filePath.endsWith('.js') && !filePath.endsWith('.ts'))) return;
+        
+        try {
+            const res = await window.electronAPI.lintFile(filePath);
+            if (res.success && res.problems && res.problems.length > 0) {
+                // ESLint format: array of objects { filePath, messages: [] }
+                const fileResult = res.problems[0];
+                const newProblems = fileResult.messages.map(m => ({
+                    path: filePath,
+                    message: m.message,
+                    severity: m.severity === 2 ? 4 : 2, // Map to our severity (4=Error, 2=Warning)
+                    startLine: m.line,
+                    startColumn: m.column,
+                    source: m.ruleId || 'eslint'
+                }));
+                
+                // Manteniamo i problemi degli altri file ma aggiorniamo questo
+                const otherProblems = (state.problems || []).filter(p => p.path !== filePath);
+                setState({ problems: [...otherProblems, ...newProblems] });
+            } else {
+                // Se non ci sono errori, puliamo i problemi di questo file
+                const remainingProblems = (state.problems || []).filter(p => p.path !== filePath);
+                setState({ problems: remainingProblems });
+            }
+        } catch (err) {
+            console.error("[GX Problems] Lint error:", err);
+        }
+    };
+
     subscribe((newState, oldState) => {
         if (newState.problems !== oldState?.problems) {
             renderProblems();
