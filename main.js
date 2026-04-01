@@ -1195,10 +1195,7 @@ function createWindow() {
 app.whenReady().then(() => {
   const mainWindow = createWindow();
 
-  // Handler nativo globale (fuori da whenReady per garanzia di boot)
-  ipcMain.handle('clipboard-read', () => {
-    return clipboard.readText();
-  });
+
 
   ipcMain.handle('open-project-folder', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
