@@ -265,12 +265,26 @@ let mcpServers = [];   // idem
 // ---- ENDPOINT SKILLS ----
 apiApp.get("/api/skills", (req, res) => {
   const diskSkills = loadPersistedData('skills');
-  res.json(diskSkills);
+  const unique = [];
+  const ids = new Set();
+  for (const s of diskSkills) {
+    if (!ids.has(String(s.id))) {
+      ids.add(String(s.id));
+      unique.push(s);
+    }
+  }
+  res.json(unique);
 });
 
 apiApp.post("/api/skills", (req, res) => {
   const body = req.body;
   const diskSkills = loadPersistedData('skills');
+  
+  // Prevenzione duplicazione per nome/slug
+  const slug = body.slug || body.name.toLowerCase().replace(/\s+/g, '-');
+  const existing = diskSkills.find(s => s.slug === slug || s.name === body.name);
+  if (existing) return res.status(200).json(existing);
+
   const newId = diskSkills.length ? Math.max(...diskSkills.map((s) => s.id)) + 100 : Math.floor(Math.random() * 100000);
   const skill = {
     id: newId,
@@ -306,12 +320,26 @@ apiApp.delete("/api/skills/:id", (req, res) => {
 // ---- ENDPOINT AGENTS ----
 apiApp.get("/api/agents", (req, res) => {
   const diskAgents = loadPersistedData('agents');
-  res.json(diskAgents);
+  const unique = [];
+  const ids = new Set();
+  for (const a of diskAgents) {
+    if (!ids.has(String(a.id))) {
+      ids.add(String(a.id));
+      unique.push(a);
+    }
+  }
+  res.json(unique);
 });
 
 apiApp.post("/api/agents", (req, res) => {
   const body = req.body;
   const diskAgents = loadPersistedData('agents');
+
+  // Prevenzione duplicazione per nome/slug
+  const slug = body.slug || body.name.toLowerCase().replace(/\s+/g, '-');
+  const existing = diskAgents.find(a => a.slug === slug || a.name === body.name);
+  if (existing) return res.status(200).json(existing);
+
   const newId = diskAgents.length ? Math.max(...diskAgents.map((a) => a.id)) + 100 : Math.floor(Math.random() * 100000);
   const agent = {
     id: newId,
@@ -1867,6 +1895,7 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.removeHandler('clipboard-read');
   ipcMain.handle('clipboard-read', () => {
     const { clipboard } = require('electron');
     return clipboard.readText();

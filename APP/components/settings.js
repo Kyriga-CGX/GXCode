@@ -418,16 +418,16 @@ const renderTabContent = () => {
             return `
                 <div class="space-y-8 animate-fade-in">
                     <div>
-                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4" data-i18n="settings.folders.title">\${window.t('settings.folders.title')}</h4>
-                        <p class="text-[10px] text-gray-500 mb-6" data-i18n="settings.folders.desc">\${window.t('settings.folders.desc')}</p>
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4" data-i18n="settings.folders.title">${window.t('settings.folders.title')}</h4>
+                        <p class="text-[10px] text-gray-500 mb-6" data-i18n="settings.folders.desc">${window.t('settings.folders.desc')}</p>
                         
                         <div class="p-6 bg-[#161b22] border border-gray-800 rounded-2xl group hover:border-blue-500/30 transition shadow-inner">
-                            <h4 class="text-[11px] font-bold text-gray-300 uppercase tracking-widest mb-2" data-i18n="settings.folders.systemDir">\${window.t('settings.folders.systemDir')}</h4>
-                            <p class="text-[10px] text-gray-500 mb-6 leading-relaxed" data-i18n="settings.folders.systemDirDesc">\${window.t('settings.folders.systemDirDesc')}</p>
+                            <h4 class="text-[11px] font-bold text-gray-300 uppercase tracking-widest mb-2" data-i18n="settings.folders.systemDir">${window.t('settings.folders.systemDir')}</h4>
+                            <p class="text-[10px] text-gray-500 mb-6 leading-relaxed" data-i18n="settings.folders.systemDirDesc">${window.t('settings.folders.systemDirDesc')}</p>
                             
                             <button onclick="window.electronAPI.openGxCodeFolder()" class="w-full py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex items-center justify-center gap-3 group-hover:border-blue-500/50 shadow-md">
                                 <span class="text-xl group-hover:scale-110 transition-transform">📂</span>
-                                <span class="text-[11px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-blue-400 transition-colors" data-i18n="settings.folders.openFolder">\${window.t('settings.folders.openFolder')}</span>
+                                <span class="text-[11px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-blue-400 transition-colors" data-i18n="settings.folders.openFolder">${window.t('settings.folders.openFolder')}</span>
                             </button>
                         </div>
                     </div>
