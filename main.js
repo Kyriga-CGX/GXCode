@@ -1703,16 +1703,24 @@ app.whenReady().then(() => {
         pendingCheck = null;
       }
 
-      // Verifichiamo se l'aggiornamento è effettivamente necessario
-      const currentVersion = app.getVersion();
-      const latestVersion = checkResult && checkResult.updateInfo ? checkResult.updateInfo.version : null;
-      
-      if (latestVersion && latestVersion !== currentVersion) {
-        console.log(`[UPDATER] Nuovo aggiornamento trovato: ${latestVersion} (Corrente: ${currentVersion})`);
+      // Helper per confronto versioni semver-like
+      const isNewer = (latest, current) => {
+        if (!latest || !current) return false;
+        const l = latest.split('.').map(Number);
+        const c = current.split('.').map(Number);
+        for (let i = 0; i < 3; i++) {
+          if (l[i] > c[i]) return true;
+          if (l[i] < c[i]) return false;
+        }
+        return false;
+      };
+
+      if (latestVersion && isNewer(latestVersion, currentVersion)) {
+        console.log(`[UPDATER] Versione superiore trovata: ${latestVersion} > ${currentVersion}. Avvio download...`);
         await autoUpdater.downloadUpdate();
         return true;
       } else {
-        console.log(`[UPDATER] Nessun aggiornamento necessario o versione già allineata (${currentVersion}).`);
+        console.log(`[UPDATER] Nessun aggiornamento necessario. Versione corrente: ${currentVersion} (Latest su GitHub: ${latestVersion || 'nessuna'}).`);
         return false;
       }
     } catch (err) {
