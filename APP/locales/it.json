@@ -36,7 +36,7 @@
         "testing": "Testing",
         "agents": "Agenti",
         "skills": "Skill",
-        "addons": "Addons",
+        "aiCompanion": "Ai Companion",
         "search_label": "Cerca...",
         "noResults": "Nessun Risultato",
         "searchHint": "Prova a cambiare i criteri di ricerca",
@@ -96,6 +96,18 @@
         "output": "Output",
         "debugConsole": "Console di Debug",
         "ports": "Porte",
+        "gemini": "Gemini",
+        "claude": "Claude",
+        "customAi": "Custom AI",
+        "customAiSetup": "Configura Custom AI",
+        "customAiAddApi": "Aggiungi API",
+        "customAiPlaceholder": "Inserisci la tua API Key...",
+        "customAiSave": "Salva",
+        "customAiSettings": "Impostazioni Custom AI",
+        "customAiFetching": "Recupero modelli...",
+        "customAiNoModels": "Nessun modello",
+        "comingSoon": "Prossimamente",
+        "sendToAi": "Invia Codice all'AI",
         "hidePanel": "Nascondi Pannello inferiore",
         "noProblems": "Nessun problema rilevato nel workspace.",
         "logsHint": "I log del sistema appariranno qui.",
@@ -116,6 +128,12 @@
     "settings": {
         "title": "Opzioni",
         "close": "Chiudi",
+        "groups": {
+            "general": "Generale",
+            "interface": "Interfaccia",
+            "ai": "IA & Automazione",
+            "extensions": "Estensioni"
+        },
         "tabs": {
             "preferences": "Preferenze",
             "keybinds": "Scorciatoie",
@@ -124,7 +142,8 @@
             "marketplace": "Marketplace & Repo",
             "appearance": "Aspetto",
             "language": "Lingua",
-            "updates": "Aggiornamenti"
+            "updates": "Aggiornamenti",
+            "ai": "AI"
         },
         "preferences": {
             "title": "Preferenze Editor",
@@ -161,18 +180,24 @@
             "english": "English"
         },
         "updates": {
-            "softwareUpdate": "Aggiornamento Software",
-            "description": "Mantenere GXCode aggiornato garantisce le ultime feature e patch di sicurezza.",
+            "title": "Aggiornamenti Sistema",
+            "check": "Controlla Aggiornamenti",
+            "upToDate": "GXCode è aggiornato àll'ultima versione.",
+            "newVersion": "Nuova versione disponibile: {version}",
             "updateNow": "Aggiorna Ora",
-            "downloading": "Download in corso: {percent}%",
-            "upToDate": "GXCode è aggiornato",
-            "restart": "Riavvia ora 🛠️",
-            "retry": "Riprova",
-            "checking": "Verifica...",
-            "currentVersion": "Versione Corrente",
-            "channel": "Canale",
-            "systemInfo": "Informazioni Sistema",
-            "officialChannel": "Official Git"
+            "checking": "Ricerca aggiornamenti...",
+            "error": "Errore durante il controllo degli aggiornamenti."
+        },
+        "ai": {
+            "title": "Configurazione AI Nativa",
+            "geminiKey": "Gemini API Key",
+            "geminiDesc": "Inserisci la tua Gemini API key da Google AI Studio per abilitare le funzioni di automazione del GX-Agent.",
+            "placeholder": "Inserisci API Key...",
+            "save": "Salva API Key",
+            "success": "API Key salvata correttamente!"
+        },
+        "gxAgent": {
+            "placeholder": "Chiedi al GX-Agent..."
         },
         "mcp": {
             "title": "Configura Nuovo Server",
@@ -294,13 +319,13 @@
         "installOk": "✅ OK",
         "installError": "❌ Errore",
         "agentsTab": "🤖 Agenti",
-        "skillsTab": "📖 Skills",
-        "addonsTab": "🧩 Addons",
+        "skillsTab": "📖 Skill",
+        "aiCompanionTab": "✨ Ai Companion",
         "manageSources": "Gestisci Sorgenti",
         "searchPlaceholder": "Cerca in {tab}...",
         "agentsSub": "Scegli tra i migliori agenti certificati da Agensi, DeepNLP e OpenSkills.",
-        "skillsSub": "Libreria unificata di tool e skill in formato SKILL.md per i tuoi agenti.",
-        "addonsSub": "Esplora e installa migliaia di estensioni tramite Open VSX.",
+        "skillsSub": "Libreria unificata di strumenti e skill in formato SKILL.md per i tuoi agenti.",
+        "aiCompanionSub": "Assumi compagni IA specializzati per guidarti nello sviluppo del progetto.",
         "vsxNote": "Nota: GXCode estrae metadati e asset direttamente dal registro Open VSX per un'esperienza nativa.",
         "syncing": "Sincronizzazione...",
         "refresh": "Aggiorna Catalogo"
@@ -312,12 +337,16 @@
         "skill": "Skill",
         "addon": "Addon",
         "name": "Nome",
+        "description": "Descrizione Breve",
         "category": "Categoria / Tag",
         "prompt": "System Prompt",
+        "logic": "Logica / Script",
         "assignSkills": "🖇️ Assegna Skill all'Agente",
         "namePlaceholder": "Esempio: React Expert",
+        "descPlaceholder": "Spiega cosa fa questo modulo...",
         "catPlaceholder": "Esempio: sviluppatore, tester, cloud...",
         "promptPlaceholder": "Sei un esperto sviluppatore...",
+        "logicPlaceholder": "Definisci la logica della skill o il comando...",
         "cancel": "Annulla",
         "publish": "Pubblica",
         "save": "💾 Salva / Sincronizza",

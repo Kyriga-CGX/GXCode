@@ -1,4 +1,6 @@
 // APP/components/marketplace.js
+// NOTE: This file uses inline styles for the modal overlay/positioning
+// because Tailwind v4 build purges dynamically-generated class names in JS template literals.
 import { state, subscribe, setState } from '../core/state.js';
 import { api } from '../core/api.js';
 
@@ -6,44 +8,73 @@ const modalsRoot = document.getElementById('modals-root');
 window.__marketCache = new Map();
 
 const renderMarketplaceContent = (items, type) => {
-    if (!items || items.length === 0) return `<div class="text-[11px] text-gray-500 italic p-6 text-center border border-dashed border-gray-800 rounded-xl bg-black/20" data-i18n="marketplace.noModules">${window.t('marketplace.noModules')}</div>`;
+    if (!items || items.length === 0) {
+        return `<div style="grid-column:1/-1;text-align:center;padding:48px 24px;color:#6e7681;font-size:11px;border:1px dashed #30363d;border-radius:12px;">${window.t('marketplace.noModules')}</div>`;
+    }
+
+    const isInstalledTab = state.activeMarketplaceTab === 'installed';
 
     return items.map(item => {
         const key = item.slug || String(item.id);
         window.__marketCache.set(key, item);
 
-        const isNew = item.discoveredAt && (Date.now() - item.discoveredAt < 120000);
+        const sourceBg = item.source === 'Open VSX' ? 'rgba(59,130,246,0.1)' :
+                         item.source === 'skills.sh' ? 'rgba(168,85,247,0.1)' :
+                         'rgba(16,185,129,0.1)';
+        const sourceColor = item.source === 'Open VSX' ? '#60a5fa' :
+                            item.source === 'skills.sh' ? '#c084fc' :
+                            '#34d399';
 
-        const sourceColor = item.source === 'Open VSX' ? 'text-blue-400 border-blue-500/30 bg-blue-500/10' :
-                           item.source === 'skills.sh' ? 'text-purple-400 border-purple-500/30 bg-purple-500/10' :
-                           ['Apify', 'DeepNLP', 'Agensi', 'Superface'].includes(item.source) ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' :
-                           'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
+        const realType = isInstalledTab ? (item.type || type) : type;
+
+        const btnStyle = isInstalledTab 
+            ? 'background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2);cursor:pointer;'
+            : item.isInstalled
+                ? 'background:#1f2937;color:#6b7280;cursor:not-allowed;'
+                : 'background:#2563eb;color:#fff;cursor:pointer;';
+
+        const btnAction = isInstalledTab 
+            ? `window.uninstallMarketItem('${realType}', '${key}', event)`
+            : `window.installMarketItem('${realType}', '${key}', event)`;
+
+        const badgeColor = realType === 'agent' ? '#3b82f6' : realType === 'skill' ? '#10b981' : realType === 'addon' ? '#a855f7' : '#6e7681';
+        const badgeBg = realType === 'agent' ? 'rgba(59,130,246,0.1)' : realType === 'skill' ? 'rgba(16,185,129,0.1)' : realType === 'addon' ? 'rgba(168,85,247,0.1)' : 'rgba(110,118,129,0.1)';
 
         return `
-        <div class="p-4 border border-gray-800 rounded-xl bg-[#161b22] flex flex-col hover:border-blue-500/30 hover:bg-[#1d232b] transition-all group shadow-sm relative overflow-hidden">
-            ${isNew ? `<div class="absolute top-0 right-0 bg-blue-600 text-white text-[8px] font-black px-2 py-0.5 rounded-bl-lg animate-pulse uppercase tracking-tighter z-10">NEW SYNC</div>` : ''}
-            <div class="flex justify-between items-start mb-2">
-                <div class="flex flex-col gap-1 overflow-hidden">
-                    <span class="text-[8px] px-1.5 py-0.5 rounded border ${sourceColor} uppercase font-bold tracking-[0.1em] self-start">${item.source || 'GX Hub'}</span>
-                    <h3 class="font-bold text-gray-100 text-[13px] group-hover:text-blue-400 transition-colors truncate pr-2">${item.name}</h3>
+        <div style="padding:16px;border:1px solid #21262d;border-radius:12px;background:#161b22;display:flex;flex-direction:column;transition:border-color 0.2s;cursor:pointer;" 
+             onmouseover="this.style.borderColor='rgba(59,130,246,0.4)'" 
+             onmouseout="this.style.borderColor='#21262d'"
+             ondblclick="window.previewMarketItem('${realType}s', '${key}')">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                <div style="display:flex;flex-direction:column;gap:4px;overflow:hidden;">
+                    <span style="font-size:8px;padding:2px 6px;border-radius:4px;border:1px solid ${sourceColor}40;background:${sourceBg};color:${sourceColor};text-transform:uppercase;font-weight:700;letter-spacing:0.1em;align-self:flex-start;">${item.source || 'GX Hub'}</span>
+                    <h3 style="margin:0;font-weight:700;color:#e6edf3;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</h3>
                 </div>
-                <span class="text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-gray-500 uppercase tracking-tighter border border-gray-800 shrink-0">${item.category || item.role || 'Addon'}</span>
+                <span style="font-size:9px;padding:2px 6px;border-radius:4px;background:${badgeBg};color:${badgeColor};border:1px solid ${badgeColor}40;flex-shrink:0;text-transform:uppercase;font-weight:700;">${item.category || item.role || realType}</span>
             </div>
-            <p class="text-[11px] text-gray-500 mt-1 mb-4 line-clamp-3 leading-relaxed h-[48px]">${item.description || 'Modulo estensione per GXCode.'}</p>
-            <div class="mt-auto flex justify-between items-center pt-3 border-t border-gray-800/50">
-                <div class="flex flex-col">
-                    <span class="text-[9px] text-gray-600 font-mono uppercase tracking-widest">${item.author || 'Registry'}</span>
-                    <span class="text-[8px] text-gray-700 font-mono italic">${item.version || 'v' + (item.discoveredAt ? '2.4.live' : '1.0.0')}</span>
+            <p style="font-size:11px;color:#8b949e;margin:4px 0 16px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:48px;">${item.description || 'Modulo per GXCode AI Assistant.'}</p>
+            <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid rgba(33,38,45,0.5);">
+                <div style="display:flex;flex-direction:column;">
+                    <span style="font-size:9px;color:#484f58;font-family:monospace;text-transform:uppercase;letter-spacing:0.1em;">${item.author || 'Registry'}</span>
+                    <span style="font-size:8px;color:#30363d;font-family:monospace;font-style:italic;">${item.version || 'v1.0.0'}</span>
                 </div>
-                <button onclick="window.installMarketItem('${type}', '${key}', event)" 
-                        class="text-[10px] px-3 py-1.5 font-bold uppercase tracking-wider rounded-md bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-lg shadow-blue-900/20 active:scale-95 ${item.isInstalled ? 'opacity-30 cursor-not-allowed bg-emerald-600' : ''}"
-                        ${item.isInstalled ? 'disabled' : ''}>
-                    ${item.isInstalled ? window.t('marketplace.installed') : window.t('marketplace.install')}
+                <button onclick="${btnAction}" 
+                        style="font-size:10px;padding:6px 14px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border-radius:6px;border:none;${btnStyle};transition:all 0.2s;"
+                        ${!isInstalledTab && item.isInstalled ? 'disabled' : ''}>
+                    ${isInstalledTab ? 'Rimuovi' : (item.isInstalled ? window.t('marketplace.installed') : window.t('marketplace.install'))}
                 </button>
             </div>
         </div>
         `;
     }).join('');
+};
+
+window.previewMarketItem = (type, id) => {
+    const item = window.__marketCache.get(id);
+    if (!item) return;
+    if (window.openCrudModal) {
+        window.openCrudModal(type, item, true); 
+    }
 };
 
 const renderMarketplace = () => {
@@ -52,163 +83,152 @@ const renderMarketplace = () => {
         return;
     }
 
+    const t = (key) => {
+        try { return window.t(key) || key; } catch(e) { return key; }
+    };
+
     const activeTab = state.activeMarketplaceTab || 'agents';
     const isLoading = state.isMarketplaceLoading;
 
-    // Filtro client-side per rendere i risultati più precisi rispetto alla query Open VSX
-    const currentSearch = document.getElementById('market-addon-search')?.value || '';
-    let filteredPlugins = state.marketplacePlugins || [];
-    if (currentSearch.length > 1) {
-        const q = currentSearch.toLowerCase();
-        filteredPlugins = filteredPlugins.filter(p => 
-            p.name.toLowerCase().includes(q) || 
-            (p.description && p.description.toLowerCase().includes(q)) ||
-            (p.slug && p.slug.toLowerCase().includes(q))
-        );
+    const currentSearch = (document.getElementById('market-global-search')?.value || '').toLowerCase();
+    
+    let mContent = '';
+    let mSubFilters = '';
+
+    if (activeTab === 'installed') {
+        const cat = state.activeMarketplaceCategory || 'all';
+        
+        let allInstalled = [
+            ...state.agents.map(a => ({ ...a, type: 'agent' })),
+            ...state.skills.map(s => ({ ...s, type: 'skill' })),
+            ...state.plugins.map(p => ({ ...p, type: 'ai-companion' }))
+        ];
+
+        if (cat === 'agents') allInstalled = allInstalled.filter(i => i.type === 'agent');
+        else if (cat === 'skills') allInstalled = allInstalled.filter(i => i.type === 'skill');
+        else if (cat === 'ai-companion') allInstalled = allInstalled.filter(i => i.type === 'ai-companion');
+
+        if (currentSearch.length > 1) {
+            allInstalled = allInstalled.filter(i =>
+                i.name.toLowerCase().includes(currentSearch) ||
+                (i.description && i.description.toLowerCase().includes(currentSearch))
+            );
+        }
+
+        mContent = renderMarketplaceContent(allInstalled, 'installed');
+
+        const subTabs = [['all', 'Tutti'], ['agents', 'Agenti'], ['skills', 'Skill'], ['ai-companion', 'Ai Companion']];
+        mSubFilters = `
+            <div style="display:flex;gap:8px;margin-bottom:16px;padding:0 32px;">
+                ${subTabs.map(([id, label]) => {
+                    const isActive = cat === id;
+                    const color = id === 'agents' ? '#3b82f6' : id === 'skills' ? '#10b981' : id === 'ai-companion' ? '#a855f7' : '#6e7681';
+                    return `<button onclick="window.setState({ activeMarketplaceCategory: '${id}' })" 
+                                    style="padding:4px 12px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;border-radius:20px;cursor:pointer;transition:all 0.2s;
+                                           ${isActive ? `background:${color}20;color:${color};border:1px solid ${color}40;` : 'background:#161b22;color:#484f58;border:1px solid #21262d;'}">
+                                 ${label}
+                            </button>`;
+                }).join('')}
+            </div>
+        `;
+    } else {
+        let itemsToRender = [];
+        if (activeTab === 'agents') itemsToRender = state.marketplaceAgents || [];
+        else if (activeTab === 'skills') itemsToRender = state.marketplaceSkills || [];
+        else if (activeTab === 'ai-companion') itemsToRender = state.marketplacePlugins || [];
+
+        if (currentSearch.length > 1) {
+            itemsToRender = itemsToRender.filter(p =>
+                p.name.toLowerCase().includes(currentSearch) ||
+                (p.description && p.description.toLowerCase().includes(currentSearch))
+            );
+        }
+        
+        mContent = (isLoading && activeTab === 'ai-companion')
+            ? `<div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px;gap:16px;">
+                 <div style="width:48px;height:48px;border:4px solid rgba(59,130,246,0.2);border-top-color:#3b82f6;border-radius:50%;animation:spin 1s linear infinite;"></div>
+                 <p style="color:#6e7681;font-size:10px;font-family:monospace;text-transform:uppercase;letter-spacing:0.2em;">Connessione ai Companion...</p>
+               </div>`
+            : renderMarketplaceContent(itemsToRender, activeTab === 'ai-companion' ? 'ai-companion' : activeTab.slice(0, -1));
     }
 
-    const mAgents = renderMarketplaceContent(state.marketplaceAgents, 'agent');
-    const mSkills = renderMarketplaceContent(state.marketplaceSkills, 'skill');
-    const mAddons = isLoading 
-        ? `<div class="col-span-full flex flex-col items-center justify-center p-20 gap-4">
-             <div class="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-             <p class="text-xs text-gray-500 font-mono tracking-widest uppercase animate-pulse">Searching Open VSX...</p>
-           </div>`
-        : renderMarketplaceContent(filteredPlugins, 'addon');
+    const tabBtn = (id, label) => {
+        const isActive = activeTab === id;
+        const isFirst = id === 'agents';
+        const isLast = id === 'installed';
+        return `<button onclick="window.setState({ activeMarketplaceTab: '${id}', activeMarketplaceCategory: 'all' })" 
+                    style="padding:8px 18px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;border:none;cursor:pointer;border-radius:${isFirst?'8px 0 0 8px':isLast?'0 8px 8px 0':'0'};${isActive ? 'background:rgba(59,130,246,0.15);color:#60a5fa;border-bottom:2px solid #3b82f6;' : 'background:transparent;color:#6e7681;'}">
+                    ${label}
+                </button>`;
+    };
 
-    const getTabClass = (t) => t === activeTab
-        ? "px-5 py-2 text-xs font-bold text-blue-400 border-b-2 border-blue-500 bg-blue-500/5"
-        : "px-5 py-2 text-xs font-medium text-gray-500 hover:text-gray-300 transition-colors hover:bg-white/5";
+    const tabs = [
+        ['agents', t('marketplace.agentsTab')],
+        ['skills', t('marketplace.skillsTab')],
+        ['ai-companion', t('marketplace.aiCompanionTab')],
+        ['installed', 'Installati']
+    ];
 
     modalsRoot.innerHTML = `
-        <div class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4 pointer-events-auto animate-fade-in">
-            <div class="bg-[#0d1117] w-full max-w-6xl h-[85vh] rounded-24px border border-gray-800 shadow-[0_30px_90px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden">
+        <div id="gx-market-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;background:rgba(0,0,0,0.85);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:center;z-index:2147483647;padding:40px;box-sizing:border-box;">
+            <div style="background:#12161d;width:100%;max-width:1100px;height:85vh;border-radius:16px;border:1px solid #30363d;box-shadow:0 32px 120px rgba(0,0,0,0.95);display:flex;flex-direction:column;overflow:hidden;">
                 
-                <!-- Modal Header -->
-                <div class="h-20 border-b border-gray-800 flex items-center justify-between px-8 bg-[#161b22] shrink-0">
-                    <div class="flex items-center gap-5">
-                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-2xl shadow-xl border border-white/10">📦</div>
+                <div style="padding:20px 32px;border-bottom:1px solid #21262d;background:#161b22;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#4338ca);display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>
                         <div>
-                            <h2 class="text-sm font-black text-white uppercase tracking-[0.2em]">GX Marketplace</h2>
-                            <p class="text-[10px] text-gray-500 font-mono uppercase tracking-widest mt-0.5 opacity-70">Unified Hub • v2.5.0</p>
+                            <div style="font-size:12px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:0.15em;">Marketplace Hub</div>
+                            <div style="font-size:9px;color:#484f58;font-family:monospace;text-transform:uppercase;letter-spacing:0.2em;margin-top:2px;">Discover &amp; Install</div>
                         </div>
                     </div>
-                    
-                    <div class="flex bg-[#0d1117] p-1 rounded-xl border border-gray-800/80 shadow-inner">
-                        <button onclick="window.setState({ activeMarketplaceTab: 'agents', activeMarketplaceCategory: 'all' })" class="${getTabClass('agents')} rounded-l-lg" data-i18n="marketplace.agentsTab">${window.t('marketplace.agentsTab')}</button>
-                        <button onclick="window.setState({ activeMarketplaceTab: 'skills', activeMarketplaceCategory: 'all' })" class="${getTabClass('skills')}" data-i18n="marketplace.skillsTab">${window.t('marketplace.skillsTab')}</button>
-                        <button onclick="window.setState({ activeMarketplaceTab: 'addons', activeMarketplaceCategory: 'all' })" class="${getTabClass('addons')} rounded-r-lg" data-i18n="marketplace.addonsTab">${window.t('marketplace.addonsTab')}</button>
+                    <div style="display:flex;background:#0d1117;padding:4px;border-radius:10px;border:1px solid #21262d;">
+                        ${tabs.map(([id, label]) => tabBtn(id, label)).join('')}
                     </div>
-
-                    <button onclick="window.openSourceSettings()" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600/10 text-blue-400 border border-blue-500/20 hover:bg-blue-600/20 transition-all font-bold text-[10px] uppercase tracking-widest active:scale-95">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                        <span data-i18n="marketplace.manageSources">${window.t('marketplace.manageSources')}</span>
+                    <button onclick="window.closeMarketplace()" 
+                            style="width:36px;height:36px;border-radius:8px;background:rgba(139,148,158,0.1);color:#8b949e;border:1px solid rgba(139,148,158,0.15);cursor:pointer;display:flex;align-items:center;justify-content:center;"
+                            onmouseover="this.style.background='rgba(248,81,73,0.2)';this.style.color='#fff'"
+                            onmouseout="this.style.background='rgba(139,148,158,0.1)';this.style.color='#8b949e'">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
-
-                    <button onclick="window.closeMarketplace()" class="w-10 h-10 rounded-xl bg-gray-800/30 text-gray-500 hover:text-white hover:bg-red-500/40 flex items-center justify-center transition border border-gray-700/50 active:scale-90">✕</button>
                 </div>
 
-                <!-- Sub-Header: Search & Categories -->
-                <div class="px-8 py-4 bg-[#0d1117] border-b border-gray-800 flex items-center justify-between gap-6 shrink-0">
-                    <div class="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
-                        <div class="flex items-center gap-2 pr-4 border-r border-gray-800">
-                             ${state.isMarketplaceLoading 
-                                ? `<span class="flex items-center gap-1.5 text-[9px] font-bold text-blue-400 animate-pulse uppercase tracking-widest" data-i18n="marketplace.syncing"><div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div> ${window.t('marketplace.syncing')}</span>`
-                                : `<button onclick="api.loadMarketplace()" class="p-1.5 rounded-lg bg-gray-800/30 text-gray-500 hover:text-white hover:bg-gray-800 transition-all active:scale-90 shadow-sm" data-i18n="[title]marketplace.refresh" title="${window.t('marketplace.refresh')}">
-                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                                   </button>`
-                             }
-                        </div>
-                        <div class="flex items-center gap-2">
-                            ${['all', 'coding', 'automation', 'security', 'architecture', 'integration', 'devops', 'tools'].map(cat => `
-                                <button onclick="window.setState({ activeMarketplaceCategory: '${cat}' })" 
-                                        class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap
-                                        ${state.activeMarketplaceCategory === cat 
-                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                                            : 'bg-gray-800/50 text-gray-500 hover:text-gray-300 hover:bg-gray-800'}">
-                                    ${cat}
-                                </button>
-                            `).join('')}
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center bg-[#161b22] border border-gray-800 rounded-xl px-4 py-2 focus-within:border-blue-500/50 transition-all w-80 shadow-inner group">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="text-gray-600 group-focus-within:text-blue-500 transition-colors mr-3" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <input id="market-global-search" type="text" data-i18n="[placeholder]marketplace.searchPlaceholder" placeholder="${window.t('marketplace.searchPlaceholder').replace('{tab}', activeTab)}" class="bg-transparent border-none outline-none text-xs text-gray-300 w-full font-medium" value="${currentSearch}">
+                <div style="padding:20px 32px;border-bottom:1px solid #21262d;background:rgba(13,17,23,0.5);flex-shrink:0;">
+                    <div style="position:relative;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#484f58" stroke-width="2.5" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input id="market-global-search" type="text" 
+                               placeholder="Cerca in ${activeTab}..." 
+                               value="${currentSearch}"
+                               style="width:100%;background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:10px 16px 10px 42px;font-size:12px;color:#c9d1d9;outline:none;box-sizing:border-box;">
                     </div>
                 </div>
-                
-                <!-- Content View -->
-                <div class="flex-1 overflow-y-auto p-10 custom-scrollbar bg-[#090c10] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/5 via-transparent to-transparent">
-                    ${activeTab === 'agents' ? `
-                        <div class="animate-slide-up">
-                            <div class="mb-8">
-                                <h3 class="text-2xl font-light text-gray-200 tracking-tight">Advanced AI Personas</h3>
-                                <p class="text-gray-500 text-sm mt-1" data-i18n="marketplace.agentsSub">${window.t('marketplace.agentsSub')}</p>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                ${mAgents}
-                            </div>
-                        </div>
-                    ` : ''}
 
-                    ${activeTab === 'skills' ? `
-                        <div class="animate-slide-up">
-                            <div class="mb-8">
-                                <h3 class="text-2xl font-light text-gray-200 tracking-tight">System Capabilities</h3>
-                                <p class="text-gray-500 text-sm mt-1" data-i18n="marketplace.skillsSub">${window.t('marketplace.skillsSub')}</p>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                ${mSkills}
-                            </div>
-                        </div>
-                    ` : ''}
+                ${mSubFilters}
 
-                    ${activeTab === 'addons' ? `
-                        <div class="animate-slide-up">
-                            <div class="flex flex-col gap-6">
-                                <div class="mb-2">
-                                    <h3 class="text-2xl font-light text-gray-200 tracking-tight">IDE Personalization</h3>
-                                    <p class="text-gray-500 text-sm mt-1" data-i18n="marketplace.addonsSub">${window.t('marketplace.addonsSub')}</p>
-                                </div>
-                                <div class="mb-4 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl flex flex-col gap-1">
-                                    <span class="text-[10px] font-bold text-blue-400 uppercase tracking-widest font-mono">Open VSX Store Integration</span>
-                                    <p class="text-[11px] text-gray-500 italic" data-i18n="marketplace.vsxNote">${window.t('marketplace.vsxNote')}</p>
-                                </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    ${mAddons}
-                                </div>
-                            </div>
-                        </div>
-                    ` : ''}
+                <div style="flex:1;overflow-y:auto;padding:24px 32px;">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+                        ${mContent}
+                    </div>
                 </div>
 
-                <div class="h-14 border-t border-gray-800 bg-[#0d1117] px-10 flex justify-between items-center shrink-0">
-                    <div class="flex items-center gap-3">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span class="text-[9px] text-gray-600 font-mono uppercase tracking-[0.3em]">SECURE LOCAL SYNC ACTIVE</span>
-                    </div>
+                <div style="height:40px;padding:0 32px;background:#161b22;border-top:1px solid #21262d;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                    <div style="width:6px;height:6px;border-radius:50%;background:${isLoading ? '#3b82f6' : '#10b981'};${isLoading ? 'animation:pulse 1.5s ease-in-out infinite;' : ''}"></div>
+                    <span style="font-size:8px;color:#484f58;font-family:monospace;text-transform:uppercase;letter-spacing:0.2em;">${isLoading ? 'Syncing registries...' : 'Ready'}</span>
                 </div>
             </div>
         </div>
     `;
 
-    // Ripristiniamo il focus e il binding con debounce
+    // Re-bind focus and event listener
     const input = document.getElementById('market-global-search');
     if (input) {
+        input.setSelectionRange(input.value.length, input.value.length);
         input.focus();
-        input.setSelectionRange(currentSearch.length, currentSearch.length);
-        
         input.oninput = (e) => {
-            const q = e.target.value;
-            if (window.__searchTimeout) clearTimeout(window.__searchTimeout);
-            
-            input.parentElement.classList.add('border-blue-500');
-            
-            window.__searchTimeout = setTimeout(async () => {
-                await api.loadMarketplace(q);
-                input.parentElement.classList.remove('border-blue-500');
-            }, 400);
+            if (activeTab === 'installed') renderMarketplace();
+            else {
+                if (window.__searchTimeout) clearTimeout(window.__searchTimeout);
+                window.__searchTimeout = setTimeout(() => api.loadMarketplace(e.target.value), 400);
+            }
         };
     }
 };
@@ -218,28 +238,50 @@ window.closeMarketplace = () => setState({ isMarketplaceOpen: false });
 window.installMarketItem = async (type, id, event) => {
     const btn = event.target;
     const originalHtml = btn.innerHTML;
-    btn.innerHTML = `<span class="animate-spin inline-block">${window.t('marketplace.installing')}</span>`;
+    btn.innerHTML = '⏳';
     btn.disabled = true;
 
     try {
-        if (type === 'agents' || type === 'agent') await api.installAgent(id);
-        else if (type === 'skills' || type === 'skill') await api.installSkill(id);
-        else if (type === 'addons' || type === 'addon') {
-            const item = window.__marketCache.get(id);
-            if (!item) throw new Error("Item non trovato in cache");
-            await api.installPlugin(item);
-        }
+        const item = window.__marketCache.get(id);
+        if (!item) throw new Error("Item non trovato in cache");
 
+        if (type === 'agents' || type === 'agent') await api.installAgent(item);
+        else if (type === 'skills' || type === 'skill') await api.installSkill(item);
+        else if (type === 'addons' || type === 'addon') await api.installPlugin(item);
+        
         btn.innerHTML = '✅ OK';
         setTimeout(() => {
             btn.innerHTML = 'INSTALLATO';
-            btn.className = "px-3 py-1 bg-gray-800 text-gray-500 rounded text-xs cursor-default";
+            btn.style.background = '#1f2937';
+            btn.style.color = '#6b7280';
+            btn.style.cursor = 'not-allowed';
         }, 1000);
     } catch (err) {
-        console.error(err);
-        btn.innerHTML = window.t('marketplace.installError');
+        btn.innerHTML = '❌';
         btn.disabled = false;
         setTimeout(() => btn.innerHTML = originalHtml, 2000);
+    }
+};
+
+window.uninstallMarketItem = async (type, id, event) => {
+    if (!confirm('Sei sicuro di voler rimuovere questo modulo?')) return;
+    
+    const btn = event.target;
+    btn.innerHTML = '🗑️...';
+    btn.disabled = true;
+
+    try {
+        if (type === 'agents' || type === 'agent') await api.deleteAgent(id);
+        else if (type === 'skills' || type === 'skill') await api.deleteSkill(id);
+        else if (type === 'addons' || type === 'addon') await api.deletePlugin(id);
+        
+        window.gxToast('Modulo rimosso correttamente.', 'info');
+        // renderMarketplace will be called via subscribe to loadAll() in api.deleteXXX
+    } catch (err) {
+        console.error("Errore disinstallazione:", err);
+        btn.innerHTML = '❌';
+        btn.disabled = false;
+        setTimeout(() => btn.innerHTML = 'Rimuovi', 2000);
     }
 };
 
@@ -251,15 +293,19 @@ let lastCat = null;
 
 export const initMarketplace = () => {
     subscribe((newState) => {
-        // Trigger load if tab OR category changed, or if marketplace just opened
-        if (newState.isMarketplaceOpen && 
-           (newState.activeMarketplaceTab !== lastTab || newState.activeMarketplaceCategory !== lastCat)) {
-            
+        const root = document.getElementById('modals-root');
+        if (root) {
+            if (newState.isMarketplaceOpen) {
+                root.style.pointerEvents = 'auto';
+            } else {
+                root.style.pointerEvents = 'none';
+            }
+        }
+        if (newState.isMarketplaceOpen && (newState.activeMarketplaceTab !== lastTab || newState.activeMarketplaceCategory !== lastCat)) {
             lastTab = newState.activeMarketplaceTab;
             lastCat = newState.activeMarketplaceCategory;
-            api.loadMarketplace();
+            if (lastTab !== 'installed') api.loadMarketplace();
         }
-        
         renderMarketplace();
     });
 };

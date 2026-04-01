@@ -15,6 +15,9 @@ import { initBottomPanel } from '../components/bottomPanel.js';
 import { initProblems } from '../components/problems.js';
 import { initUpdater } from '../components/updater.js';
 import { initDebug } from '../components/debug.js';
+import { initGxAgent } from '../components/gxAgent.js';
+import { listAvailableModels } from '../core/geminiApi.js';
+import { initAiKnowledgeBridge } from '../core/aiKnowledgeBridge.js';
 // initContextMenu non necessario (gestito da workspace.js)
 
 // DOM Elements Right Sidebar
@@ -85,6 +88,8 @@ const btnTerminalToggle = document.getElementById('toggle-terminal-btn');
 const renderSidebarItem = (item, type) => {
     // Layout basato sul vecchio design
     const div = document.createElement('div');
+    div.setAttribute('data-id', item.id);
+    div.setAttribute('data-type', type);
     div.className = "flex flex-col p-3 rounded-lg border border-gray-800/80 bg-[#161b22]/50 hover:bg-[#1d232b] cursor-pointer transition shadow-sm group";
 
     // Icona in base a bot o skill
@@ -166,7 +171,7 @@ const renderSidebar = () => {
     // Icon mapping per renderSidebarItem
     const type = state.activeSidebarTab === 'agents' ? 'agents' 
                : state.activeSidebarTab === 'skills' ? 'skills' 
-               : 'plugins';
+               : 'ai-companion';
     
     // Filtro Ricerca
     let filtered = activeList.filter(item => 
@@ -191,6 +196,21 @@ const renderSidebar = () => {
         return;
     }
     
+    if (state.activeSidebarTab === 'ai-companion') {
+        const aiContainer = document.createElement('div');
+        aiContainer.id = 'sidebar-ai-companion-container';
+        aiContainer.className = "flex-1 flex flex-col h-full overflow-hidden";
+        sidebarContent.appendChild(aiContainer);
+        
+        // Inizializziamo/Renderizziamo la chat nel sidebar
+        if (window.renderGxAgentChat) {
+            window.renderGxAgentChat('sidebar-ai-companion-container');
+        } else {
+            aiContainer.innerHTML = `<div class="p-8 text-center text-gray-500 uppercase text-[10px] tracking-widest font-bold">Ai Companion offline</div>`;
+        }
+        return;
+    }
+
     filtered.forEach(item => {
         sidebarContent.appendChild(renderSidebarItem(item, state.activeSidebarTab));
     });
@@ -204,17 +224,19 @@ const bootstrap = async () => {
     // Carica le traduzioni prima di tutto
     await loadLocale(state.language || 'it');
 
+    const tabAiCompanion = document.getElementById('sidebar-tab-ai-companion');
+
     // Leghiamo i tasti
-    tabAgents.onclick = () => {
+    if (tabAgents) tabAgents.onclick = () => {
         setState({ activeSidebarTab: 'agents' });
         skillCategories.classList.add('hidden');
     };
-    tabSkills.onclick = () => {
+    if (tabSkills) tabSkills.onclick = () => {
         setState({ activeSidebarTab: 'skills' });
         skillCategories.classList.remove('hidden');
     };
-    tabAddons.onclick = () => {
-        setState({ activeSidebarTab: 'addons' });
+    if (tabAiCompanion) tabAiCompanion.onclick = () => {
+        setState({ activeSidebarTab: 'ai-companion' });
         skillCategories.classList.add('hidden');
     };
     
@@ -259,57 +281,147 @@ const bootstrap = async () => {
     initTickets();
     initWorkspace();
     // initContextMenu(); <-- Rimossa poiché non necessaria e non esportata
+    // Esposizione Globale per componenti Legacy/Agenti
+    window.state = state;
+    window.setState = setState;
+
     initCrud();
     initGit();
     initBottomPanel();
-    initProblems();
-    initUpdater();
+    initGxAgent();
+    initAiKnowledgeBridge();
+    
+    // --- GLOBAL SHORTCUT DISPATCHER (Dynamic & Professional) ---
+    window.addEventListener('keydown', (e) => {
+        // Ignora se siamo in un input o textarea (tranne salvataggio)
+        const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+        
+        let keys = [];
+        if (e.ctrlKey || e.metaKey) keys.push('Ctrl');
+        if (e.shiftKey) keys.push('Shift');
+        if (e.altKey) keys.push('Alt');
+        
+        // Mappa tasti speciali
+        const key = e.key === ' ' ? 'Space' : e.key.charAt(0).toUpperCase() + e.key.slice(1);
+        if (!['Control', 'Shift', 'Alt', 'Meta'].includes(key)) {
+            keys.push(key);
+        }
 
-    // Event Delegation for CRUD in the Right Sidebar List
-    if (sidebarContent) {
-        sidebarContent.addEventListener('click', async (e) => {
+        const shortcutStr = keys.join('+');
+        const binding = state.shortcuts[shortcutStr];
+
+        if (binding) {
+            // Se siamo in un input, permettiamo solo il salvataggio o scorciatoie non conflittuali
+            if (isInput && !['editor:save', 'editor:format'].includes(binding.action)) return;
+
+            e.preventDefault();
+            console.log(`[GX-SHORTCUT] Triggering Action: ${binding.action} for ${shortcutStr}`);
+            
+            switch (binding.action) {
+                case 'editor:save': 
+                    if (window.saveActiveFile) window.saveActiveFile(); 
+                    break;
+                case 'editor:format': 
+                    if (window.formatActiveFile) window.formatActiveFile(); 
+                    break;
+                case 'search:quick-open': 
+                    setState({ activeActivity: 'search', isLeftSidebarOpen: true });
+                    setTimeout(() => document.getElementById('global-search-input')?.focus(), 50);
+                    break;
+                case 'sidebar:toggle': 
+                    if (window.toggleSidebar) window.toggleSidebar(); 
+                    break;
+                case 'search:global':
+                    setState({ activeActivity: 'search', isLeftSidebarOpen: true });
+                    break;
+            }
+        }
+    });
+
+    // Listen for Gemini Official OAuth Success
+    if (window.electronAPI.onGeminiAuthSuccess) {
+        window.electronAPI.onGeminiAuthSuccess((data) => {
+            console.log("[GX-AGENT] OAuth Success:", data.email);
+            setState({
+                geminiConfig: {
+                    isAuthenticated: true,
+                    user: {
+                        email: data.email,
+                        name: data.name,
+                        picture: data.picture
+                    },
+                    token: data.code // Token di accesso
+                }
+            });
+            // Carica modelli reali per questo account
+            listAvailableModels();
+            // Forza il re-render della chat se visibile nel Bottom Panel
+            if (window.renderGxAgentChat) {
+                window.renderGxAgentChat();
+            }
+        });
+    }
+
+    // Event Delegation for CRUD in the Right Sidebar (Global for Header + Content)
+    if (rightSidebar) {
+        rightSidebar.addEventListener('click', async (e) => {
             const btn = e.target.closest('button[data-action]');
-            if (!btn) return;
+            const itemElement = e.target.closest('[data-id]');
+            
+            if (!btn && itemElement) {
+                // Selezione Agente/Persona
+                const id = itemElement.getAttribute('data-id');
+                const type = itemElement.getAttribute('data-type');
+                if (type === 'agents') {
+                    console.log(`[GX-AGENT] Attivazione Persona ID: ${id}`);
+                    setState({ activeAgentId: id });
+                }
+                return;
+            }
 
+            if (!btn) return;
             const action = btn.getAttribute('data-action');
+
+            if (action === 'create-new') {
+                if (window.openCrudModal) window.openCrudModal(state.activeSidebarTab, null);
+                return;
+            }
+
             const id = btn.getAttribute('data-id');
             const type = btn.getAttribute('data-type');
+            if (!id || !type) return;
 
             const list = type === 'agents' ? state.agents : (type === 'skills' ? state.skills : state.plugins);
             const item = list.find(i => String(i.id) === String(id));
-
+            if (!item) return;
             if (action === 'delete') {
-                if (!item) return;
+                console.log(`[GX-DELETE] Requesting deletion for ${type} ID: ${id}`);
                 const typeLabel = type === 'agents' ? window.t('crud.agent') : (type === 'skills' ? window.t('crud.skill') : window.t('crud.addon'));
                 const modalTitle = window.t('contextMenu.delete') + " " + typeLabel;
                 const modalMsg = window.t('contextMenu.deleteConfirm').replace('{path}', `<strong>${item.name || '...'}</strong>`);
                 
                 if (window.gxConfirm) {
                     window.gxConfirm(modalTitle, modalMsg, async () => {
+                        console.log(`[GX-DELETE] Confirmed deletion for ${id}`);
                         if (type === 'agents') await api.deleteAgent(id);
                         else if (type === 'skills') await api.deleteSkill(id);
                         else await api.deletePlugin(id);
                         await api.loadAll(); 
                     });
                 } else {
-                    if (confirm(`Vuoi eliminare: ${item.name}?`)) {
+                    if (confirm(`Vuoi eliminare: ${item.name || id}?`)) {
+                        console.log(`[GX-DELETE] Native confirm deletion for ${id}`);
                         if (type === 'agents') await api.deleteAgent(id);
                         else if (type === 'skills') await api.deleteSkill(id);
                         else await api.deletePlugin(id);
+                        await api.loadAll();
                     }
                 }
             } else if (action === 'edit') {
+
                 if (window.openCrudModal) window.openCrudModal(type, item);
             }
         });
-    }
-
-    // Tasto Creatore "+" Header destro
-    const btnCreateAdd = document.querySelector('#right-sidebar .px-4.py-3 button');
-    if (btnCreateAdd) {
-        btnCreateAdd.onclick = () => {
-            if (window.openCrudModal) window.openCrudModal(state.activeSidebarTab, null);
-        };
     }
 
     // Tab Left Sidebar Bindings

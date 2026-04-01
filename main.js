@@ -78,7 +78,7 @@ apiApp.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  
+
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (!req.url.includes('socket.io') && !req.url.includes('polling')) {
@@ -164,13 +164,13 @@ apiApp.post("/api/skills", (req, res) => {
     id: newId,
     name: body.name,
     description: body.description ?? "",
-    content: body.content ?? "",
+    logic: body.logic ?? body.content ?? "", // Use logic as primary, fallback to content
     category: body.category ?? "general",
     isActive: body.isActive ?? true,
     slug: body.slug || body.name.toLowerCase().replace(/\s+/g, '-')
   };
   skills.push(skill);
-  savePersistedData('skills', skill); // Salva fisicamente su ~/.claude/skills o simile
+  savePersistedData('skills', skill);
   res.status(201).json(skill);
 });
 
@@ -206,10 +206,12 @@ apiApp.post("/api/agents", (req, res) => {
     id: newId,
     name: body.name,
     description: body.description ?? "",
+    systemPrompt: body.systemPrompt ?? "",
     role: body.role ?? "general",
     parentId: body.parentId ?? null,
     avatar: body.avatar ?? "bot",
     skillIds: body.skillIds ?? "[]",
+    assignedSkills: body.assignedSkills ?? [],
     status: body.status ?? "idle",
     slug: body.slug || body.name.toLowerCase().replace(/\s+/g, '-')
   };
@@ -236,9 +238,52 @@ apiApp.delete("/api/agents/:id", (req, res) => {
   res.status(204).end();
 });
 
-// ---- ENDPOINT TICKETS ----
-apiApp.get("/api/tickets", (req, res) => {
-  res.json(tickets);   // array (anche se vuoto)
+// ---- ENDPOINT TICKETS (YouTrack Real Integration) ----
+apiApp.get("/api/tickets", async (req, res) => {
+  const { url, token } = req.query;
+
+  if (!url || !token) {
+    return res.json(tickets); // Restituisce l'array vuoto (mock) se mancano i parametri
+  }
+
+  try {
+    const issuesUrl = `${url.replace(/\/$/, '')}/api/issues?fields=idReadable,summary,description,project(name),priority(name),state(name),assignee(fullName)`;
+    console.log(`[SPY-YOUTRACK] Sto contattando: ${issuesUrl}`);
+
+    const response = await fetch(issuesUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'User-Agent': 'GXCode-IDE'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error("[SPY-YOUTRACK] Errore API:", errorData);
+      throw new Error(`YouTrack Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[SPY-YOUTRACK] Trovati ${data.length} ticket.`);
+    
+    // Formattiamo per la nostra UI (opzionale se l'app si aspetta già il formato YouTrack)
+    const formatted = data.map(issue => ({
+      id: issue.idReadable,
+      name: issue.summary,
+      description: issue.description,
+      project: issue.project?.name,
+      priority: issue.priority?.name,
+      status: issue.state?.name,
+      assignee: issue.assignee?.fullName
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error("[SPY-YOUTRACK] Fetch failed:", err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ---- ENDPOINT MCP SERVERS ----
@@ -286,74 +331,383 @@ const POTENTIAL_DISCOVERIES = {
 // Registro dei nuovi elementi scoperti durante questa sessione (Persistenza in memoria)
 let discoveredRegistry = { agents: [], skills: [] };
 
-// Simulazione di un Live Connector intelligente
-const fetchLiveMarketplace = async (type, q, category) => {
+// URL del registro GXCode (Esempio pubblico)
+const GX_REGISTRY_URL = 'https://raw.githubusercontent.com/GXCode-IDE/gx-registry/main/marketplace.json';
+
+// ═══════════════════════════════════════════════════════════════════
+// LIVE MARKETPLACE AGGREGATOR v6.0 - Multi-Source, Daily Updated
+// Sources: Apify Store | HuggingFace Hub | npm Registry | GitHub
+// ═══════════════════════════════════════════════════════════════════
+const fetchLiveMarketplace = async (type, q, category, customRegs = []) => {
   const now = Date.now();
-  
-  // Ogni chiamata ha una possibilità del 70% di "scoprire" qualcosa di nuovo se il pool non è vuoto
-  if (Math.random() > 0.3 && POTENTIAL_DISCOVERIES[type]) {
-    const potential = POTENTIAL_DISCOVERIES[type].filter(p => 
-      !discoveredRegistry[type].find(d => d.name === p.name)
-    );
-    
-    if (potential.length > 0) {
-      const item = potential[Math.floor(Math.random() * potential.length)];
-      discoveredRegistry[type].push({
-        id: `live-${type}-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-        name: item.name,
-        category: item.category,
-        description: item.desc,
-        source: item.author,
-        author: item.author,
-        discoveredAt: now,
-        isInstalled: false
-      });
-      console.log(`[SPY-DISCOVERY] Nuovo elemento scoperto: ${item.name} (${type})`);
+  const results = [];
+  const seen = new Set();
+
+  const addItem = (item) => {
+    const key = `${item.source}-${item.name}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      results.push({ ...item, discoveredAt: now, isInstalled: false });
+    }
+  };
+
+  // ─── 1. GX Registry + Custom Registries ──────────────────────────
+  const allRegs = [GX_REGISTRY_URL, ...customRegs].filter(Boolean);
+  for (const regUrl of allRegs) {
+    try {
+      console.log(`[SPY-DISCOVERY] Interrogazione registro: ${regUrl} (${type})...`);
+      const resp = await fetch(regUrl, { signal: AbortSignal.timeout(4000) });
+      if (resp.ok) {
+        const externalData = await resp.json();
+        (externalData[type] || []).forEach(item => addItem(item));
+      }
+    } catch (err) {
+      console.warn(`[SPY-DISCOVERY] Registro ${regUrl} non raggiungibile.`);
     }
   }
 
-  // Restituiamo tutti gli elementi scoperti finora per quel tipo
-  return discoveredRegistry[type];
+  // ─── 2. Apify Store (AGENTI) ─────────────────────────────────────
+  // Apify is a real marketplace with 3000+ automation actors/agents, updated daily
+  if (type === 'agents') {
+    try {
+      const searchQ = q || (category !== 'all' ? category : 'web-scraper');
+      const apifyUrl = `https://api.apify.com/v2/store?limit=20&search=${encodeURIComponent(searchQ)}&sortBy=popularity`;
+      const apifyResp = await fetch(apifyUrl, {
+        headers: { 'User-Agent': 'GXCode-IDE/3.0' },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (apifyResp.ok) {
+        const apifyData = await apifyResp.json();
+        (apifyData.data?.items || []).forEach(actor => {
+          addItem({
+            id: `apify-${actor.id}`,
+            name: actor.title || actor.name,
+            category: actor.categories?.[0] || 'Automation',
+            description: actor.description || `Automation agent by ${actor.username}. ${actor.totalRuns ? actor.totalRuns + ' runs.' : ''}`,
+            source: 'Apify Store',
+            author: actor.username,
+            version: actor.currentPublicVersion?.versionNumber || 'latest',
+            link: `https://apify.com/${actor.username}/${actor.name}`,
+            stats: actor.totalRuns ? `${(actor.totalRuns/1000).toFixed(0)}k runs` : null
+          });
+        });
+        console.log(`[SPY-APIFY] Trovati ${apifyData.data?.items?.length || 0} agenti da Apify Store.`);
+      }
+    } catch (err) {
+      console.warn('[SPY-APIFY] Apify Store non raggiungibile:', err.message);
+    }
+  }
+
+  // ─── 3. HuggingFace Spaces (AGENTI) ──────────────────────────────
+  // HF Spaces: thousands of live AI demos/agents, updated constantly
+  if (type === 'agents') {
+    try {
+      const hfSearch = q ? `&search=${encodeURIComponent(q)}` : '';
+      const hfSpacesUrl = `https://huggingface.co/api/spaces?limit=15&sort=likes${hfSearch}&full=false`;
+      const hfResp = await fetch(hfSpacesUrl, {
+        headers: { 'User-Agent': 'GXCode-IDE/3.0' },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (hfResp.ok) {
+        const spaces = await hfResp.json();
+        spaces.forEach(space => {
+          const tags = space.tags || [];
+          const cat = tags.find(t => ['nlp','cv','audio','tabular','code'].includes(t)) || 'ML/AI';
+          addItem({
+            id: `hf-space-${space.id?.replace('/', '-')}`,
+            name: space.id?.split('/')[1] || space.id,
+            category: cat.toUpperCase().replace('NLP','Text AI').replace('CV','Vision AI').replace('CODE','Code AI'),
+            description: `🤗 HuggingFace Space by ${space.author}. ${space.likes || 0} likes.${space.sdk ? ` [${space.sdk}]` : ''}`,
+            source: 'HuggingFace',
+            author: space.author,
+            version: 'live',
+            link: `https://huggingface.co/spaces/${space.id}`
+          });
+        });
+        console.log(`[SPY-HF-SPACES] Trovati ${spaces.length} spaces da HuggingFace.`);
+      }
+    } catch (err) {
+      console.warn('[SPY-HF-SPACES] HuggingFace Spaces non raggiungibile:', err.message);
+    }
+  }
+
+  // ─── 4. HuggingFace Models (SKILL) ───────────────────────────────
+  // HF Models: 500k+ models, with tags acting as skill categories, updated daily
+  if (type === 'skills') {
+    try {
+      const hfSearch = q ? `&search=${encodeURIComponent(q)}` : '';
+      const pipeline = category !== 'all' ? `&pipeline_tag=${encodeURIComponent(category)}` : '';
+      const hfModelsUrl = `https://huggingface.co/api/models?limit=20&sort=downloads&direction=-1${hfSearch}${pipeline}&full=false`;
+      const hfResp = await fetch(hfModelsUrl, {
+        headers: { 'User-Agent': 'GXCode-IDE/3.0' },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (hfResp.ok) {
+        const models = await hfResp.json();
+        models.forEach(model => {
+          const task = model.pipeline_tag || 'ML/AI';
+          const taskLabel = task.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          const dl = model.downloads ? `${(model.downloads/1000).toFixed(0)}k downloads` : '';
+          addItem({
+            id: `hf-model-${model.id?.replace('/', '-')}`,
+            name: model.id?.split('/').pop() || model.id,
+            category: taskLabel,
+            description: `HuggingFace model for ${taskLabel}. By ${model.id?.split('/')[0] || 'Community'}. ${dl}`,
+            source: 'HuggingFace',
+            author: model.id?.split('/')[0] || 'HuggingFace',
+            version: 'latest',
+            link: `https://huggingface.co/${model.id}`
+          });
+        });
+        console.log(`[SPY-HF-MODELS] Trovati ${models.length} modelli da HuggingFace.`);
+      }
+    } catch (err) {
+      console.warn('[SPY-HF-MODELS] HuggingFace Models non raggiungibile:', err.message);
+    }
+  }
+
+  // ─── 5. npm Registry (SKILL) ──────────────────────────────────────
+  // npm: real packages as skills (langchain, openai, etc.), updated constantly
+  if (type === 'skills') {
+    try {
+      const npmKeywords = q
+        ? encodeURIComponent(q)
+        : encodeURIComponent('langchain OR ai-agent OR llm OR openai OR anthropic OR skill');
+      const npmUrl = `https://registry.npmjs.org/-/v1/search?text=${npmKeywords}&size=15&quality=0.65&popularity=0.98&maintenance=0.5`;
+      const npmResp = await fetch(npmUrl, {
+        headers: { 'User-Agent': 'GXCode-IDE/3.0' },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (npmResp.ok) {
+        const npmData = await npmResp.json();
+        (npmData.objects || []).forEach(pkg => {
+          const p = pkg.package;
+          addItem({
+            id: `npm-${p.name}`,
+            name: p.name,
+            category: p.keywords?.find(k => ['ai','ml','nlp','tools','automation','integration'].some(kw => k.includes(kw)))?.toUpperCase() || 'npm Package',
+            description: p.description || `npm skill package. ${pkg.score?.detail?.popularity ? `Popularity: ${(pkg.score.detail.popularity * 100).toFixed(0)}%` : ''}`,
+            source: 'npm Registry',
+            author: p.publisher?.username || p.author?.name || 'Community',
+            version: p.version || 'latest',
+            link: p.links?.npm
+          });
+        });
+        console.log(`[SPY-NPM] Trovati ${npmData.objects?.length || 0} pacchetti da npm.`);
+      }
+    } catch (err) {
+      console.warn('[SPY-NPM] npm Registry non raggiungibile:', err.message);
+    }
+  }
+
+  // ─── 6. GitHub Topics Search ──────────────────────────────────────
+  try {
+    const topic = type === 'agents' ? 'ai-agent' : type === 'skills' ? 'llm-tool' : 'vscode-extension';
+    const searchQuery = q ? `${q}+topic:${topic}` : `topic:${topic}+topic:gxcode`;
+    const ghUrl = `https://api.github.com/search/repositories?q=${searchQuery}&sort=stars&order=desc&per_page=8`;
+    const ghResp = await fetch(ghUrl, {
+      headers: { 'User-Agent': 'GXCode-IDE', 'Accept': 'application/vnd.github.v3+json' },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (ghResp.ok) {
+      const ghData = await ghResp.json();
+      (ghData.items || []).forEach(repo => {
+        addItem({
+          id: `gh-${repo.id}`,
+          name: repo.name,
+          category: repo.language || 'GitHub Community',
+          description: repo.description || `${repo.stargazers_count}⭐  GitHub repository by ${repo.owner.login}`,
+          source: 'GitHub',
+          author: repo.owner.login,
+          version: `${repo.stargazers_count}★`,
+          link: repo.html_url
+        });
+      });
+    }
+  } catch (err) {
+    console.warn('[SPY-GITHUB] GitHub Search API non raggiungibile.');
+  }
+
+  return results;
 };
 
-// Marketplace Search Aggregator (V5 - Persistent Discovery)
+// Marketplace Search Aggregator (V5.1 - Multi-Registry & GitHub Support)
 apiApp.get("/api/marketplace/search", async (req, res) => {
-  const { q, type, category } = req.query;
+  const { q, type, category, registries } = req.query;
   const searchTerm = q ? q.toLowerCase() : '';
   const searchCat = category ? category.toLowerCase() : 'all';
-  
+  const customRegs = registries ? registries.split(',') : [];
+
   // Base Data (Catalogo di base SEMPRE visibile)
   const localResults = {
     agents: [
-      { id: 'deep-1', name: "DeepNLP Architect", category: "Architecture", description: "Design di sistemi complessi basato sulle API di DeepNLP.org.", source: "DeepNLP", author: "DeepNLP Team", isInstalled: false },
-      { id: 'agensi-1', name: "Agensi Coder Pro", category: "Coding", description: "Agente ottimizzato per il formato SKILL.md e coding estremo.", source: "Agensi", author: "Agensi.ai", isInstalled: false },
-      { id: 'agensi-2', name: "Agensi Python Expert", category: "Coding", description: "Esperto Python specializzato in data science e automazione.", source: "Agensi", author: "Agensi.ai", isInstalled: false },
-      { id: 'apify-1', name: "Apify Crawler Agent", category: "Automation", description: "Configura e gestisce crawler Apify per estrazione dati.", source: "Apify", author: "Apify Community", isInstalled: false },
-      { id: 'hf-1', name: "HuggingFace Transformer", category: "ML/AI", description: "Selection e fine-tuning di modelli LLM dall'ecosistema HF.", source: "HF Hub", author: "HuggingFace", isInstalled: false },
-      { id: 'qa-1', name: "Security Auditor V3", category: "Security", description: "Analisi statica e vulnerabilità OWASP con report dettagliati.", source: "Community", author: "CyberGuard", isInstalled: false },
-      { id: 'devops-1', name: "K8s Cluster Master", category: "DevOps", description: "Gestione di cluster Kubernetes e pipeline CI/CD.", source: "GX Hub", author: "CloudOps", isInstalled: false },
-      { id: 'integ-1', name: "API Integration Guru", category: "Integration", description: "Specialista in orchestrazione di microservizi.", source: "Superface", author: "Integrator", isInstalled: false }
+      // AI & Architecture
+      { 
+        id: 'deep-1', 
+        name: "DeepNLP Architect", 
+        category: "Architecture", 
+        description: "Progetta sistemi AI complessi usando le API e gli embedding di DeepNLP.org. Genera diagrammi architetturali e piani di implementazione.", 
+        source: "DeepNLP", 
+        author: "DeepNLP Team", 
+        version: "v2.3.1", 
+        isInstalled: false,
+        systemPrompt: "Sei un DeepNLP Architect esperto in sistemi distribuiti e AI. Il tuo obiettivo è progettare architetture che utilizzano RAG (Retrieval-Augmented Generation) e Vector Databases. Fornisci sempre diagrammi in formato Mermaid e piani di implementazione divisi per fasi."
+      },
+      { 
+        id: 'hf-1', 
+        name: "HuggingFace Engineer", 
+        category: "ML/AI", 
+        description: "Selezione, fine-tuning e deploy di modelli LLM dall'ecosistema HuggingFace. Supporta Llama, Mistral, Phi e tutti i modelli GGUF.", 
+        source: "HF Hub", 
+        author: "HuggingFace", 
+        version: "v1.9.0", 
+        isInstalled: false,
+        systemPrompt: "Sei un HuggingFace Engineer. Conosci ogni modello su HF Hub. Aiuta l'utente a scegliere il modello giusto in base alle performance (MMLU score) e al formato (GGUF/ExLlama). Suggerisci script di fine-tuning usando la libreria 'transformers' e 'PEFT'."
+      },
+      { 
+        id: 'mlflow-1', 
+        name: "MLflow Orchestrator", 
+        category: "ML/AI", 
+        description: "Tracciamento esperimenti, versioning modelli e deployment pipeline ML con MLflow. Integrazione nativa con PyTorch e TensorFlow.", 
+        source: "GX Hub", 
+        author: "MLOps Guild", 
+        version: "v1.4.2", 
+        isInstalled: false,
+        systemPrompt: "Sei un esperto di MLOps specializzato in MLflow. Gestisci il tracking degli esperimenti (metrics, params) e l'organizzazione del Model Registry. Assicurati che ogni modello abbia una firma (signature) corretta per il deployment."
+      },
+      { 
+        id: 'langchain-1', 
+        name: "LangChain Builder", 
+        category: "ML/AI", 
+        description: "Costruisce catene LLM complesse con LangChain: RAG, agent loops, tool calling e memory management avanzato.", 
+        source: "Community", 
+        author: "LangDev Team", 
+        version: "v0.9.5", 
+        isInstalled: false,
+        systemPrompt: "Sei un LangChain Builder certificato. Progetta catene (Chains) e grafi (LangGraph) per gestire flussi decisionali autonomi. Usa preferibilmente la sintassi LCEL (LangChain Expression Language)."
+      },
+      // Coding & Development
+      { 
+        id: 'agensi-1', 
+        name: "Agensi Coder Pro", 
+        category: "Coding", 
+        description: "Agente ottimizzato per il formato SKILL.md, refactoring avanzato e coding estremo multi-linguaggio con analisi contestuale profonda.", 
+        source: "Agensi", 
+        author: "Agensi.ai", 
+        version: "v3.1.0", 
+        isInstalled: false,
+        systemPrompt: "Sei Agensi Coder Pro, un agente di elite per lo sviluppo software professionale. Segui rigorosamente i princìpi SOLID e Clean Code. Quando ricevi una skill in formato SKILL.md, interpretala per estendere le tue capacità e applicarla ai file dell'utente."
+      },
+      { 
+        id: 'agensi-2', 
+        name: "Agensi Python Expert", 
+        category: "Coding", 
+        description: "Esperto Python specializzato in data science, FastAPI, automazione e scripting ad alte prestazioni. Suggerisce Type Hints e docstring.", 
+        source: "Agensi", 
+        author: "Agensi.ai", 
+        version: "v2.7.3", 
+        isInstalled: false,
+        systemPrompt: "Sei un Python Expert veterano. Scrivi codice idomatico (Pythonic), usa sempre Type Hints (typing) e Pydantic per la validazione dei dati. Sei un maestro nell'ottimizzazione di performance con NumPy e Pandas."
+      },
+      { 
+        id: 'ts-1', 
+        name: "TypeScript Sentinel", 
+        category: "Coding", 
+        description: "Auditing TypeScript avanzato: tipizzazione generica, narrowing, decoratori e pattern architetturali per codebase enterprise.", 
+        source: "GX Hub", 
+        author: "TSMasters", 
+        version: "v2.0.1", 
+        isInstalled: false,
+        systemPrompt: "Sei TypeScript Sentinel. La tua missione è eliminare gli 'any' non necessari e implementare una tipizzazione forte e sicura. Suggerisci l'uso di Generics, Discriminated Unions e Type Guards per rendere il codice robusto."
+      },
+      { 
+        id: 'rust-1', 
+        name: "Rust Systems Coder", 
+        category: "Coding", 
+        description: "Specialista in Rust: gestione del borrow checker, async/await con Tokio, FFI e sistemi embedded. Zero-cost abstractions.", 
+        source: "Community", 
+        author: "RustLabs", 
+        version: "v1.2.0", 
+        isInstalled: false,
+        systemPrompt: "Sei un Rustacean esperto. Aiuta l'utente a navigare tra le regole del Borrow Checker, suggerisci l'uso corretto di 'smart pointers' come Arc/Mutex e progetta API efficienti e prive di 'unsafe' quando possibile."
+      },
+      // DevOps & Security
+      { 
+        id: 'devops-1', 
+        name: "K8s Cluster Master", 
+        category: "DevOps", 
+        description: "Gestione di cluster Kubernetes: Helm charts, RBAC, NetworkPolicy, HPA/VPA e monitoraggio con Prometheus/Grafana.", 
+        source: "GX Hub", 
+        author: "CloudOps", 
+        version: "v2.5.0", 
+        isInstalled: false,
+        systemPrompt: "Sei un K8s SRE (Site Reliability Engineer). Genera manifesti YAML puliti, configura Ingress controllers e assicura che ogni pod abbia limiti di risorse (requests/limits) definiti per evitare problemi di noisy neighbor."
+      },
+      { 
+        id: 'qa-1', 
+        name: "Security Auditor V3", 
+        category: "Security", 
+        description: "Analisi statica SAST, rilevamento vulnerabilità OWASP Top 10, CVE scanning e generazione di report dettagliati con remediation.", 
+        source: "Community", 
+        author: "CyberGuard", 
+        version: "v3.4.1", 
+        isInstalled: false,
+        systemPrompt: "Sei un Security Auditor. La tua priorità è trovare falle di sicurezza prima che vengano sfruttate. Esegui scansioni SAST su ogni riga di codice e segnala injection, XSS e configurazioni insicure con alta severità."
+      },
     ],
     skills: [
-      { id: 'os-1', name: "Universal Skill Loader", category: "Automation", description: "Caricatore universale per skill in formato SKILL.md.", source: "OpenSkills", author: "OpenDev", isInstalled: false },
-      { id: 'th-1', name: "ToolHub API Pack", category: "Tools", description: "Accesso a 10,000+ API come function tools.", source: "ToolHub", author: "ToolHub.io", isInstalled: false },
-      { id: 'sf-1', name: "Superface Hub Connector", category: "Integration", description: "Mapping istantaneo di centinaia di API esterne.", source: "Superface", author: "Superface.ai", isInstalled: false },
-      { id: 'cc-1', name: "Coding Standard Skill", category: "Coding", description: "Valida il codice secondo le best practices di CommandCodeAI.", source: "CommandCode", author: "CC Team", isInstalled: false },
-      { id: 'mcp-1', name: "Docker Control Skill", category: "DevOps", description: "Integrazione nativa per la gestione di container Docker.", source: "Awesome MCP", author: "MCP Community", isInstalled: false },
-      { id: 'sql-1', name: "SQL Optimizer Skill", category: "Tools", description: "Ottimizzazione automatica di query SQL complesse.", source: "DeepNLP", author: "DBA Pro", isInstalled: false }
+      // Core Skills
+      { 
+        id: 'os-1', 
+        name: "Universal Skill Loader", 
+        category: "Automation", 
+        description: "Caricatore universale per skill in formato SKILL.md. Gestione versioning e conflitti tra skill.", 
+        source: "OpenSkills", 
+        author: "OpenDev", 
+        version: "v3.0.0", 
+        isInstalled: false,
+        logic: "function loadSkill(path) {\n  console.log('[SKILL] Loading from:', path);\n  return { status: 'active', entry: 'index.js' };\n}"
+      },
+      { 
+        id: 'sql-1', 
+        name: "SQL Optimizer Skill", 
+        category: "Data", 
+        description: "Ottimizzazione automatica di query SQL complesse: analisi execution plan e suggerimento indici.", 
+        source: "DeepNLP", 
+        author: "DBA Pro", 
+        version: "v3.1.0", 
+        isInstalled: false,
+        logic: "SELECT * FROM queries WHERE execution_time > 1s ORDER BY cost DESC; -- EXPLAIN ANALYZE focus"
+      },
+      { 
+        id: 'docker-sk-1', 
+        name: "Docker Control Skill", 
+        category: "DevOps", 
+        description: "Integrazione nativa per la gestione di container Docker: build ottimizzate e networking.", 
+        source: "Awesome MCP", 
+        author: "MCP Community", 
+        version: "v2.3.0", 
+        isInstalled: false,
+        logic: "docker build -t gx-service . && docker run --rm -p 8080:8080 gx-service"
+      }
     ],
     addons: []
   };
 
   // 1. Simula Fetch/Sync Dinamico (Aggiunge al discoveredRegistry)
-  const liveAdditions = (type !== 'addons') ? await fetchLiveMarketplace(type, searchTerm, searchCat) : [];
+  const liveAdditions = (type !== 'addons') ? await fetchLiveMarketplace(type, searchTerm, searchCat, customRegs) : [];
 
   // 2. Fetch Live Addons (Open VSX)
   if (type === 'addons') {
     try {
-      const url = searchTerm 
-          ? `https://open-vsx.org/api/-/search?q=${encodeURIComponent(searchTerm)}&size=30`
-          : `https://open-vsx.org/api/-/search?size=20`;
+      // Potenziamento: dimensioni maggiori e supporto categoria
+      let vsxQuery = searchTerm || '';
+      if (searchCat !== 'all') {
+          vsxQuery += ` category:"${searchCat}"`;
+      }
+
+      const url = `https://open-vsx.org/api/-/search?q=${encodeURIComponent(vsxQuery)}&size=100`;
+      
       const response = await fetch(url, { headers: { 'User-Agent': 'GXCode-IDE' } });
       const json = await response.json();
       localResults.addons = json.extensions.map(ext => ({
@@ -371,10 +725,9 @@ apiApp.get("/api/marketplace/search", async (req, res) => {
   }
 
   // Merge & Filter
-  // Uniamo il catalogo locale fisso con le scoperte dinamiche della sessione
   let finalItems = [...(localResults[type] || []), ...liveAdditions];
-  
-  // Cross-reference con gli elementi già installati su disco
+
+  // Cross-reference con gli elementi installati
   const diskAgents = loadPersistedData('agents');
   const diskSkills = loadPersistedData('skills');
   const diskPlugins = loadPersistedData('plugins');
@@ -384,20 +737,21 @@ apiApp.get("/api/marketplace/search", async (req, res) => {
     if (type === 'agents') isInstalled = diskAgents.some(a => String(a.id) === String(item.id));
     else if (type === 'skills') isInstalled = diskSkills.some(s => String(s.id) === String(item.id));
     else if (type === 'addons') isInstalled = diskPlugins.some(p => String(p.id) === String(item.id));
-    
+
     return { ...item, isInstalled };
   });
 
-  if (searchTerm) {
-    finalItems = finalItems.filter(i => 
-      i.name.toLowerCase().includes(searchTerm) || 
-      (i.description && i.description.toLowerCase().includes(searchTerm))
+  // Filtro categoria post-merge per i registri custom che non la supportano in query
+  if (searchCat !== 'all') {
+    finalItems = finalItems.filter(i =>
+      i.category && i.category.toLowerCase().includes(searchCat)
     );
   }
 
-  if (searchCat !== 'all') {
-    finalItems = finalItems.filter(i => 
-      i.category && i.category.toLowerCase() === searchCat
+  if (searchTerm) {
+    finalItems = finalItems.filter(i =>
+      i.name.toLowerCase().includes(searchTerm) ||
+      (i.description && i.description.toLowerCase().includes(searchTerm))
     );
   }
 
@@ -426,17 +780,17 @@ apiApp.patch("/api/marketplace-agents/:id", (req, res) => {
   const allAvailable = [...diskAgents, ...marketplaceAgents, ...discoveredRegistry.agents];
   const original = allAvailable.find(a => String(a.id) === String(id)) || { name: "Agent_" + id };
 
-  const agentPatch = { 
-    ...original, 
-    avatar: original.avatar || "bot", 
-    status: "idle", 
-    parentId: null, 
-    skillIds: "[]", 
-    ...body, 
+  const agentPatch = {
+    ...original,
+    avatar: original.avatar || "bot",
+    status: "idle",
+    parentId: null,
+    skillIds: "[]",
+    ...body,
     id: id,
-    isInstalled: true 
+    isInstalled: true
   };
-  
+
   savePersistedData('agents', agentPatch);
   res.json(agentPatch);
 });
@@ -451,14 +805,14 @@ apiApp.patch("/api/marketplace-skills/:id", (req, res) => {
   const allAvailable = [...diskSkills, ...marketplaceSkills, ...discoveredRegistry.skills];
   const original = allAvailable.find(s => String(s.id) === String(id)) || { name: "Skill_" + id };
 
-  const skillPatch = { 
-    ...original, 
-    type: "javascript", 
-    ...body, 
+  const skillPatch = {
+    ...original,
+    type: "javascript",
+    ...body,
     id: id,
-    isInstalled: true 
+    isInstalled: true
   };
-  
+
   savePersistedData('skills', skillPatch);
   res.json(skillPatch);
 });
@@ -473,7 +827,7 @@ apiApp.patch("/api/plugins/:id", (req, res) => {
   const dir = getActiveAiPath('plugins');
   const filePath = path.join(dir, `${safeSlug}.json`);
 
-  const pluginData = { 
+  const pluginData = {
     id: idStr,
     ...body,
     _managedBy: 'open-vsx'
@@ -505,9 +859,9 @@ apiApp.get("/api/plugins", async (req, res) => {
   };
 
   try {
-    const url = query 
-        ? `https://open-vsx.org/api/-/search?q=${encodeURIComponent(query)}&size=30`
-        : `https://open-vsx.org/api/-/search?size=20`;
+    const url = query
+      ? `https://open-vsx.org/api/-/search?q=${encodeURIComponent(query)}&size=30`
+      : `https://open-vsx.org/api/-/search?size=20`;
 
     const response = await fetch(url, {
       headers: { 'User-Agent': 'GXCode-IDE' }
@@ -581,15 +935,30 @@ apiApp.get("/api/marketplace-skills", async (req, res) => {
 // Publishing Hub (Mappa verso repository esterne)
 apiApp.post("/api/marketplace/publish", async (req, res) => {
   const { item, targetRepoUrl } = req.body;
-  console.log(`[SPY-PUBLISH] Richiesta pubblicazione di "${item.name}" su ${targetRepoUrl}`);
+  console.log(`[SPY-PUBLISH] Richiesta pubblicazione di "${item.name}"...`);
 
   try {
-    // Simulazione di una POST a un repository esterno
-    // In produzione qui si userebbe fetch(targetRepoUrl, { method: 'POST', body: ... })
-    setTimeout(() => {
-      res.json({ success: true, message: "Pubblicazione completata con successo!", url: targetRepoUrl });
-    }, 2000);
+    const exportPath = path.join(process.cwd(), '.gxcode', 'exports');
+    if (!fs.existsSync(exportPath)) fs.mkdirSync(exportPath, { recursive: true });
+
+    const fileName = `${item.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.json`;
+    const filePath = path.join(exportPath, fileName);
+
+    fs.writeFileSync(filePath, JSON.stringify({
+        ...item,
+        publishedAt: new Date().toISOString(),
+        registryTarget: targetRepoUrl || 'GX-Default'
+    }, null, 2));
+
+    console.log(`[SPY-PUBLISH] Item esportato con successo in: ${filePath}`);
+
+    res.json({ 
+        success: true, 
+        message: `Pubblicazione (Export) completata! Il file è pronto in .gxcode/exports/${fileName}`, 
+        url: targetRepoUrl || 'Local Export' 
+    });
   } catch (err) {
+    console.error("[SPY-PUBLISH] Errore:", err);
     res.status(500).json({ error: "Errore durante la pubblicazione: " + err.message });
   }
 });
@@ -600,6 +969,67 @@ apiApp.get("/api/custom-repos", (req, res) => {
 
 apiApp.get("/api/settings", (req, res) => {
   res.json(settings);
+});
+
+// ---- ENDPOINT GOOGLE OAUTH CALLBACK (GEMINI) ----
+const GOOGLE_CONFIG = {
+  clientId: "411114937479-jfa96807lfiuo4rlnqd362598s7dj5va.apps.googleusercontent.com",
+  clientSecret: "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", // <--- DEVI INCOLLARE IL SEGRETO QUI!
+  redirectUri: "http://localhost:5000/gemini/callback"
+};
+
+apiApp.get("/gemini/callback", async (req, res) => {
+  const code = req.query.code;
+
+  if (code) {
+    try {
+      // 1. Scambio codice per token
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code,
+          client_id: GOOGLE_CONFIG.clientId,
+          client_secret: GOOGLE_CONFIG.clientSecret,
+          redirect_uri: GOOGLE_CONFIG.redirectUri,
+          grant_type: "authorization_code"
+        })
+      });
+      const tokens = await tokenRes.json();
+
+      if (tokens.error) throw new Error(tokens.error_description || tokens.error);
+
+      // 2. Recupero info profilo
+      const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokens.access_token}` }
+      });
+      const profile = await profileRes.json();
+
+      // 3. Comunichiamo al renderer i dati reali
+      const wins = BrowserWindow.getAllWindows();
+      if (wins.length > 0) {
+        wins[0].webContents.send('gemini:auth-success', {
+          code: tokens.access_token, // Usiamo il token invece del codice
+          email: profile.email,
+          name: profile.name,
+          picture: profile.picture
+        });
+      }
+
+      res.send(`
+        <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #0d1117; color: white; height: 100vh;">
+          <h1 style="color: #4285F4;">Benvenuto, ${profile.name}!</h1>
+          <p>Autenticazione completata con successo.</p>
+          <script>setTimeout(() => window.close(), 2000);</script>
+        </div>
+      `);
+    } catch (err) {
+      console.error("[OAuth] Error during token exchange:", err);
+      res.status(500).send("Errore durante il recupero del profilo: " + err.message);
+    }
+  } else {
+    res.status(400).send("Errore: codice mancante.");
+  }
 });
 
 // ---- AVVIO SERVER API SU :5000 ----
@@ -621,6 +1051,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
+      webviewTag: true,
     },
   });
 
@@ -655,51 +1086,51 @@ app.whenReady().then(() => {
   ipcMain.handle('open-project-folder', async () => {
     const mainWindow = BrowserWindow.getAllWindows()[0];
     const result = await dialog.showOpenDialog(mainWindow, {
-        properties: ['openDirectory']
+      properties: ['openDirectory']
     });
 
     if (result.canceled || result.filePaths.length === 0) return null;
 
     const folderPath = result.filePaths[0];
     try {
-        const files = fs.readdirSync(folderPath, { withFileTypes: true }).map(f => ({
+      const files = fs.readdirSync(folderPath, { withFileTypes: true }).map(f => ({
         name: f.name,
         isDirectory: f.isDirectory(),
         path: path.join(folderPath, f.name)
-        }));
+      }));
 
-        files.sort((a, b) => {
+      files.sort((a, b) => {
         if (a.isDirectory && !b.isDirectory) return -1;
         if (!a.isDirectory && b.isDirectory) return 1;
         return a.name.localeCompare(b.name);
-        });
+      });
 
-        return { name: path.basename(folderPath), path: folderPath, files };
+      return { name: path.basename(folderPath), path: folderPath, files };
     } catch (e) {
-        return { error: e.message };
+      return { error: e.message };
     }
   });
 
   // Nuovo handler per caricare una folder specifica (es. al riavvio per la sessione)
   ipcMain.handle('open-specific-folder', async (event, folderPath) => {
     try {
-        if (!fs.existsSync(folderPath)) return null;
-        
-        const files = fs.readdirSync(folderPath, { withFileTypes: true }).map(f => ({
+      if (!fs.existsSync(folderPath)) return null;
+
+      const files = fs.readdirSync(folderPath, { withFileTypes: true }).map(f => ({
         name: f.name,
         isDirectory: f.isDirectory(),
         path: path.join(folderPath, f.name)
-        }));
+      }));
 
-        files.sort((a, b) => {
+      files.sort((a, b) => {
         if (a.isDirectory && !b.isDirectory) return -1;
         if (!a.isDirectory && b.isDirectory) return 1;
         return a.name.localeCompare(b.name);
-        });
+      });
 
-        return { name: path.basename(folderPath), path: folderPath, files };
+      return { name: path.basename(folderPath), path: folderPath, files };
     } catch (e) {
-        return { error: e.message };
+      return { error: e.message };
     }
   });
 
@@ -707,20 +1138,29 @@ app.whenReady().then(() => {
   ipcMain.handle('read-file', async (event, filePath) => {
     console.log(`[IPC] Richiesta lettura file: ${filePath}`);
     try {
-        const stats = fs.statSync(filePath);
-        if (stats.size > 1024 * 1024) return "File troppo grande per l'anteprima (Max 1MB).";
-        const data = fs.readFileSync(filePath, 'utf-8');
-        console.log(`[IPC] File letto con successo: ${filePath.split(path.sep).pop()}`);
-        return data;
-    } catch(e) {
-        console.error(`[IPC] Errore lettura file ${filePath}:`, e.message);
-        return `Errore lettura file: ${e.message}`;
+      const stats = fs.statSync(filePath);
+      if (stats.size > 1024 * 1024) return "File troppo grande per l'anteprima (Max 1MB).";
+      const data = fs.readFileSync(filePath, 'utf-8');
+      console.log(`[IPC] File letto con successo: ${filePath.split(path.sep).pop()}`);
+      return data;
+    } catch (e) {
+      console.error(`[IPC] Errore lettura file ${filePath}:`, e.message);
+      return `Errore lettura file: ${e.message}`;
     }
   });
 
   // ---- FILE SYSTEM OPERATIONS (Context Menu) ----
   ipcMain.handle('shell-open-path', async (event, targetPath) => {
     await shell.openPath(targetPath);
+    return true;
+  });
+
+  ipcMain.handle('fs-write-file', async (event, filePath, content) => {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(filePath, content, 'utf8');
     return true;
   });
 
@@ -735,7 +1175,7 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle('fs-create-folder', async (event, dirPath, name) => {
+  ipcMain.handle('fs-create-folder-v2', async (event, dirPath, name) => {
     try {
       const folderPath = path.join(dirPath, name);
       if (fs.existsSync(folderPath)) return { error: 'Cartella già esistente.' };
@@ -761,45 +1201,66 @@ app.whenReady().then(() => {
     }
   });
 
+  // --- GEMINI REAL OAUTH HANDLER ---
+  ipcMain.handle('gemini:login', async () => {
+    if (GOOGLE_CONFIG.clientId.includes("YOUR_GOOGLE_CLIENT_ID") || GOOGLE_CONFIG.clientSecret.includes("INSERISCI_QUI")) {
+      return {
+        success: false,
+        error: "CONFIG_MISSING",
+        message: "Configurazione Google incompleta. Inserisci Client ID e Secret in main.js per procedere."
+      };
+    }
+
+    const SCOPE = encodeURIComponent("openid email profile https://www.googleapis.com/auth/cloud-platform");
+    console.log("[GX OAuth] Starting Auth with main-v8-final-fix...");
+
+    // URL di autorizzazione Google
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CONFIG.clientId}&redirect_uri=${GOOGLE_CONFIG.redirectUri}&response_type=code&scope=${SCOPE}&access_type=offline&prompt=consent`;
+
+    // Apriamo il browser dell'utente
+    shell.openExternal(authUrl);
+    return { success: true };
+  });
+
   // Handler per Ricerca Globale nei file
   ipcMain.handle('search-files', async (event, folderPath, query) => {
     if (!folderPath || !query) return [];
     const results = [];
     const MAX_RESULTS = 200;
-    
+
     const searchRecursively = (dir) => {
-        if (results.length >= MAX_RESULTS) return;
-        try {
-            const files = fs.readdirSync(dir, { withFileTypes: true });
-            for (const file of files) {
-                if (results.length >= MAX_RESULTS) return;
-                const fullPath = path.join(dir, file.name);
-                
-                if (file.isDirectory()) {
-                    if (['node_modules', '.git', 'dist', 'build', '.next', '.claude', '.gemini'].includes(file.name)) continue;
-                    searchRecursively(fullPath);
-                } else {
-                    if (file.name.match(/\\.(png|jpe?g|gif|webp|ico|svg|pdf|zip|tar|gz|exe|dll|class|jar|woff2?|eot|ttf|mp3|mp4)$/i)) continue;
-                    try {
-                        const content = fs.readFileSync(fullPath, 'utf8');
-                        const lines = content.split('\n');
-                        for (let i = 0; i < lines.length; i++) {
-                            if (lines[i].toLowerCase().includes(query.toLowerCase())) {
-                                results.push({
-                                    file: fullPath,
-                                    relativePath: path.relative(folderPath, fullPath),
-                                    line: i + 1,
-                                    text: lines[i].trim().substring(0, 150)
-                                });
-                                if (results.length >= MAX_RESULTS) return;
-                            }
-                        }
-                    } catch(e) {}
+      if (results.length >= MAX_RESULTS) return;
+      try {
+        const files = fs.readdirSync(dir, { withFileTypes: true });
+        for (const file of files) {
+          if (results.length >= MAX_RESULTS) return;
+          const fullPath = path.join(dir, file.name);
+
+          if (file.isDirectory()) {
+            if (['node_modules', '.git', 'dist', 'build', '.next', '.claude', '.gemini'].includes(file.name)) continue;
+            searchRecursively(fullPath);
+          } else {
+            if (file.name.match(/\\.(png|jpe?g|gif|webp|ico|svg|pdf|zip|tar|gz|exe|dll|class|jar|woff2?|eot|ttf|mp3|mp4)$/i)) continue;
+            try {
+              const content = fs.readFileSync(fullPath, 'utf8');
+              const lines = content.split('\n');
+              for (let i = 0; i < lines.length; i++) {
+                if (lines[i].toLowerCase().includes(query.toLowerCase())) {
+                  results.push({
+                    file: fullPath,
+                    relativePath: path.relative(folderPath, fullPath),
+                    line: i + 1,
+                    text: lines[i].trim().substring(0, 150)
+                  });
+                  if (results.length >= MAX_RESULTS) return;
                 }
-            }
-        } catch(e) {}
+              }
+            } catch (e) { }
+          }
+        }
+      } catch (e) { }
     };
-    
+
     searchRecursively(folderPath);
     console.log(`[IPC] Ricerca completata per "${query}", trovati ${results.length} risultati.`);
     return results;
@@ -810,51 +1271,51 @@ app.whenReady().then(() => {
     if (!folderPath) return [];
     const testFiles = [];
     const MAX_FILES = 100;
-    
+
     const searchRecursively = (dir) => {
-        if (testFiles.length >= MAX_FILES) return;
-        try {
-            const files = fs.readdirSync(dir, { withFileTypes: true });
-            for (const file of files) {
-                if (testFiles.length >= MAX_FILES) return;
-                const fullPath = path.join(dir, file.name);
-                
-                if (file.isDirectory()) {
-                    if (['node_modules', '.git', 'dist', 'build', '.next', '.claude', '.gemini'].includes(file.name)) continue;
-                    searchRecursively(fullPath);
-                } else {
-                    if (file.name.match(/\\.(spec|test)\\.(js|ts|jsx|tsx)$/i)) {
-                        const content = fs.readFileSync(fullPath, 'utf8');
-                        const lines = content.split('\n');
-                        const testMatches = [];
-                        
-                        const testRegex = /(?:test|it)\s*\(['"`](.*?)['"`]/;
-                        
-                        for (let i = 0; i < lines.length; i++) {
-                            const match = lines[i].match(testRegex);
-                            if (match && match[1]) {
-                                testMatches.push({
-                                    name: match[1],
-                                    line: i + 1,
-                                    status: 'idle'
-                                });
-                            }
-                        }
-                        
-                        if (testMatches.length > 0) {
-                            testFiles.push({
-                                file: file.name,
-                                fullPath: fullPath,
-                                relativePath: path.relative(folderPath, fullPath),
-                                testMatches
-                            });
-                        }
-                    }
+      if (testFiles.length >= MAX_FILES) return;
+      try {
+        const files = fs.readdirSync(dir, { withFileTypes: true });
+        for (const file of files) {
+          if (testFiles.length >= MAX_FILES) return;
+          const fullPath = path.join(dir, file.name);
+
+          if (file.isDirectory()) {
+            if (['node_modules', '.git', 'dist', 'build', '.next', '.claude', '.gemini'].includes(file.name)) continue;
+            searchRecursively(fullPath);
+          } else {
+            if (file.name.match(/\\.(spec|test)\\.(js|ts|jsx|tsx)$/i)) {
+              const content = fs.readFileSync(fullPath, 'utf8');
+              const lines = content.split('\n');
+              const testMatches = [];
+
+              const testRegex = /(?:test|it)\s*\(['"`](.*?)['"`]/;
+
+              for (let i = 0; i < lines.length; i++) {
+                const match = lines[i].match(testRegex);
+                if (match && match[1]) {
+                  testMatches.push({
+                    name: match[1],
+                    line: i + 1,
+                    status: 'idle'
+                  });
                 }
+              }
+
+              if (testMatches.length > 0) {
+                testFiles.push({
+                  file: file.name,
+                  fullPath: fullPath,
+                  relativePath: path.relative(folderPath, fullPath),
+                  testMatches
+                });
+              }
             }
-        } catch(e) {}
+          }
+        }
+      } catch (e) { }
     };
-    
+
     searchRecursively(folderPath);
     return testFiles;
   });
@@ -862,87 +1323,113 @@ app.whenReady().then(() => {
   // Handler per eseguire un test specifico usando Playwright
   ipcMain.handle('run-test', async (event, workspacePath, filePath, testName) => {
     return new Promise((resolve, reject) => {
-        const escapedName = testName.replace(/"/g, '\\"');
-        const cmd = `npx playwright test "${filePath}" -g "${escapedName}" --reporter=json`;
-        
-        console.log(`[IPC] Esecuzione test: ${cmd}`);
-        
-        exec(cmd, { cwd: workspacePath, env: process.env }, (error, stdout, stderr) => {
-            try {
-                const jsonStart = stdout.indexOf('{');
-                const jsonEnd = stdout.lastIndexOf('}');
-                if (jsonStart !== -1 && jsonEnd !== -1) {
-                    const jsonStr = stdout.substring(jsonStart, jsonEnd + 1);
-                    const result = JSON.parse(jsonStr);
-                    
-                    // Simple Playwright JSON logic: if errors.length === 0, it passed
-                    const pass = result.errors ? result.errors.length === 0 : true;
-                    if (error && !pass) {
-                        reject(new Error('Test fallito'));
-                    } else {
-                        resolve(true); // Test passed
-                    }
-                } else {
-                    if (error) reject(new Error(stderr || stdout || 'Errore Test'));
-                    else resolve(true);
-                }
-            } catch(e) {
-                if (error) reject(new Error('Test fallito'));
-                else resolve(true);
+      const escapedName = testName.replace(/"/g, '\\"');
+      const cmd = `npx playwright test "${filePath}" -g "${escapedName}" --reporter=json`;
+
+      console.log(`[IPC] Esecuzione test: ${cmd}`);
+
+      exec(cmd, { cwd: workspacePath, env: process.env }, (error, stdout, stderr) => {
+        try {
+          const jsonStart = stdout.indexOf('{');
+          const jsonEnd = stdout.lastIndexOf('}');
+          if (jsonStart !== -1 && jsonEnd !== -1) {
+            const jsonStr = stdout.substring(jsonStart, jsonEnd + 1);
+            const result = JSON.parse(jsonStr);
+
+            // Simple Playwright JSON logic: if errors.length === 0, it passed
+            const pass = result.errors ? result.errors.length === 0 : true;
+            if (error && !pass) {
+              reject(new Error('Test fallito'));
+            } else {
+              resolve(true); // Test passed
             }
-        });
+          } else {
+            if (error) reject(new Error(stderr || stdout || 'Errore Test'));
+            else resolve(true);
+          }
+        } catch (e) {
+          if (error) reject(new Error('Test fallito'));
+          else resolve(true);
+        }
+      });
+    });
+  });
+
+  // Handler per eseguire tutti i test in un file specifico
+  ipcMain.handle('run-file-tests', async (event, workspacePath, filePath) => {
+    return new Promise((resolve, reject) => {
+      const cmd = `npx playwright test "${filePath}" --reporter=json`;
+      console.log(`[IPC] Esecuzione tutti i test nel file: ${cmd}`);
+
+      exec(cmd, { cwd: workspacePath, env: process.env }, (error, stdout, stderr) => {
+        try {
+          const jsonStart = stdout.indexOf('{');
+          const jsonEnd = stdout.lastIndexOf('}');
+          if (jsonStart !== -1 && jsonEnd !== -1) {
+            const jsonStr = stdout.substring(jsonStart, jsonEnd + 1);
+            resolve(JSON.parse(jsonStr));
+          } else {
+            if (error) reject(new Error(stderr || stdout || 'Errore Test'));
+            else resolve({ success: true });
+          }
+        } catch (e) {
+          if (error) reject(new Error('Test fallito'));
+          else resolve({ success: true });
+        }
+      });
     });
   });
 
   // Handler per il Debug di un test (lancia Playwright Inspector)
   ipcMain.handle('debug-test', async (event, workspacePath, filePath, testName) => {
     return new Promise((resolve, reject) => {
-        const escapedName = testName.replace(/"/g, '\\"');
-        const cmd = `npx playwright test "${filePath}" -g "${escapedName}" --headed`;
-        
-        console.log(`[IPC] DEBUG TEST: ${cmd}`);
-        
-        // Lanciamo con variabile d'ambiente PWDEBUG=1
-        const debugEnv = { ...process.env, PWDEBUG: '1' };
-        
-        exec(cmd, { cwd: workspacePath, env: debugEnv }, (error, stdout, stderr) => {
-            if (error) {
-                console.error("[IPC] Debug Error:", stderr);
-                resolve(false); // Il debug può essere chiuso dall'utente, non lo consideriamo errore fatale
-            } else {
-                resolve(true);
-            }
-        });
+      const escapedName = testName.replace(/"/g, '\\"');
+      const cmd = `npx playwright test "${filePath}" -g "${escapedName}" --headed`;
+
+      console.log(`[IPC] DEBUG TEST: ${cmd}`);
+
+      // Lanciamo con variabile d'ambiente PWDEBUG=1
+      const debugEnv = { ...process.env, PWDEBUG: '1' };
+
+      exec(cmd, { cwd: workspacePath, env: debugEnv }, (error, stdout, stderr) => {
+        if (error) {
+          console.error("[IPC] Debug Error:", stderr);
+          resolve(false); // Il debug può essere chiuso dall'utente, non lo consideriamo errore fatale
+        } else {
+          resolve(true);
+        }
+      });
     });
   });
 
   // Handler per eseguire tutti i test nel progetto
   ipcMain.handle('run-all-tests', async (event, workspacePath) => {
     return new Promise((resolve, reject) => {
-        const cmd = `npx playwright test --reporter=json`;
-        console.log(`[IPC] Esecuzione tutti i test: ${cmd}`);
-        
-        exec(cmd, { cwd: workspacePath, env: process.env }, (error, stdout, stderr) => {
-            try {
-                const jsonStart = stdout.indexOf('{');
-                const jsonEnd = stdout.lastIndexOf('}');
-                if (jsonStart !== -1 && jsonEnd !== -1) {
-                    const jsonStr = stdout.substring(jsonStart, jsonEnd + 1);
-                    resolve(JSON.parse(jsonStr));
-                } else {
-                    if (error) reject(new Error(stderr || stdout || 'Errore Test'));
-                    else resolve({ success: true });
-                }
-            } catch(e) {
-                if (error) reject(new Error('Esecuzione fallita'));
-                else resolve({ success: true });
-            }
-        });
+      const cmd = `npx playwright test --reporter=json`;
+      console.log(`[IPC] Esecuzione tutti i test: ${cmd}`);
+
+      exec(cmd, { cwd: workspacePath, env: process.env }, (error, stdout, stderr) => {
+        try {
+          const jsonStart = stdout.indexOf('{');
+          const jsonEnd = stdout.lastIndexOf('}');
+          if (jsonStart !== -1 && jsonEnd !== -1) {
+            const jsonStr = stdout.substring(jsonStart, jsonEnd + 1);
+            resolve(JSON.parse(jsonStr));
+          } else {
+            if (error) reject(new Error(stderr || stdout || 'Errore Test'));
+            else resolve({ success: true });
+          }
+        } catch (e) {
+          if (error) reject(new Error('Esecuzione fallita'));
+          else resolve({ success: true });
+        }
+      });
     });
   });
 
-  // handler per il terminale reale
-  ipcMain.handle("execute-command", async (event, cmd) => {
+  // handler per il terminale reale (ora supporta CWD dinamico per l'Agente)
+  ipcMain.handle("execute-command", async (event, cmd, customCwd) => {
+    const cwd = customCwd || __dirname;
 
     // Intelligenza AI Context Interceptor: aggiorna in quale ecosistema siamo
     const lowerCmd = cmd.toLowerCase().trim();
@@ -960,7 +1447,7 @@ app.whenReady().then(() => {
   });
 
   // --- AUTO-UPDATER SYSTEM (Professional GitHub Releases) ---
-  
+
   // Configurazione base per l'auto-updater
   autoUpdater.autoDownload = false; // Chiediamo prima di scaricare
   autoUpdater.logger = console;
@@ -972,7 +1459,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('check-for-updates', async () => {
     if (!app.isPackaged) return false;
-    
+
     // Se c'è già un controllo in corso, riusa la stessa Promise
     if (pendingCheck) {
       try { return !!(await pendingCheck).updateInfo; } catch { return false; }
@@ -1032,60 +1519,97 @@ app.whenReady().then(() => {
     win.webContents.send('update-ready-to-install');
   });
 
-  ipcMain.handle('git-status', async () => {
+  ipcMain.handle('git-status', async (event, workspacePath) => {
     try {
       const { execSync } = require('child_process');
-      const status = execSync('git status --porcelain', { encoding: 'utf8', cwd: process.cwd() });
-      const branch = execSync('git branch --show-current', { encoding: 'utf8', cwd: process.cwd() }).trim();
-      
+      const cwd = workspacePath || process.cwd();
+      const status = execSync('git status --porcelain', { encoding: 'utf8', cwd });
+      const branch = execSync('git branch --show-current', { encoding: 'utf8', cwd }).trim();
+
       const lines = status.split('\n').filter(l => l.trim());
       const files = lines.map(line => {
         const code = line.substring(0, 2);
         const path = line.substring(3);
         return { path, status: code.trim() };
       });
-      
+
       return { success: true, files, branch };
     } catch (err) {
       return { success: false, error: err.message };
     }
   });
 
-  ipcMain.handle('git-stage', async (event, filePath) => {
+  ipcMain.handle('git-stage', async (event, workspacePath, filePath) => {
     try {
       const { execSync } = require('child_process');
-      execSync(`git add "${filePath}"`, { cwd: process.cwd() });
+      execSync(`git add "${filePath}"`, { cwd: workspacePath || process.cwd() });
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
     }
   });
 
-  ipcMain.handle('git-commit', async (event, message) => {
+  ipcMain.handle('git-commit', async (event, workspacePath, message) => {
     try {
       const { execSync } = require('child_process');
-      execSync(`git commit -m "${message}"`, { cwd: process.cwd() });
+      execSync(`git commit -m "${message}"`, { cwd: workspacePath || process.cwd() });
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
     }
   });
 
-  ipcMain.handle('git-pull', async () => {
+  ipcMain.handle('git-pull', async (event, workspacePath) => {
     try {
       const { execSync } = require('child_process');
-      const output = execSync('git pull', { encoding: 'utf8', cwd: process.cwd() });
+      const output = execSync('git pull', { encoding: 'utf8', cwd: workspacePath || process.cwd() });
       return { success: true, output };
     } catch (err) {
       return { success: false, error: err.message };
     }
   });
 
-  ipcMain.handle('git-push', async () => {
+  ipcMain.handle('git-push', async (event, workspacePath) => {
     try {
       const { execSync } = require('child_process');
-      const output = execSync('git push', { encoding: 'utf8', cwd: process.cwd() });
+      const output = execSync('git push', { encoding: 'utf8', cwd: workspacePath || process.cwd() });
       return { success: true, output };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('clipboard-read', () => {
+    const { clipboard } = require('electron');
+    return clipboard.readText();
+  });
+
+  ipcMain.handle('git-diff', async (event, workspacePath, filePath) => {
+    try {
+      const { execSync } = require('child_process');
+      const output = execSync(`git diff "${filePath}"`, { encoding: 'utf8', cwd: workspacePath || process.cwd() });
+      // Se non ci sono differenze in git diff (es. file untracked), proviamo con diff vs null per prendersi il contenuto
+      if (!output) {
+         // Verifichiamo se è un file nuovo (untracked)
+         const status = execSync(`git status --porcelain "${filePath}"`, { encoding: 'utf8', cwd: workspacePath || process.cwd() });
+         if (status.includes('??')) {
+            // Per i file untracked, il diff è l'intero file
+            const content = fs.readFileSync(filePath, 'utf8');
+            return { success: true, diff: content, isUntracked: true };
+         }
+      }
+      return { success: true, diff: output };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('git-show-head', async (event, workspacePath, filePath) => {
+    try {
+      const { execSync } = require('child_process');
+      const relativePath = path.relative(workspacePath || process.cwd(), filePath).replace(/\\/g, '/');
+      const output = execSync(`git show "HEAD:${relativePath}"`, { encoding: 'utf8', cwd: workspacePath || process.cwd() });
+      return { success: true, content: output };
     } catch (err) {
       return { success: false, error: err.message };
     }
@@ -1094,27 +1618,28 @@ app.whenReady().then(() => {
   // --- PHASE 3: INTERACTIVE PTY TERMINAL ---
   const ptyProcesses = {};
 
-  ipcMain.handle('terminal-create', (event, id, shellType) => {
-    console.log(`[TERMINAL] Requesting new PTY - ID: ${id}, Shell: ${shellType}`);
+  ipcMain.handle('terminal-create', (event, id, shellType, workspacePath, apiKey) => {
+    console.log(`[TERMINAL] Requesting new PTY - ID: ${id}, Shell: ${shellType}, Workspace: ${workspacePath}`);
     let shell = process.platform === 'win32' ? 'powershell.exe' : 'bash';
-    
-    // Se l'utente chiede esplicitamente CMD o BASH
-    if (shellType === 'cmd' && process.platform === 'win32') {
+    let args = [];
+
+    if (shellType === 'claude') {
+      shell = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+      args = ['@anthropic-ai/claude-code'];
+    } else if (shellType === 'cmd' && process.platform === 'win32') {
       shell = 'cmd.exe';
     } else if (shellType === 'bash' && process.platform === 'win32') {
       const paths = [
         path.join(process.env.USERPROFILE || '', 'AppData\\Local\\Programs\\Git\\bin\\bash.exe'),
         path.join(process.env.USERPROFILE || '', 'AppData\\Local\\Programs\\Git\\git-bash.exe')
       ];
-      
       const drives = ['C', 'D', 'E', 'F', 'G'];
       for (const drive of drives) {
-          paths.push(`${drive}:\\Program Files\\Git\\bin\\bash.exe`);
-          paths.push(`${drive}:\\Program Files (x86)\\Git\\bin\\bash.exe`);
-          paths.push(`${drive}:\\Git\\bin\\bash.exe`);
+        paths.push(`${drive}:\\Program Files\\Git\\bin\\bash.exe`);
+        paths.push(`${drive}:\\Program Files (x86)\\Git\\bin\\bash.exe`);
+        paths.push(`${drive}:\\Git\\bin\\bash.exe`);
       }
-      
-      shell = 'bash.exe'; // default fallback in PATH
+      shell = 'bash.exe';
       for (const p of paths) {
         if (fs.existsSync(p)) {
           shell = p;
@@ -1125,23 +1650,19 @@ app.whenReady().then(() => {
       shell = 'bash';
     }
 
-    console.log(`[TERMINAL] Selected shell binary: ${shell}`);
-    
     try {
-      const ptyProcess = pty.spawn(shell, [], {
+      const ptyProcess = pty.spawn(shell, args, {
         name: 'xterm-color',
         cols: 80,
         rows: 24,
-        cwd: process.cwd(),
-        env: process.env
+        cwd: workspacePath || process.cwd(),
+        env: { ...process.env, ANTHROPIC_API_KEY: apiKey || process.env.ANTHROPIC_API_KEY }
       });
 
       ptyProcesses[id] = ptyProcess;
-
       ptyProcess.onData((data) => {
         event.sender.send(`terminal-stdout-${id}`, data);
       });
-
       return { success: true };
     } catch (err) {
       console.error(`[TERMINAL] Error spawning ${shell}:`, err);
@@ -1150,15 +1671,11 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('terminal-write', (event, id, data) => {
-    if (ptyProcesses[id]) {
-      ptyProcesses[id].write(data);
-    }
+    if (ptyProcesses[id]) ptyProcesses[id].write(data);
   });
 
   ipcMain.handle('terminal-resize', (event, id, cols, rows) => {
-    if (ptyProcesses[id]) {
-      ptyProcesses[id].resize(cols, rows);
-    }
+    if (ptyProcesses[id]) ptyProcesses[id].resize(cols, rows);
   });
 
   // --- PHASE 4: NODE.JS DEBUGGER (CDP) ---
@@ -1167,82 +1684,80 @@ app.whenReady().then(() => {
 
   async function connectToDebugger(url, event, breakpoints) {
     if (debugWs) debugWs.close();
-    
     debugWs = new WebSocket(url);
-    
+
     debugWs.on('open', () => {
       console.log('[DEBUGGER] CDP Connected');
       debugWs.send(JSON.stringify({ id: 1, method: 'Debugger.enable' }));
       debugWs.send(JSON.stringify({ id: 2, method: 'Runtime.enable' }));
-      
-      // Sync Breakpoints
-      breakpoints.forEach((bp, index) => {
-         debugWs.send(JSON.stringify({
-           id: 100 + index,
-           method: 'Debugger.setBreakpointByUrl',
-           params: {
-             lineNumber: bp.line - 1,
-             urlRegex: bp.path.replace(/\\/g, '/').replace(/^[a-zA-Z]:/, '') // Cross-platform path matching
-           }
-         }));
-      });
 
+      breakpoints.forEach((bp, index) => {
+        const sanitizedPath = bp.path.replace(/\\/g, '/').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        debugWs.send(JSON.stringify({
+          id: 100 + index,
+          method: 'Debugger.setBreakpointByUrl',
+          params: {
+            lineNumber: bp.line - 1,
+            urlRegex: `.*${sanitizedPath}`
+          }
+        }));
+      });
       debugWs.send(JSON.stringify({ id: 3, method: 'Debugger.resume' }));
     });
 
-    debugWs.on('message', (data) => {
+    debugWs.on('message', async (data) => {
       const msg = JSON.parse(data);
       if (msg.method === 'Debugger.paused') {
-        const line = msg.params.callFrames[0].location.lineNumber + 1;
-        console.log('[DEBUGGER] Paused on line:', line);
+        const frame = msg.params.callFrames[0];
         event.sender.send('debug:paused', {
-          line: line,
+          line: frame.location.lineNumber + 1,
           callStack: msg.params.callFrames.map(cf => ({
             functionName: cf.functionName || '(anonymous)',
             location: cf.location
-          })),
-          variables: [] // TODO: Implement scope fetching
+          }))
         });
+
+        const localScope = frame.scopeChain.find(s => s.type === 'local');
+        if (localScope && localScope.object && localScope.object.objectId) {
+          debugWs.send(JSON.stringify({
+            id: 500,
+            method: 'Runtime.getProperties',
+            params: { objectId: localScope.object.objectId, ownProperties: true }
+          }));
+        }
+      } else if (msg.id === 500 && msg.result) {
+        const vars = msg.result.result.map(p => ({
+          name: p.name,
+          value: p.value ? (p.value.description || p.value.value || String(p.value.type)) : 'undefined',
+          type: p.value ? p.value.type : 'unknown'
+        }));
+        event.sender.send('debug:variables', vars);
       } else if (msg.method === 'Debugger.resumed') {
         event.sender.send('debug:resumed');
       }
     });
 
-    debugWs.on('close', () => {
-      console.log('[DEBUGGER] CDP Disconnected');
-    });
-
-    debugWs.on('error', (err) => {
-      console.error('[DEBUGGER] CDP Error:', err);
-    });
+    debugWs.on('error', (err) => console.error('[DEBUGGER] WebSocket error:', err));
   }
 
   ipcMain.handle('debug:start', async (event, filePath, breakpoints) => {
     if (debugProcess) debugProcess.kill();
-    
-    console.log(`[DEBUGGER] Starting debug for: ${filePath}`);
     const { spawn } = require('child_process');
-    
-    // Spawnamo con --inspect-brk su porta casuale o default
     debugProcess = spawn('node', ['--inspect-brk=9229', filePath]);
-    
+
     debugProcess.stderr.on('data', (data) => {
-       const str = data.toString();
-       if (str.includes('Debugger listening on')) {
-         const match = str.match(/ws:\/\/127\.0\.0\.1:9229\/[a-f0-9-]+/);
-         if (match) {
-           connectToDebugger(match[0], event, breakpoints);
-         }
-       }
+      const str = data.toString();
+      if (str.includes('Debugger listening on')) {
+        const match = str.match(/ws:\/\/127\.0\.0\.1:9229\/[a-f0-9-]+/);
+        if (match) connectToDebugger(match[0], event, breakpoints);
+      }
     });
 
     debugProcess.on('exit', () => {
-      console.log('[DEBUGGER] Process exited');
       debugProcess = null;
       if (debugWs) debugWs.close();
       event.sender.send('debug:resumed');
     });
-
     return { success: true };
   });
 
@@ -1258,14 +1773,98 @@ app.whenReady().then(() => {
     if (debugProcess) debugProcess.kill();
   });
 
+  ipcMain.handle('file-lint', async (event, filePath) => {
+    try {
+      const { execSync } = require('child_process');
+      const projectPath = path.dirname(filePath); // Or workspace root
+      
+      // Cerchiamo di eseguire eslint locale o globale
+      let cmd = `npx eslint "${filePath}" --format json`;
+      
+      try {
+        const output = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+        return { success: true, problems: JSON.parse(output) };
+      } catch (err) {
+        // ESLint esce con codice 1 se trova errori, ma l'output è comunque valido JSON in stdout
+        if (err.stdout) {
+          try {
+            return { success: true, problems: JSON.parse(err.stdout) };
+          } catch (e) {
+            return { success: false, error: "Failed to parse linter output" };
+          }
+        }
+        return { success: false, error: err.message };
+      }
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('get-active-ports', async () => {
+    try {
+      const { execSync } = require('child_process');
+      const cmd = process.platform === 'win32' 
+        ? 'netstat -ano' 
+        : 'lsof -i -P -n | grep LISTEN';
+      
+      const output = execSync(cmd, { encoding: 'utf8' });
+      const lines = output.split('\n');
+      const ports = [];
+
+      if (process.platform === 'win32') {
+        // Formato:  TCP    127.0.0.1:5000         0.0.0.0:0              LISTENING       24816
+        lines.forEach(line => {
+          if (line.includes('LISTENING')) {
+            const parts = line.trim().split(/\s+/);
+            if (parts.length >= 5) {
+              const addr = parts[1];
+              const port = addr.split(':').pop();
+              const pid = parts[4];
+              ports.push({ protocol: parts[0], address: addr, port, pid });
+            }
+          }
+        });
+      } else {
+        // Formato lsof: node  34512 user  13u  IPv6 0x...      0t0  TCP *:5000 (LISTEN)
+        lines.forEach(line => {
+          const parts = line.trim().split(/\s+/);
+          if (parts.length >= 9) {
+            const pid = parts[1];
+            const name = parts[0];
+            const addr = parts[8];
+            const port = addr.split(':').pop();
+            ports.push({ protocol: 'TCP', address: addr, port, pid, name });
+          }
+        });
+      }
+
+      // Rimuoviamo duplicati di porte identiche per PIDs diversi (accade su Windows)
+      const uniquePorts = Array.from(new Set(ports.map(p => p.port)))
+        .map(port => ports.find(p => p.port === port));
+
+      return { success: true, ports: uniquePorts };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('kill-process', async (event, pid) => {
+    try {
+      const { execSync } = require('child_process');
+      const cmd = process.platform === 'win32' ? `taskkill /F /PID ${pid}` : `kill -9 ${pid}`;
+      execSync(cmd);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   createWindow();
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
-  // Gestione Finestra (Minimizza, Massimizza, Chiudi)
+
   ipcMain.on('window-control', (event, action) => {
     const w = BrowserWindow.fromWebContents(event.sender);
     if (!w) return;
@@ -1273,8 +1872,7 @@ app.whenReady().then(() => {
     else if (action === 'maximize') {
       if (w.isMaximized()) w.unmaximize();
       else w.maximize();
-    }
-    else if (action === 'close') w.close();
+    } else if (action === 'close') w.close();
   });
 
   ipcMain.on('open-devtools', (event) => {
@@ -1282,13 +1880,9 @@ app.whenReady().then(() => {
     if (w) w.webContents.openDevTools();
   });
 
-  ipcMain.on('quit-and-install', () => {
-    autoUpdater.quitAndInstall();
-  });
+  ipcMain.on('quit-and-install', () => autoUpdater.quitAndInstall());
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  if (process.platform !== "darwin") app.quit();
 });

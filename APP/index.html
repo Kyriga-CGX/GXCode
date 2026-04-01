@@ -115,7 +115,7 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 4 5 2 5-2v11l-5 2-5-2V4Z"/><path d="M15.5 10.5 12 14l-3.5-3.5"/></svg>
             </button>
             <button id="activity-testing" class="p-2.5 text-gray-500 hover:text-white transition rounded-md" onclick="window.setState({ activeActivity: 'testing', isLeftSidebarOpen: true })" data-i18n="[title]sidebar.testing">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 14h18"/><path d="m7 18 2 2 4-4"/><path d="m7 10 2 2 4-4"/><path d="m7 2 2 2 4-4"/></svg>
             </button>
         </nav>
 
@@ -191,10 +191,6 @@
                     </div>
                 </div>
 
-                <!-- DEBUG PANE -->
-                <div id="pane-debug" class="hidden flex flex-col h-full flex-1 overflow-hidden">
-                    <!-- Dynamic rendering via debug.js -->
-                </div>
 
             </div>
         </aside>
@@ -287,7 +283,14 @@
                             <button id="tab-debug-console-btn" class="h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-transparent text-gray-500 hover:text-gray-300" data-i18n="terminal.debugConsole">Debug Console</button>
                             <button id="tab-ports-btn" class="h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-transparent text-gray-500 hover:text-gray-300" data-i18n="terminal.ports">Ports</button>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center h-full gap-1">
+                            <button id="tab-gemini-btn" class="h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-transparent text-gray-500 hover:text-[#4facfe] hover:bg-gray-800/10" data-i18n="terminal.gemini">Gemini</button>
+                            <button id="tab-claude-btn" class="h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-transparent text-gray-500 hover:text-[#d97757] hover:bg-gray-800/10" data-i18n="terminal.claude">Claude</button>
+                            <button id="tab-custom-ai-btn" class="h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-transparent text-gray-500 hover:text-[#a78bfa] hover:bg-gray-800/10" data-i18n="terminal.customAi">Custom AI</button>
+                            
+                            <!-- Separatore -->
+                            <div class="h-4 w-[1px] bg-gray-800 mx-2"></div>
+
                             <button id="close-panel-btn" class="p-1.5 text-gray-500 hover:text-white transition rounded" data-i18n="[title]terminal.hidePanel">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>
                             </button>
@@ -323,6 +326,21 @@
                             <div class="opacity-30 text-[10px] uppercase text-gray-500 font-bold text-center mt-10" data-i18n="terminal.ports">${window.t('terminal.ports')}</div>
                         </div>
 
+                        <!-- PANE: GX-AGENT (Agente Avanzato) -->
+                        <div id="pane-agent" class="absolute inset-0 hidden flex flex-col">
+                            <!-- Il contenuto viene renderizzato da gxAgent.js -->
+                        </div>
+
+                        <!-- PANE: AI CLAUDE (NATIVE CLI) -->
+                        <div id="pane-ai-claude" class="absolute inset-0 hidden flex flex-col bg-[#06080a] overflow-hidden">
+                             <div id="pane-claude-cli" class="flex-1 w-full relative overflow-hidden p-2"></div>
+                        </div>
+
+                        <!-- PANE: AI CUSTOM -->
+                        <div id="pane-ai-custom" class="absolute inset-0 hidden flex flex-col bg-[#0d1117]">
+                            <!-- Handled by customAi.js (Setup vs Chat views) -->
+                        </div>
+
                     </div>
                 </div>
             </main>
@@ -332,7 +350,7 @@
             <div class="flex border-b border-gray-800 shrink-0 bg-[#0d1117]">
                 <button id="sidebar-tab-agents" class="flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-blue-400 border-blue-500 bg-[#161b22]" data-i18n="sidebar.agents">Agents</button>
                 <button id="sidebar-tab-skills" class="flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300" data-i18n="sidebar.skills">Skills</button>
-                <button id="sidebar-tab-addons" class="flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300" data-i18n="sidebar.addons">Addons</button>
+                <button id="sidebar-tab-ai-companion" class="flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300" data-i18n="sidebar.aiCompanion">Ai Companion</button>
             </div>
             
             <!-- EX TICKET DEFAULTS HEADER -->
@@ -347,7 +365,7 @@
             <div class="px-4 py-3 border-b border-gray-800 flex flex-col gap-3">
                 <div class="flex justify-between items-center text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase">
                     <span id="sidebar-dynamic-title">AGENTS</span>
-                    <button class="hover:text-white transition text-lg">+</button>
+                    <button data-action="create-new" class="hover:text-white transition text-lg">+</button>
                 </div>
                 
                 <!-- Search Bar -->
@@ -373,9 +391,13 @@
     </div>
 
     <!-- ROOT DELLE MODALI (Marketplace, Settings) -->
-    <div id="modals-root" class="absolute inset-0 pointer-events-none z-50"></div>
-
-    <!-- SCRIPT CHUNKS (Modular Architecture) -->
+    <!-- Modal Layers (Standardized Depth) -->
+    <div id="settings-root" class="fixed inset-0 pointer-events-none" style="z-index: 1000000;"></div>
+    <div id="modals-root" class="fixed inset-0 pointer-events-none" style="z-index: 1001000;"></div>
+    <div id="crud-root" class="fixed inset-0 pointer-events-none" style="z-index: 1002000;"></div>
+    <!-- Layer for Confirmation Dialogs (Highest Priority) -->
+    <div id="dialogs-root" class="fixed inset-0 pointer-events-none" style="z-index: 2000000;"></div>
+    
     <script type="module" src="scripts/app.js"></script>
 </body>
 </html>
