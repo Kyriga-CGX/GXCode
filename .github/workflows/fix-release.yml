@@ -1,8 +1,0 @@
-name: Fix
-on: workflow_dispatch
-jobs:
-  fix:
-      runs-on: ubuntu-latest
-          steps:
-                - run: echo OK
-                
