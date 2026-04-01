@@ -1,16 +1,16 @@
 name: Fix
 on: workflow_dispatch
 jobs:
-fix:
-runs-on: ubuntu-latest
-steps:
-    - run: |
-            gh release download v1.2.3 -p 'GXCode-Setup-1.2.3.exe' -R ${{ github.repository }}
-                    S=$(stat -c%s "GXCode-Setup-1.2.3.exe")
-                            H=$(sha512sum "GXCode-Setup-1.2.3.exe" | awk '{print $1}')
-                                    D=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-                                            printf "version: 1.2.3\npath: GXCode-Setup-1.2.3.exe\nsha512: $H\nreleaseDate: '$D'\nfiles:\n  - url: GXCode-Setup-1.2.3.exe\n    sha512: $H\n    size: $S\n" > latest.yml
-                                                    gh release upload v1.2.3 latest.yml --clobber -R ${{ github.repository }}
-                                                          env:
-                                                                  GH_TOKEN: ${{ github.token }}
-                                                                  
+  fix:
+      runs-on: ubuntu-latest
+          steps:
+                - run: |
+                          gh release download v1.2.3 -p GXCode-Setup-1.2.3.exe -R ${{github.repository}}
+                                    S=$(stat -c%s GXCode-Setup-1.2.3.exe)
+                                              H=$(sha512sum GXCode-Setup-1.2.3.exe | awk '{print $1}')
+                                                        D=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+                                                                  printf "version: 1.2.3\npath: GXCode-Setup-1.2.3.exe\nsha512: $H\nreleaseDate: '$D'\nfiles:\n  - url: GXCode-Setup-1.2.3.exe\n    sha512: $H\n    size: $S\n" > latest.yml
+                                                                            gh release upload v1.2.3 latest.yml --clobber -R ${{github.repository}}
+                                                                                    env:
+                                                                                              GH_TOKEN: ${{github.token}}
+                                                                                              
