@@ -1,1 +1,8 @@
-{name: Fix, on: workflow_dispatch, jobs: {fix: {runs-on: ubuntu-latest, steps: [{run: "gh release download v1.2.3 -p GXCode-Setup-1.2.3.exe -R ${{github.repository}}\nSIZE=$(stat -c%s GXCode-Setup-1.2.3.exe)\nHASH=$(sha512sum GXCode-Setup-1.2.3.exe|awk '{print $1}')\nDATE=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")\nprintf \"version: 1.2.3\\npath: GXCode-Setup-1.2.3.exe\\nsha512: $HASH\\nreleaseDate: '$DATE'\\nfiles:\\n  - url: GXCode-Setup-1.2.3.exe\\n    sha512: $HASH\\n    size: $SIZE\\n\" > latest.yml\ngh release upload v1.2.3 latest.yml --clobber -R ${{github.repository}}", env: {GH_TOKEN: "${{github.token}}"} }]}}}
+name: Fix
+on: workflow_dispatch
+jobs:
+  fix:
+      runs-on: ubuntu-latest
+          steps:
+                - run: echo OK
+                
