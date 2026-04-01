@@ -1521,10 +1521,16 @@ app.whenReady().then(() => {
         pendingCheck = null;
       }
 
-      if (checkResult && checkResult.updateInfo) {
+      // Verifichiamo se l'aggiornamento è effettivamente necessario
+      const currentVersion = app.getVersion();
+      const latestVersion = checkResult && checkResult.updateInfo ? checkResult.updateInfo.version : null;
+      
+      if (latestVersion && latestVersion !== currentVersion) {
+        console.log(`[UPDATER] Nuovo aggiornamento trovato: ${latestVersion} (Corrente: ${currentVersion})`);
         await autoUpdater.downloadUpdate();
         return true;
       } else {
+        console.log(`[UPDATER] Nessun aggiornamento necessario o versione già allineata (${currentVersion}).`);
         return false;
       }
     } catch (err) {
