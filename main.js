@@ -2,7 +2,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
-const { exec } = require("child_process");
+const { exec, spawn } = require("child_process");
 const express = require("express");
 const os = require("os");
 const fs = require("fs");
@@ -13,6 +13,118 @@ try {
   console.error("ERRORE: Impossibile caricare node-pty. Il terminale non funzionerà.", e);
 }
 const WebSocket = require('ws');
+
+class NodeDebugger {
+  constructor(browserWindow) {
+    this.window = browserWindow;
+    this.child = null;
+    this.ws = null;
+    this.msgId = 1;
+    this.paused = false;
+  }
+
+  async start(filePath, breakpoints = []) {
+    return new Promise((resolve, reject) => {
+      console.log(`[Debugger] Avvio: ${filePath}`);
+      
+      this.child = spawn('node', ['--inspect-brk=0', filePath], {
+        cwd: path.dirname(filePath),
+        stdio: ['inherit', 'pipe', 'pipe']
+      });
+
+      this.child.stderr.on('data', (data) => {
+        const msg = data.toString();
+        const match = msg.match(/ws:\/\/127\.0\.0\.1:(\d+)\/[a-f0-9-]+/);
+        if (match && !this.ws) {
+          this.connect(match[0], breakpoints, resolve, reject);
+        }
+      });
+
+      this.child.on('exit', () => this.stop());
+    });
+  }
+
+  connect(url, breakpoints, resolve, reject) {
+    this.ws = new WebSocket(url);
+    this.ws.on('open', () => {
+      this.send('Debugger.enable');
+      this.send('Runtime.enable');
+      
+      breakpoints.forEach(bp => {
+        this.send('Debugger.setBreakpointByUrl', {
+          lineNumber: bp.line - 1,
+          urlRegex: '.*' + path.basename(bp.path).replace(/\./g, '\\.')
+        });
+      });
+
+      this.send('Debugger.resume');
+      resolve({ success: true });
+    });
+
+    this.ws.on('message', (data) => this.handleMessage(JSON.parse(data.toString())));
+  }
+
+  handleMessage(msg) {
+    // Gestione risposte alle richieste (con callback)
+    if (msg.id && this._callbacks && this._callbacks[msg.id]) {
+      this._callbacks[msg.id](msg.result);
+      delete this._callbacks[msg.id];
+      return;
+    }
+
+    if (msg.method === 'Debugger.paused') {
+      this.paused = true;
+      const topFrame = msg.params.callFrames[0];
+      const scope = topFrame.scopeChain.find(s => s.type === 'local' || s.type === 'closure');
+      
+      if (scope && scope.object && scope.object.objectId) {
+        this.send('Runtime.getProperties', { objectId: scope.object.objectId }, (res) => {
+          if (res && res.result) {
+            const vars = res.result.map(p => ({
+              name: p.name,
+              value: p.value ? (p.value.description || p.value.value || '...') : 'undefined',
+              type: p.value ? p.value.type : 'unknown'
+            }));
+            this.window.webContents.send('debug-variables', vars);
+          }
+        });
+      }
+
+      this.window.webContents.send('debug-paused', {
+        line: topFrame.location.lineNumber + 1,
+        callStack: msg.params.callFrames.map(f => ({ 
+          functionName: f.functionName || '(anon)', 
+          location: f.location 
+        }))
+      });
+    } else if (msg.method === 'Debugger.resumed') {
+      this.paused = false;
+      this.window.webContents.send('debug-resumed');
+    }
+  }
+
+  send(method, params = {}, callback = null) {
+    const id = this.msgId++;
+    if (callback) {
+      this._callbacks = this._callbacks || {};
+      this._callbacks[id] = callback;
+    }
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ id, method, params }));
+    }
+  }
+
+  stepOver() { if (this.paused) this.send('Debugger.stepOver'); }
+  continue() { if (this.paused) this.send('Debugger.resume'); }
+  stop() {
+    if (this.child) this.child.kill();
+    if (this.ws) this.ws.close();
+    this.child = null; this.ws = null; this.paused = false;
+    this.window.webContents.send('debug-resumed');
+  }
+}
+
+let nodeDebugger = null;
 
 // ================== GESTIONE CONTESTO AI E DISCO Locale ==================
 let currentAiContext = '.GXCODE'; // Di base usa una cartella universale
@@ -1079,12 +1191,14 @@ function createWindow() {
   win.webContents.on('console-message', (event, level, message, line, sourceId) => {
     console.log(`[Renderer] ${message} (${sourceId}:${line})`);
   });
+  return win;
 }
 
 app.whenReady().then(() => {
+  const mainWindow = createWindow();
+
   // Handler nativo globale (fuori da whenReady per garanzia di boot)
   ipcMain.handle('open-project-folder', async () => {
-    const mainWindow = BrowserWindow.getAllWindows()[0];
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openDirectory']
     });
@@ -1112,7 +1226,6 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('open-project-file', async () => {
-    const mainWindow = BrowserWindow.getAllWindows()[0];
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile'],
       filters: [
@@ -1129,8 +1242,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('open-project-workspace', async () => {
-    const mainWindow = BrowserWindow.getAllWindows()[0];
-    const result = await dialog.showOpenDialog(mainWindow, {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
       title: 'Seleziona Workspace',
       properties: ['openFile', 'showHiddenFiles'],
       filters: [
@@ -1139,9 +1251,53 @@ app.whenReady().then(() => {
       ]
     });
 
-    if (result.canceled || result.filePaths.length === 0) return null;
-    const filePath = result.filePaths[0];
-    return { path: filePath, isWorkspace: true };
+    if (canceled || filePaths.length === 0) return null;
+    const wsPath = filePaths[0];
+
+    try {
+      const content = fs.readFileSync(wsPath, 'utf8');
+      const config = JSON.parse(content);
+      const folders = [];
+
+      if (config.folders && Array.isArray(config.folders)) {
+        for (const item of config.folders) {
+          let folderPath = item.path;
+          if (!path.isAbsolute(folderPath)) {
+            folderPath = path.resolve(path.dirname(wsPath), folderPath);
+          }
+
+          if (fs.existsSync(folderPath) && fs.statSync(folderPath).isDirectory()) {
+            const files = fs.readdirSync(folderPath, { withFileTypes: true }).map(f => ({
+              name: f.name,
+              isDirectory: f.isDirectory(),
+              path: path.join(folderPath, f.name)
+            }));
+            
+            files.sort((a, b) => {
+              if (a.isDirectory && !b.isDirectory) return -1;
+              if (!a.isDirectory && b.isDirectory) return 1;
+              return a.name.localeCompare(b.name);
+            });
+
+            folders.push({
+              name: item.name || path.basename(folderPath),
+              path: folderPath,
+              files: files
+            });
+          }
+        }
+      }
+
+      return { 
+        name: path.basename(wsPath, '.code-workspace'),
+        path: wsPath,
+        isWorkspace: true, 
+        folders 
+      };
+    } catch (e) {
+      console.error("[Workspace Error]", e);
+      return { error: e.message };
+    }
   });
 
   ipcMain.handle('open-specific-folder', async (event, folderPath) => {
@@ -1192,6 +1348,32 @@ app.whenReady().then(() => {
     }
     fs.writeFileSync(filePath, content, 'utf8');
     return true;
+  });
+
+  ipcMain.handle('debug-start', async (event, filePath, breakpoints) => {
+    if (nodeDebugger) nodeDebugger.stop();
+    nodeDebugger = new NodeDebugger(mainWindow);
+    return await nodeDebugger.start(filePath, breakpoints);
+  });
+
+  ipcMain.handle('debug-stop', async () => {
+    if (nodeDebugger) nodeDebugger.stop();
+    return true;
+  });
+
+  ipcMain.handle('debug-step', async () => {
+    if (nodeDebugger) nodeDebugger.stepOver();
+    return true;
+  });
+
+  ipcMain.handle('debug-continue', async () => {
+    if (nodeDebugger) nodeDebugger.continue();
+    return true;
+  });
+
+  ipcMain.handle('set-breakpoint', async (event, { path: filePath, line }) => {
+    // Logica per gestire i breakpoint
+    return { success: true };
   });
 
   ipcMain.handle('fs-create-file', async (event, dirPath, name) => {
@@ -1898,7 +2080,6 @@ app.whenReady().then(() => {
     }
   });
 
-  createWindow();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

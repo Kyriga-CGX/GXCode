@@ -6,14 +6,19 @@ let editorRight = null;
 let ignoreStateUpdate = false;
 let _updateBreadcrumbs = null;
 let breakpointDecorations = [];
-let debugActiveDecorations = [];
+let breakpointDecorationsRight = [];
+let debugActiveLineDecoration = [];
+let debugActiveLineDecorationRight = [];
 let updateBreakpointDecorations = () => {};
 let updateDebugActiveLine = () => {};
 let getDocumentSymbols = () => [];
 
 const normalizePath = (p) => {
     if (!p) return "";
-    return p.replace(/\//g, '\\').toLowerCase();
+    // Absolute Normalizer: lowercase, forward-slashes, remove 'file:///' and extra spaces
+    let path = p.toString().trim().toLowerCase().replace(/\\/g, '/');
+    if (path.startsWith('file:///')) path = path.replace('file:///', '');
+    return path;
 };
 
 // ── Selection state ──────────────────────────────────────────────────────────
@@ -203,18 +208,80 @@ const renderWorkspace = () => {
     }
     
     const ws = state.workspaceData;
-    treeContainer.innerHTML = renderFileTree(ws.files);
+
+    if (ws.isWorkspace && ws.folders) {
+        let html = '';
+        ws.folders.forEach(folder => {
+            const isExpanded = state.expandedFolders?.includes(folder.path);
+            const pl = 8;
+            
+            html += `
+                <div class="gx-tree-item is-folder is-workspace-root" data-path="${folder.path}" data-name="${folder.name}" style="padding-left:${pl}px">
+                    <span class="gx-arr${isExpanded?' gx-arr-open':''}" style="color:#2188ff">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
+                    </span>
+                    <span class="text-blue-500 mr-2">💼</span>
+                    <span class="gx-nm font-black uppercase text-[9px] tracking-widest text-gray-400">${folder.name}</span>
+                </div>
+                ${isExpanded ? `<div class="gx-kids" style="--gx:${pl+10}px">${renderFileTree(folder.files, 1)}</div>` : ''}
+            `;
+        });
+        treeContainer.innerHTML = html;
+    } else {
+        treeContainer.innerHTML = renderFileTree(ws.files);
+    }
 };
 
 export const initWorkspace = () => {
-    const btnOpen = document.getElementById('btn-open-folder');
+    const btnOpenDropdown = document.getElementById('btn-open-dropdown');
     const treeContainer = document.getElementById('workspace-tree-container');
-    if (!btnOpen || !treeContainer) return;
+    if (!btnOpenDropdown || !treeContainer) return;
 
-    // Refresh Git Status in background on Load & Periodically
-    const refreshGit = () => { if (window.renderGit) window.renderGit(); };
-    refreshGit();
-    setInterval(refreshGit, 10000); // Poll ogni 10s per cambiamenti esterni/salvataggi
+    // Gestione Dropdown "Apri"
+    btnOpenDropdown.onclick = (e) => {
+        e.stopPropagation();
+        const menu = document.createElement('div');
+        menu.className = 'fixed bg-[#161b22] border border-gray-700 rounded-md shadow-[0_10px_40px_rgba(0,0,0,0.5)] py-1 min-w-[180px] animate-in fade-in zoom-in duration-150';
+        
+        // Forza z-index estremo via inline style per superare ogni stacking context
+        menu.style.zIndex = '999999';
+        
+        const rect = btnOpenDropdown.getBoundingClientRect();
+        menu.style.top = `${rect.bottom + 8}px`;
+        menu.style.left = `${rect.left}px`;
+
+        const options = [
+            { id: 'folder', icon: '📁', label: window.t('explorer.openFolder') || 'Apri Cartella', action: window.electronAPI.openFolder },
+            { id: 'file', icon: '📄', label: window.t('explorer.openFile') || 'Apri File', action: window.electronAPI.openFile },
+            { id: 'workspace', icon: '💼', label: window.t('explorer.openWorkspace') || 'Apri Workspace', action: window.electronAPI.openWorkspace }
+        ];
+
+        options.forEach(opt => {
+            const item = document.createElement('div');
+            item.className = 'px-3 py-1.5 text-[11px] text-gray-400 hover:text-white hover:bg-blue-600 cursor-pointer flex items-center gap-2 transition-colors';
+            item.innerHTML = `<span>${opt.icon}</span> <span>${opt.label}</span>`;
+            item.onclick = async () => {
+                menu.remove();
+                try {
+                    const data = await opt.action();
+                    if (data && !data.error) {
+                        if (opt.id === 'file') {
+                            // Non sostituiamo il workspace, ma apriamo il file
+                            if (window.openFileInIDE) window.openFileInIDE(data.path, data.path.split('\\').pop());
+                        } else {
+                            localStorage.setItem('gx-last-workspace', data.path);
+                            setState({ workspaceData: data });
+                        }
+                    }
+                } catch (err) { console.error(err); }
+            };
+            menu.appendChild(item);
+        });
+
+        document.body.appendChild(menu);
+        const closeMenu = () => { menu.remove(); document.removeEventListener('click', closeMenu); };
+        setTimeout(() => document.addEventListener('click', closeMenu), 10);
+    };
     
     // Inizializzazione Monaco Editor
     if (window.require) {
@@ -250,25 +317,38 @@ export const initWorkspace = () => {
                 const container = document.getElementById('hub-content-area');
                 if (!container) return;
                 
+                // --- INSTANCE GUARD (Ghost Fix) ---
+                if (editor) {
+                    console.log("[GX-DEBUG] Monaco already initialized, skipping duplicate creation.");
+                    return;
+                }
+                
                 const createOptions = (isLight) => ({
                     value: '',
                     language: 'javascript',
                     theme: isLight ? 'gx-light' : 'gx-dark',
                     automaticLayout: true,
                     fontSize: 13,
+                    lineHeight: 16,
                     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
                     minimap: { enabled: true, showSlider: 'mouseover', maxColumn: 80 },
                     lineNumbers: 'on',
                     glyphMargin: true,
                     roundedSelection: true,
                     scrollBeyondLastLine: false,
-                    padding: { top: 10 },
-                    lineDecorationsWidth: 10,
+                    padding: { top: 0, bottom: 0 },
+                    lineDecorationsWidth: 26,
                 });
 
                 editor = monaco.editor.create(document.getElementById('monaco-editor-container'), createOptions(isLight));
                 editorRight = monaco.editor.create(document.getElementById('monaco-editor-container-right'), createOptions(isLight));
                 
+                // Forza il ricalcolo del layout per sincronizzare il gutter
+                setTimeout(() => {
+                    if (editor) editor.layout();
+                    if (editorRight) editorRight.layout();
+                }, 100);
+
                 // --- SAVE & LINT INTEGRATION ---
                 const gxToast = (msg, type) => {
                     if (window.gxToast) window.gxToast(msg, type);
@@ -298,12 +378,14 @@ export const initWorkspace = () => {
                 // Ghost Breakpoint on Hover
                 let ghostDecoration = [];
                 editor.onMouseMove((e) => {
-                    if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN || e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
-                        const line = e.target.position.lineNumber;
+                    const isGutter = e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN || 
+                                     e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS;
+                    if (isGutter && e.target.range) {
+                        const line = e.target.range.startLineNumber;
                         ghostDecoration = editor.deltaDecorations(ghostDecoration, [{
                             range: new monaco.Range(line, 1, line, 1),
                             options: {
-                                glyphMarginClassName: 'monaco-breakpoint-ghost',
+                                glyphMarginClassName: 'gx-breakpoint-hover',
                                 glyphMarginHoverMessage: { value: 'Add Breakpoint' }
                             }
                         }]);
@@ -317,67 +399,82 @@ export const initWorkspace = () => {
                 });
 
                 editor.onMouseDown((e) => {
-                    const activeFileId = state.activeFileId;
-                    if (!activeFileId) return;
-
-                    if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN || e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
-                        const line = e.target.position.lineNumber;
+                    const isGutter = e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN || 
+                                     e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS;
+                    if (isGutter && e.target.range) {
+                        const line = e.target.range.startLineNumber;
+                        console.log(`[CLICK-SYNC] Line detected: ${line}`);
+                        const activeFileId = state.activeFileId;
+                        if (!activeFileId) return;
+                        
                         const normActive = normalizePath(activeFileId);
                         console.log("[Monaco Debug] Toggle breakpoint on line:", line, "path:", normActive);
                         
-                        let breakpoints = [...state.breakpoints];
-                        const idx = breakpoints.findIndex(bp => normalizePath(bp.path) === normActive && bp.line === line);
+                        let newBreakpoints = [...state.breakpoints];
+                        const idx = newBreakpoints.findIndex(bp => normalizePath(bp.path) === normActive && bp.line === line);
 
                         if (idx !== -1) {
-                            breakpoints.splice(idx, 1);
+                            newBreakpoints.splice(idx, 1);
                         } else {
-                            breakpoints.push({ path: activeFileId, line: line });
+                            newBreakpoints.push({ path: activeFileId, line: line });
                         }
-                        setState({ breakpoints });
+                        
+                        setState({ breakpoints: newBreakpoints });
+                        if (updateBreakpointDecorations) updateBreakpointDecorations();
                     }
                 });
 
                 updateBreakpointDecorations = () => {
                     const activeFileId = state.activeFileId;
-                    if (!activeFileId || !editor) return;
+                    if (!activeFileId) return;
 
                     const normActive = normalizePath(activeFileId);
                     const activeBreakpoints = state.breakpoints.filter(bp => normalizePath(bp.path) === normActive);
                     
-                    const newDecorations = activeBreakpoints.map(bp => ({
-                        range: new monaco.Range(bp.line, 1, bp.line, 1),
-                        options: {
-                            isWholeLine: false,
-                            glyphMarginClassName: 'monaco-breakpoint-gutter',
-                            linesDecorationsClassName: 'monaco-breakpoint-line-hint',
-                            glyphMarginHoverMessage: { value: 'Breakpoint' },
-                            stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
-                        }
-                    }));
+                    console.log(`[DEBUG-IDE] MATCHED COUNT: ${activeBreakpoints.length} FOR [${normActive}]`);
+                    
+                    const newDecorations = activeBreakpoints.map(bp => {
+                        console.log(`[BREAKPOINT-RENDER] Drawing at line: ${bp.line}`);
+                        return {
+                            range: new monaco.Range(bp.line, 1, bp.line, 1),
+                            options: {
+                                isWholeLine: false,
+                                glyphMarginClassName: 'gx-breakpoint-real',
+                                glyphMarginHoverMessage: { value: 'Breakpoint' },
+                                stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+                            }
+                        };
+                    });
 
-                    breakpointDecorations = editor.deltaDecorations(breakpointDecorations, newDecorations);
+                    // Update BOTH editors
+                    if (editor) {
+                        console.log(`[GX-DEBUG-SYNC] Syncing LEFT editor model: ${editor.getModel()?.uri.toString()}`);
+                        breakpointDecorations = editor.deltaDecorations(breakpointDecorations, newDecorations);
+                    }
+                    if (editorRight) {
+                        console.log(`[GX-DEBUG-SYNC] Syncing RIGHT editor model: ${editorRight.getModel()?.uri.toString()}`);
+                        breakpointDecorationsRight = editorRight.deltaDecorations(breakpointDecorationsRight, newDecorations);
+                    }
                 };
 
                 updateDebugActiveLine = () => {
                     const activeLine = state.debugActiveLine;
-                    if (!activeLine || !editor || !editor.getModel()) {
-                        debugActiveDecorations = editor.deltaDecorations(debugActiveDecorations, []);
-                        return;
-                    }
-
-                    console.log("[Monaco Debug] Highlighting active line:", activeLine);
-                    debugActiveDecorations = editor.deltaDecorations(debugActiveDecorations, [
-                        {
-                            range: new monaco.Range(activeLine, 1, activeLine, 1),
-                            options: {
-                                isWholeLine: true,
-                                className: 'monaco-debug-active-line',
-                                glyphMarginClassName: 'monaco-debug-active-glyph'
-                            }
+                    const newDecorations = activeLine ? [{
+                        range: new monaco.Range(activeLine, 1, activeLine, 1),
+                        options: {
+                            isWholeLine: true,
+                            className: 'monaco-debug-active-line',
+                            glyphMarginClassName: 'monaco-debug-active-glyph'
                         }
-                    ]);
-                    
-                    editor.revealLineInCenterIfOutsideViewport(activeLine);
+                    }] : [];
+
+                    if (editor) {
+                        debugActiveLineDecoration = editor.deltaDecorations(debugActiveLineDecoration, newDecorations);
+                        if (activeLine) editor.revealLineInCenterIfOutsideViewport(activeLine);
+                    }
+                    if (editorRight) {
+                        debugActiveLineDecorationRight = editorRight.deltaDecorations(debugActiveLineDecorationRight, newDecorations);
+                    }
                 };
 
                 editor.onDidChangeModelContent(() => {
@@ -554,26 +651,10 @@ export const initWorkspace = () => {
         });
     }
 
-    btnOpen.onclick = async () => {
-        if (!window.electronAPI || !window.electronAPI.openFolder) {
-            console.error("IPC bridge non trovato per openFolder.");
-            return;
-        }
-        
-        const originalHtml = btnOpen.innerHTML;
-        btnOpen.innerHTML = '<span class="animate-pulse">Loading OS System...</span>';
-        
-        try {
-            const data = await window.electronAPI.openFolder();
-            if (data && !data.error) {
-                localStorage.setItem('gx-last-workspace', data.path);
-                setState({ workspaceData: data });
-            }
-        } catch (err) {
-            console.error(err);
-        }
-        btnOpen.innerHTML = originalHtml;
-    };
+    // Refresh Git Status in background
+    const refreshGit = () => { if (window.renderGit) window.renderGit(); };
+    refreshGit();
+    setInterval(refreshGit, 10000);
 
     treeContainer.oncontextmenu = (e) => {
         const item = e.target.closest('.is-file, .is-folder');
@@ -635,6 +716,7 @@ export const initWorkspace = () => {
 
                 // Carichiamo i figli se non presenti
                 const findAndAddChildren = (files) => {
+                    if (!files) return null;
                     for (const f of files) {
                         if (f.path === path) {
                             return (async () => {
@@ -655,37 +737,53 @@ export const initWorkspace = () => {
                     return null;
                 };
                 
-                await findAndAddChildren(state.workspaceData.files);
+                const ws = state.workspaceData;
+                let res = null;
+                if (ws.isWorkspace && ws.folders) {
+                    for (const folder of ws.folders) {
+                        if (folder.path === path) {
+                            // Workspace root itself doesn't need to be re-scanned, it's scanned on open
+                            res = true;
+                            break;
+                        }
+                        res = findAndAddChildren(folder.files);
+                        if (res) break;
+                    }
+                } else {
+                    res = findAndAddChildren(ws.files);
+                }
+                if (typeof res === 'function') await res();
             }
         } else {
-            // Logica apertura File (esistente)
-            const filePath = path;
-            const fileName = name;
-            
-            let openFiles = [...state.openFiles];
-            const existing = openFiles.find(f => f.path === filePath);
-
-            if (!existing) {
-                openFiles.push({ name: fileName, path: filePath, content: null, loading: true, error: null });
-                setState({ openFiles, activeFileId: filePath });
-
-                try {
-                    const content = await window.electronAPI.readFile(filePath);
-                    openFiles = state.openFiles.map(f => f.path === filePath ? { ...f, content, loading: false } : f);
-                    setState({ openFiles });
-                    
-                    // Trigger lint on first open
-                    setTimeout(() => { if (window.runLint) window.runLint(filePath); }, 500);
-                } catch (err) {
-                    console.error("Errore lettura file:", err);
-                    openFiles = state.openFiles.map(f => f.path === filePath ? { ...f, content: null, loading: false, error: err.message } : f);
-                    setState({ openFiles });
-                }
-            } else {
-                setState({ activeFileId: filePath });
-            }
+            if (window.openFileInIDE) window.openFileInIDE(path, name);
         }
     });
+
+    // Funzione globale per aprire file da qualsiasi punto (Menu, Search, Explorer)
+    window.openFileInIDE = async (filePath, fileName) => {
+        let openFiles = [...state.openFiles];
+        const existing = openFiles.find(f => f.path === filePath);
+
+        if (!existing) {
+            openFiles.push({ name: fileName, path: filePath, content: null, loading: true, error: null });
+            setState({ openFiles, activeFileId: filePath });
+
+            try {
+                const content = await window.electronAPI.readFile(filePath);
+                openFiles = state.openFiles.map(f => f.path === filePath ? { ...f, content, loading: false } : f);
+                setState({ openFiles });
+                
+                // Trigger lint on first open
+                setTimeout(() => { if (window.runLint) window.runLint(filePath); }, 500);
+            } catch (err) {
+                console.error("Errore lettura file:", err);
+                openFiles = state.openFiles.map(f => f.path === filePath ? { ...f, content: null, loading: false, error: err.message } : f);
+                setState({ openFiles });
+            }
+        } else {
+            setState({ activeFileId: filePath });
+        }
+    };
 
     // ─── Refined Tab & Split Logic ───────────────────────────────────────────
     window.navigateTab = (direction) => {
@@ -741,15 +839,19 @@ export const initWorkspace = () => {
         const activeFileRight = state.openFiles.find(f => f.path === state.activeFileIdRight);
         
         // Tab UI Update
+        tabsContainer.style.overflowX = 'auto';
+        tabsContainer.style.display = 'flex';
+        tabsContainer.style.scrollbarWidth = 'none'; // Hide scrollbar for cleaner look
+        
         tabsContainer.innerHTML = state.openFiles.map(f => {
             const isActive = f.path === state.activeFileId;
             return `
-                <div onclick="window.switchTab('${f.path.replace(/\\/g, '/')}')" class="px-3 py-1.5 text-[11px] font-bold ${isActive ? 'bg-[#161b22] text-blue-400 border-gray-800' : 'bg-transparent text-gray-500 border-transparent'} border border-b-0 inline-flex items-center gap-3 cursor-pointer relative translate-y-[1px] shadow-2xl rounded-t-lg hover:text-gray-300 transition group">
-                    <span class="flex items-center gap-2">
-                         <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" class="${isActive ? 'text-blue-500' : 'text-gray-700'}"><circle cx="12" cy="12" r="10"/></svg>
-                         ${f.name}
+                <div onclick="window.switchTab('${f.path.replace(/\\/g, '/')}')" class="px-3 py-1.5 text-[11px] font-bold ${isActive ? 'bg-[#161b22] text-blue-400 border-gray-800' : 'bg-transparent text-gray-500 border-transparent'} border border-b-0 flex items-center gap-3 cursor-pointer relative translate-y-[1px] shadow-2xl rounded-t-lg hover:text-gray-300 transition group whitespace-nowrap shrink-0">
+                    <span class="flex items-center gap-2 truncate max-w-[160px]">
+                         <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" class="shrink-0 ${isActive ? 'text-blue-500' : 'text-gray-700'}"><circle cx="12" cy="12" r="10"/></svg>
+                         <span class="truncate">${f.name}</span>
                     </span>
-                    <button onclick="event.stopPropagation(); window.closeTab('${f.path.replace(/\\/g, '/')}')" class="hover:text-red-400 transition ml-2 opacity-30 group-hover:opacity-100">×</button>
+                    <button onclick="event.stopPropagation(); window.closeTab('${f.path.replace(/\\/g, '/')}')" class="hover:text-red-400 transition ml-2 opacity-30 group-hover:opacity-100 shrink-0">×</button>
                 </div>
             `;
         }).join('');
@@ -1007,6 +1109,7 @@ window.scrollTabs = (direction) => {
         tabs.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
 };
+
 
 window.showFileDiff = async () => {
     const activeFileId = state.activeFileId;

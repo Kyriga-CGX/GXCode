@@ -519,55 +519,8 @@ const bootstrap = async () => {
         }
     });
 
-    // --- OPEN DROPDOWN LOGIC ---
-    const btnOpenDropdown = document.getElementById('btn-open-dropdown');
-    const openDropdownMenu = document.getElementById('open-dropdown-menu');
-    const optOpenFolder = document.getElementById('opt-open-folder');
-    const optOpenFile = document.getElementById('opt-open-file');
-    const optOpenWorkspace = document.getElementById('opt-open-workspace');
-
-    if (btnOpenDropdown && openDropdownMenu) {
-        btnOpenDropdown.onclick = (e) => {
-            e.stopPropagation();
-            openDropdownMenu.classList.toggle('hidden');
-        };
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', () => {
-            openDropdownMenu.classList.add('hidden');
-        });
-    }
-
-    if (optOpenFolder) {
-        optOpenFolder.onclick = async () => {
-            const result = await window.electronAPI.openFolder();
-            if (result) {
-                setState({ workspacePath: result.path, workspaceFiles: result.files });
-            }
-        };
-    }
-
-    if (optOpenFile) {
-        optOpenFile.onclick = async () => {
-            const result = await window.electronAPI.openFile();
-            if (result && result.path) {
-                // In un IDE, aprire un file singolo spesso significa caricarlo nell'editor
-                // ma qui lo aggiungiamo come "workspace" di un solo file per semplicità di UI
-                if (window.openFile) window.openFile(result.path);
-                window.gxToast(window.t('explorer.openedFile'), 'success');
-            }
-        };
-    }
-
-    if (optOpenWorkspace) {
-        optOpenWorkspace.onclick = async () => {
-            const result = await window.electronAPI.openWorkspace();
-            if (result && result.path) {
-                // Logica per caricare un file .code-workspace se presente
-                window.gxToast('Apertura Workspace non ancora pienamente implementata', 'info');
-            }
-        };
-    }
+    // Project opening logic is now fully managed by the dynamic menu in workspace.js
+    // to prevent event listener conflicts and ensure state consistency.
 
     // Inizializza i dati dal backend!
     // Triggers render automatico appena caricati!

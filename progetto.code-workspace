@@ -1,0 +1,6 @@
+{
+  "folders": [
+    { "path": ".", "name": "GXCode Core" },
+    { "path": "APP", "name": "GXCode Frontend" }
+  ]
+}
