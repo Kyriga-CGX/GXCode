@@ -269,7 +269,7 @@ export const initWorkspace = () => {
                             // Non sostituiamo il workspace, ma apriamo il file
                             if (window.openFileInIDE) window.openFileInIDE(data.path, data.path.split('\\').pop());
                         } else {
-                            localStorage.setItem('gx-last-workspace', data.path);
+                            // Salvataggio ora gestito automaticamente dal subscribe nello stato
                             setState({ workspaceData: data });
                         }
                     }
@@ -993,6 +993,11 @@ export const initWorkspace = () => {
 
         if (fileChanged || newState.debugActiveLine !== oldState?.debugActiveLine) {
             updateDebugActiveLine();
+        }
+
+        // Autosave Workspace Path for next session
+        if (newState.workspaceData?.path && newState.workspaceData.path !== oldState?.workspaceData?.path) {
+            localStorage.setItem('gx-last-workspace', newState.workspaceData.path);
         }
     });
 

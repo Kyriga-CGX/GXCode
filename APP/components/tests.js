@@ -113,8 +113,8 @@ export const initTests = () => {
             scanWorkspaceForTests();
         }
         
-        // Se il workspace cambia, invalidiamo la cache dei test e riscansiamo se la tab è aperta
-        if (newState.workspaceData && oldState && newState.workspaceData.path !== oldState.workspaceData?.path) {
+        // Se il workspace cambia (o viene caricato la prima volta), invalidiamo la cache dei test e riscansiamo se la tab è aperta
+        if (newState.workspaceData?.path && (!oldState?.workspaceData || newState.workspaceData.path !== oldState.workspaceData.path)) {
             testFilesCache = [];
             if (newState.activeActivity === 'testing') scanWorkspaceForTests();
         }

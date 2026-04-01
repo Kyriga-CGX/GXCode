@@ -1578,12 +1578,12 @@ app.whenReady().then(() => {
             if (['node_modules', '.git', 'dist', 'build', '.next', '.claude', '.gemini'].includes(file.name)) continue;
             searchRecursively(fullPath);
           } else {
-            if (file.name.match(/\\.(spec|test)\\.(js|ts|jsx|tsx)$/i)) {
+            if (file.name.match(/\.(spec|test)\.(js|ts|jsx|tsx)$/i)) {
               const content = fs.readFileSync(fullPath, 'utf8');
               const lines = content.split('\n');
               const testMatches = [];
 
-              const testRegex = /(?:test|it)\s*\(['"`](.*?)['"`]/;
+              const testRegex = /(?:test|it|describe)\s*\(['"`](.*?)['"`]/;
 
               for (let i = 0; i < lines.length; i++) {
                 const match = lines[i].match(testRegex);
