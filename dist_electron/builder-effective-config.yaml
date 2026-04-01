@@ -11,6 +11,7 @@ files:
       - APP/**/*
       - package.json
 win:
+  icon: APP/assets/logo.png
   target:
     - nsis
   publish:
