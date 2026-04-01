@@ -115,6 +115,8 @@ export const setState = (newState) => {
     if (newState.customAiConfig) localStorage.setItem('gx-custom-ai-config', JSON.stringify(state.customAiConfig));
     if (newState.geminiConfig) localStorage.setItem('gx-gemini-config', JSON.stringify(state.geminiConfig));
     if (newState.claudeCliConfig) localStorage.setItem('gx-claude-cli-config', JSON.stringify(state.claudeCliConfig));
+    if (newState.mcpServers) localStorage.setItem('gx-mcp-servers', JSON.stringify(state.mcpServers));
+    if (newState.youtrackConfig) localStorage.setItem('gx-youtrack-config', JSON.stringify(state.youtrackConfig));
 
     for (const listener of listeners) {
         listener(state);

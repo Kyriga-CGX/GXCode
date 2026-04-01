@@ -74,10 +74,12 @@ export const api = {
     
     // Phase 6: Sync Tickets
     loadTickets: async () => {
-         const url = localStorage.getItem('gx-youtrack-url') || '';
-         const token = localStorage.getItem('gx-youtrack-token') || '';
-         const query = (url && token) ? `?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}` : '';
-         
+         const { url, token, enabled } = state.youtrackConfig;
+         if (!enabled || !url || !token) {
+            setState({ tickets: [] });
+            return;
+         }
+         const query = `?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}`;
          const tickets = await fetchJson(`/tickets${query}`);
          setState({ tickets: tickets || [] });
     },
@@ -148,5 +150,14 @@ export const api = {
     deletePlugin: async (id) => {
          await fetchJson(`/plugins/${id}`, { method: 'DELETE' });
          await api.loadAll();
+    },
+
+    // MCP Sync to Backend
+    syncMCPServers: async (mcpServers) => {
+         return await fetchJson('/mcp-servers', {
+             method: 'POST',
+             headers: {'Content-Type': 'application/json'},
+             body: JSON.stringify(mcpServers)
+         });
     }
 };

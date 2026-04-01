@@ -429,7 +429,17 @@ apiApp.get("/api/tickets", async (req, res) => {
 
 // ---- ENDPOINT MCP SERVERS ----
 apiApp.get("/api/mcp-servers", (req, res) => {
-  res.json(mcpServers);  // array (anche se vuoto)
+  res.json(mcpServers);
+});
+
+apiApp.post("/api/mcp-servers", (req, res) => {
+  if (Array.isArray(req.body)) {
+    mcpServers = req.body;
+    console.log(`[IPC] Sincronizzati ${mcpServers.length} server MCP.`);
+    res.json({ success: true, count: mcpServers.length });
+  } else {
+    res.status(400).json({ error: "Invalid data format" });
+  }
 });
 
 // ---- ENDPOINT MARKETPLACE / REPOS / SETTINGS E PLUGINS ----

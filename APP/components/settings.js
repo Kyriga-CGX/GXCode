@@ -1,5 +1,6 @@
 import { state, subscribe, setState } from '../core/state.js';
 import { loadLocale } from '../core/i18n.js';
+import { api } from '../core/api.js';
 
 const getSkins = () => [
     { id: 'dark', label: window.t('settings.skins.dark') },
@@ -644,8 +645,10 @@ window.submitMCPForm = () => {
     if (name && url) {
         const newServer = { id: Date.now().toString(), name, url, enabled: true };
         const mcpServers = [...state.mcpServers, newServer];
-        localStorage.setItem('gx-mcp-servers', JSON.stringify(mcpServers));
         setState({ mcpServers });
+        
+        // Sincronizza con il backend (così l'Agente può usarli)
+        api.syncMCPServers?.(mcpServers);
         
         nameEl.value = '';
         urlEl.value = '';
@@ -674,28 +677,32 @@ window.addNewMCPServer = () => {
 
 window.removeMCPServer = (id) => {
     const mcpServers = state.mcpServers.filter(s => s.id !== id);
-    localStorage.setItem('gx-mcp-servers', JSON.stringify(mcpServers));
     setState({ mcpServers });
+    api.syncMCPServers?.(mcpServers);
 };
 
 window.toggleMCPServer = (id) => {
     const mcpServers = state.mcpServers.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s);
-    localStorage.setItem('gx-mcp-servers', JSON.stringify(mcpServers));
     setState({ mcpServers });
+    api.syncMCPServers?.(mcpServers);
 };
 
 window.toggleYoutrack = () => {
     const youtrackConfig = { ...state.youtrackConfig, enabled: !state.youtrackConfig.enabled };
-    localStorage.setItem('gx-youtrack-config', JSON.stringify(youtrackConfig));
     setState({ youtrackConfig });
+    // Se attivato, prova a caricare subito i ticket
+    if (youtrackConfig.enabled) api.loadTickets();
 };
 
 window.saveYoutrackConfig = () => {
     const url = document.getElementById('yt-url').value;
     const token = document.getElementById('yt-token').value;
     const youtrackConfig = { ...state.youtrackConfig, url, token };
-    localStorage.setItem('gx-youtrack-config', JSON.stringify(youtrackConfig));
     setState({ youtrackConfig });
+    
+    // Ricarica immediatamente i ticket per mostrare i cambiamenti
+    api.loadTickets();
+    
     window.gxToast(window.t('settings.youtrack.success'), 'info');
 };
 
