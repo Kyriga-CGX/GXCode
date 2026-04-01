@@ -1,26 +1,16 @@
-name: Fix Release
+name: Fix
 on: workflow_dispatch
 jobs:
-  fix:
-      runs-on: ubuntu-latest
-          steps:
-                - name: Fix v1.2.3
-                        run: |
-                                  gh release download v1.2.3 --pattern 'GXCode-Setup-1.2.3.exe' --repo ${{ github.repository }}
-                                            SIZE=$(stat -c%s "GXCode-Setup-1.2.3.exe")
-                                                      SHA512=$(sha512sum "GXCode-Setup-1.2.3.exe" | awk '{print $1}')
-                                                                DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-                                                                          cat <<EOF > latest.yml
-                                                                                    version: 1.2.3
-                                                                                              files:
-                                                                                                          - url: GXCode-Setup-1.2.3.exe
-                                                                                                                        sha512: $SHA512
-                                                                                                                                      size: $SIZE
-                                                                                                                                                path: GXCode-Setup-1.2.3.exe
-                                                                                                                                                          sha512: $SHA512
-                                                                                                                                                                    releaseDate: '$DATE'
-                                                                                                                                                                              EOF
-                                                                                                                                                                                        gh release upload v1.2.3 latest.yml --clobber --repo ${{ github.repository }}
-                                                                                                                                                                                                env:
-                                                                                                                                                                                                          GH_TOKEN: ${{ github.token }}
-                                                                                                                                                                                                          
+fix:
+runs-on: ubuntu-latest
+steps:
+    - run: |
+            gh release download v1.2.3 -p 'GXCode-Setup-1.2.3.exe' -R ${{ github.repository }}
+                    S=$(stat -c%s "GXCode-Setup-1.2.3.exe")
+                            H=$(sha512sum "GXCode-Setup-1.2.3.exe" | awk '{print $1}')
+                                    D=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+                                            printf "version: 1.2.3\npath: GXCode-Setup-1.2.3.exe\nsha512: $H\nreleaseDate: '$D'\nfiles:\n  - url: GXCode-Setup-1.2.3.exe\n    sha512: $H\n    size: $S\n" > latest.yml
+                                                    gh release upload v1.2.3 latest.yml --clobber -R ${{ github.repository }}
+                                                          env:
+                                                                  GH_TOKEN: ${{ github.token }}
+                                                                  
