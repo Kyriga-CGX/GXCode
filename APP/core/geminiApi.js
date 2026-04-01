@@ -50,8 +50,8 @@ export const listAvailableModels = async () => {
     }
 };
 
-// Tool Definitions for Gemini (Professional Suite + Dynamic Skills)
-export const getDynamicTools = () => {
+// Tool Definitions for Gemini (Professional Suite + Dynamic Skills + MCP + YouTrack)
+export const getDynamicTools = async () => {
     const baseTools = [
         {
             name: "list_files",
@@ -70,7 +70,7 @@ export const getDynamicTools = () => {
             parameters: {
                 type: "object",
                 properties: {
-                    path: { type: "string", description: "Il percorso relativo o assoluto del file." }
+                    path: { type: "string", description: "Il percorso relativo o assoluto del file (es. 'src/index.js')." }
                 },
                 required: ["path"]
             }
@@ -82,7 +82,7 @@ export const getDynamicTools = () => {
                 type: "object",
                 properties: {
                     path: { type: "string", description: "Percorso del file da scrivere." },
-                    content: { type: "string", description: "Contenuto testuale completo." }
+                    content: { type: "string", description: "Contenuto testuale completo del file." }
                 },
                 required: ["path", "content"]
             }
@@ -105,6 +105,60 @@ export const getDynamicTools = () => {
         }
     ];
 
+    // --- INTEGRAZIONE YOUTRACK ---
+    const ytConfig = state.youtrackConfig;
+    if (ytConfig && ytConfig.enabled && ytConfig.url && ytConfig.token) {
+        baseTools.push(
+            {
+                name: "youtrack_search_issues",
+                description: "Cerca ticket su YouTrack utilizzando una query testuale o filtri (Project, State, etc).",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        query: { type: "string", description: "Parole chiave per la ricerca (es. 'bug fixed')." },
+                        project: { type: "string", description: "Filtra per nome progetto." }
+                    }
+                }
+            },
+            {
+                name: "youtrack_get_issue_details",
+                description: "Recupera tutti i dettagli (descrizione, priorità, commenti) di un ticket specifico tramite il suo ID (es. 'GX-123').",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        issueId: { type: "string", description: "ID leggibile del ticket YouTrack." }
+                    },
+                    required: ["issueId"]
+                }
+            }
+        );
+    }
+
+    // --- INTEGRAZIONE DINAMICA MCP SERVERS ---
+    const mcpServers = (state.mcpServers || []).filter(s => s.enabled);
+    const mcpTools = [];
+
+    for (const server of mcpServers) {
+        try {
+            // Discovery via Backend Proxy
+            const response = await fetch(`/api/mcp/tools?url=${encodeURIComponent(server.url)}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.tools && Array.isArray(data.tools)) {
+                    data.tools.forEach(tool => {
+                        mcpTools.push({
+                            name: `mcp_${server.id}_${tool.name}`, // Prefisso per evitare collisioni
+                            description: `[MCP: ${server.name}] ${tool.description}`,
+                            parameters: tool.parameters
+                        });
+                    });
+                }
+            }
+        } catch (err) {
+            console.warn(`[MCP Discovery] Impossibile contattare ${server.name}:`, err.message);
+        }
+    }
+
     // Integrazione dinamica delle Skill dalla Sidebar
     const marketplaceSkills = (state.skills || []).map(skill => ({
         name: `gx_skill_${skill.id || skill.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
@@ -117,7 +171,6 @@ export const getDynamicTools = () => {
         }
     }));
 
-    // Se ci sono skill, aggiungiamo un tool generico di esecuzione per sicurezza
     if (marketplaceSkills.length > 0) {
         baseTools.push({
             name: "execute_gx_skill",
@@ -133,7 +186,7 @@ export const getDynamicTools = () => {
         });
     }
 
-    return [{ function_declarations: [...baseTools, ...marketplaceSkills] }];
+    return [{ function_declarations: [...baseTools, ...mcpTools, ...marketplaceSkills] }];
 };
 
 // Implementation of Tools (Bridge to Electron)
@@ -192,38 +245,81 @@ const toolHandlers = {
     execute_gx_skill: async ({ skill_name, args }) => {
         try {
             console.log(`[GX-BRIDGE] AI Request to execute skill: ${skill_name}`);
-            // In un framework reale, qui chiameremmo api.runSkill(skill_name, args)
-            // Per ora simuliamo l'uso del terminale per eseguire la logica della skill
             const result = await window.electronAPI.executeCommand(`gx-skill run "${skill_name}" ${args || ""}`, state.workspaceData?.path || "");
             return `Skill "${skill_name}" eseguita. Output:\n${result.stdout}`;
         } catch (err) {
             return `Errore esecuzione skill "${skill_name}": ${err.message}`;
         }
+    },
+    // Handler YouTrack
+    youtrack_search_issues: async (args) => {
+        try {
+            const { url, token } = state.youtrackConfig;
+            let finalUrl = `${url.replace(/\/$/, '')}/api/issues?fields=idReadable,summary,project(name),state(name)`;
+            if (args.query) finalUrl += `&query=${encodeURIComponent(args.query)}`;
+            
+            const resp = await fetch(finalUrl, { headers: { 'Authorization': `Bearer ${token}` } });
+            const issues = await resp.json();
+            return JSON.stringify(issues.map(i => ({ id: i.idReadable, summary: i.summary, project: i.project?.name, state: i.state?.name })));
+        } catch (err) {
+            return `Errore YouTrack: ${err.message}`;
+        }
+    },
+    youtrack_get_issue_details: async ({ issueId }) => {
+        try {
+            const { url, token } = state.youtrackConfig;
+            const finalUrl = `${url.replace(/\/$/, '')}/api/issues/${issueId}?fields=idReadable,summary,description,project(name),state(name),priority(name)`;
+            const resp = await fetch(finalUrl, { headers: { 'Authorization': `Bearer ${token}` } });
+            return JSON.stringify(await resp.json());
+        } catch (err) {
+            return `Errore YouTrack (Issue ${issueId}): ${err.message}`;
+        }
+    }
+};
+
+// Internal MCP Proxy Handler (called by router below)
+const handleMCPCall = async (toolFullName, args) => {
+    // Il formato è mcp_SERVERID_TOOLNAME
+    const parts = toolFullName.split('_');
+    if (parts.length < 3) return "Errore formato nome tool.";
+    
+    const serverId = parts[1];
+    const toolName = parts.slice(2).join('_');
+    const server = state.mcpServers.find(s => String(s.id) === String(serverId));
+    
+    if (!server) return "Server MCP non trovato.";
+    
+    try {
+        const response = await fetch('/api/mcp/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: server.url, tool: toolName, arguments: args })
+        });
+        const result = await response.json();
+        return JSON.stringify(result);
+    } catch (err) {
+        return `Errore Proxy MCP: ${err.message}`;
     }
 };
 
 export const callGeminiAgent = async (messages, onStatusUpdate) => {
     const config = state.geminiConfig || { isAuthenticated: false };
-    const apiKey = state.geminiApiKey; // La chiave manuale inserita nelle impostazioni
+    const apiKey = state.geminiApiKey;
     const activeModel = config.activeModel || "gemini-1.5-pro";
     let url = `${BASE_URL}/models/${activeModel}:generateContent`;
     const headers = { 'Content-Type': 'application/json' };
 
     if (apiKey) {
-        // PRIORITÀ 1: API Key manuale (AI Studio) - Molto più affidabile per i dev
         url += `?key=${apiKey}`;
-        console.log(`[GX-AGENT] Using Manual API Key with Model: ${activeModel}`);
     } else if (config.isAuthenticated && config.token) {
-        // PRIORITÀ 2: Token OAuth Account (Se non c'è una chiave manuale)
         headers['Authorization'] = `Bearer ${config.token}`;
-        console.log(`[GX-AGENT] Using Official Account with Model: ${activeModel}`);
     } else {
-        throw new Error("Nessun metodo di autenticazione configurato. Inserisci una Gemini API Key nelle impostazioni o accedi con Google.");
+        throw new Error("Autenticazione mancante.");
     }
 
     const payload = {
         contents: messages,
-        tools: getDynamicTools(),
+        tools: await getDynamicTools(),
         tool_config: { function_calling_config: { mode: "AUTO" } }
     };
 
@@ -246,10 +342,17 @@ export const callGeminiAgent = async (messages, onStatusUpdate) => {
         const { name, args } = part.functionCall;
         if (onStatusUpdate) onStatusUpdate(`Eseguo tool: ${name}...`);
         
-        const handler = toolHandlers[name];
+        // Router per i gestori (base + YouTrack + MCP)
+        let handler = toolHandlers[name];
+        let result;
+        
         if (handler) {
-            const result = await handler(args);
-            
+            result = await handler(args);
+        } else if (name.startsWith('mcp_')) {
+            result = await handleMCPCall(name, args);
+        } else {
+            result = `Tool "${name}" non implementato.`;
+        }
             const nextMessages = [
                 ...messages,
                 candidate.content,
@@ -262,7 +365,6 @@ export const callGeminiAgent = async (messages, onStatusUpdate) => {
             ];
             
             return await callGeminiAgent(nextMessages, onStatusUpdate);
-        }
     }
 
     return part.text || "Operazione completata.";

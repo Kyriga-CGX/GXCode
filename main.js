@@ -442,7 +442,41 @@ apiApp.post("/api/mcp-servers", (req, res) => {
   }
 });
 
-// ---- ENDPOINT MARKETPLACE / REPOS / SETTINGS E PLUGINS ----
+// Proxy per chiamare i tool sugli MCP esterni (evita CORS e centralizza il traffico)
+apiApp.get("/api/mcp/tools", async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: "Missing server URL" });
+  
+  try {
+    const response = await fetch(`${url.replace(/\/$/, '')}/tools`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json', 'User-Agent': 'GXCode-IDE' }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: `MCP Server at ${url} unreachable: ${err.message}` });
+  }
+});
+
+apiApp.post("/api/mcp/proxy", async (req, res) => {
+  const { url, tool, arguments: args } = req.body;
+  if (!url || !tool) return res.status(400).json({ error: "Missing URL or tool name" });
+
+  try {
+    console.log(`[SPY-MCP-PROXY] Chiamata a ${url}/execute [Tool: ${tool}]`);
+    const resp = await fetch(`${url.replace(/\/$/, '')}/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'GXCode-IDE' },
+      body: JSON.stringify({ tool, arguments: args })
+    });
+    const result = await resp.json();
+    res.json(result);
+  } catch (err) {
+    console.error(`[SPY-MCP-PROXY] Errore:`, err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 const offlineMockPlugins = [
   { id: 991, slug: "prettier", name: "Prettier", description: "Formatta il codice automaticamente.", version: "3.2.0", author: "Prettier Core" },
   { id: 992, slug: "eslint", name: "ESLint", description: "Strumento di analisi statica per correggere problemi nel codice JS/TS.", version: "8.50.0", author: "JS Foundation" },

@@ -526,8 +526,12 @@ const bootstrap = async () => {
     // to prevent event listener conflicts and ensure state consistency.
 
     // Inizializza i dati dal backend!
-    // Triggers render automatico appena caricati!
     await api.loadAll();
+    
+    // Sincronizza i server MCP locali con il backend
+    if (state.mcpServers && state.mcpServers.length > 0) {
+        api.syncMCPServers(state.mcpServers);
+    }
 
     // Ripristina l'ultimo progetto/workspace salvato
     if (window.restoreSession) {
