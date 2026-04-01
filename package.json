@@ -2,8 +2,9 @@
   "name": "gxcode",
   "version": "1.2.2",
   "main": "main.js",
-  "description": "Professional AI-Native IDE for modern development workflows.",
-  "author": "Cloud-GX",
+  "description": "L'IDE AI-Nativo professionale per lo sviluppo software moderno. Powered by Cloud-GX.",
+  "author": "Giovanni Faggiano (Cloud-GX)",
+  "homepage": "https://cloud-gx.net",
   "repository": {
     "type": "git",
     "url": "https://github.com/Kyriga-CGX/GXCode.git"
