@@ -163,6 +163,7 @@ export const openCrudModal = (type, item = null, isPreview = false) => {
         const btn = document.getElementById('crud-save');
         const origText = btn.innerHTML;
         btn.innerHTML = `<span class="animate-pulse">${window.t('crud.syncing')}</span>`;
+        btn.disabled = true;
         
         try {
             if (isEdit) {
@@ -177,6 +178,7 @@ export const openCrudModal = (type, item = null, isPreview = false) => {
         } catch (e) {
             console.error(e);
             btn.innerHTML = origText;
+            btn.disabled = false;
             alert('Errore nel salvataggio.');
         }
     };
