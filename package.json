@@ -57,6 +57,12 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "installerHeader": "APP/assets/installer_header.png",
+      "installerSidebar": "APP/assets/installer_sidebar.png",
+      "installerHeaderIcon": "APP/assets/logo.png",
+      "allowElevation": true,
+      "perMachine": true,
+      "deleteAppDataOnUninstall": false,
       "shortcutName": "GXCode"
     },
     "publish": {

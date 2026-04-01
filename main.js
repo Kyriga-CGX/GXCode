@@ -1733,12 +1733,24 @@ app.whenReady().then(() => {
     }
   });
 
+  // Configurazione per sbloccare download non firmati
+  autoUpdater.fullChangelog = true;
+  autoUpdater.allowDowngrade = false;
+  autoUpdater.autoDownload = false; // Lo gestiamo noi manualmente
+  
+  autoUpdater.on('error', (err) => {
+    console.error('[UPDATER ERROR]', err);
+    const wins = BrowserWindow.getAllWindows();
+    if (wins.length > 0) wins[0].webContents.send('updater-error', err.message);
+  });
+
   autoUpdater.on('update-available', (info) => {
     const wins = BrowserWindow.getAllWindows();
     if (wins.length > 0) wins[0].webContents.send('update-available', info);
   });
 
   autoUpdater.on('download-progress', (progressObj) => {
+    console.log(`[UPDATER] Download: ${progressObj.percent}%`);
     const wins = BrowserWindow.getAllWindows();
     if (wins.length > 0) wins[0].webContents.send('download-progress', progressObj.percent);
   });
