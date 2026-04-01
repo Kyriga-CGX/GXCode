@@ -1111,7 +1111,39 @@ app.whenReady().then(() => {
     }
   });
 
-  // Nuovo handler per caricare una folder specifica (es. al riavvio per la sessione)
+  ipcMain.handle('open-project-file', async () => {
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'Tutti i file', extensions: ['*'] },
+        { name: 'JavaScript', extensions: ['js', 'jsx'] },
+        { name: 'TypeScript', extensions: ['ts', 'tsx'] },
+        { name: 'HTML/CSS', extensions: ['html', 'css'] }
+      ]
+    });
+
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const filePath = result.filePaths[0];
+    return { path: filePath, isFile: true };
+  });
+
+  ipcMain.handle('open-project-workspace', async () => {
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Seleziona Workspace',
+      properties: ['openFile', 'showHiddenFiles'],
+      filters: [
+        { name: 'GXCode Workspace', extensions: ['code-workspace'] },
+        { name: 'Tutti i file', extensions: ['*'] }
+      ]
+    });
+
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const filePath = result.filePaths[0];
+    return { path: filePath, isWorkspace: true };
+  });
+
   ipcMain.handle('open-specific-folder', async (event, folderPath) => {
     try {
       if (!fs.existsSync(folderPath)) return null;
@@ -1134,14 +1166,12 @@ app.whenReady().then(() => {
     }
   });
 
-  // Nuovo handler per leggere il contenuto di un file
   ipcMain.handle('read-file', async (event, filePath) => {
     console.log(`[IPC] Richiesta lettura file: ${filePath}`);
     try {
       const stats = fs.statSync(filePath);
       if (stats.size > 1024 * 1024) return "File troppo grande per l'anteprima (Max 1MB).";
       const data = fs.readFileSync(filePath, 'utf-8');
-      console.log(`[IPC] File letto con successo: ${filePath.split(path.sep).pop()}`);
       return data;
     } catch (e) {
       console.error(`[IPC] Errore lettura file ${filePath}:`, e.message);

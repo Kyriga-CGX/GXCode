@@ -21,6 +21,9 @@
     "explorer": {
         "title": "Progetto Locale",
         "openFolder": "Apri Cartella",
+        "openFile": "Apri File",
+        "openWorkspace": "Apri Workspace",
+        "openedFile": "File aperto con successo",
         "files": "📁 Files",
         "tickets": "🎫 Tickets",
         "emptyTitle": "Non hai ancora aperto nessuna cartella.",
@@ -172,20 +175,23 @@
             "customGrad": "Colore Personalizzato Gradiente"
         },
         "language": {
-            "title": "Lingua Sistema",
-            "desc": "Scegli la lingua del sistema GXCode. Il cambio richiede il riavvio della dashboard.",
+            "title": "Lingua",
+            "desc": "Seleziona la lingua dell'interfaccia. Riavvio richiesto.",
             "it_label": "IT",
-            "en_label": "GB",
+            "en_label": "EN",
             "italian": "Italiano",
-            "english": "English"
+            "english": "Inglese"
         },
         "updates": {
-            "title": "Aggiornamenti Sistema",
-            "check": "Controlla Aggiornamenti",
-            "upToDate": "GXCode è aggiornato àll'ultima versione.",
-            "newVersion": "Nuova versione disponibile: {version}",
+            "title": "Aggiornamenti",
+            "softwareUpdate": "Aggiornamento Software",
+            "description": "Verifica regolarmente la presenza di nuove versioni per migliorare la stabilità e la sicurezza.",
             "updateNow": "Aggiorna Ora",
-            "checking": "Ricerca aggiornamenti...",
+            "downloading": "Download in corso: {percent}%",
+            "systemInfo": "Informazioni di Sistema",
+            "currentVersion": "Versione Installata",
+            "channel": "Canale di Rilascio",
+            "officialChannel": "Canale Ufficiale Stable",
             "error": "Errore durante il controllo degli aggiornamenti."
         },
         "ai": {
@@ -263,6 +269,8 @@
     "contextMenu": {
         "newFile": "Nuovo File",
         "newFolder": "Nuova Cartella",
+        "newWorkspace": "Nuovo Workspace",
+        "showExplorer": "Mostra in Explorer",
         "delete": "Elimina",
         "reveal": "Mostra in Explorer",
         "copyPath": "Copia Percorso",
@@ -321,11 +329,13 @@
         "agentsTab": "🤖 Agenti",
         "skillsTab": "📖 Skill",
         "aiCompanionTab": "✨ Ai Companion",
+        "addonsTab": "🧩 Addon",
         "manageSources": "Gestisci Sorgenti",
         "searchPlaceholder": "Cerca in {tab}...",
         "agentsSub": "Scegli tra i migliori agenti certificati da Agensi, DeepNLP e OpenSkills.",
         "skillsSub": "Libreria unificata di strumenti e skill in formato SKILL.md per i tuoi agenti.",
         "aiCompanionSub": "Assumi compagni IA specializzati per guidarti nello sviluppo del progetto.",
+        "addonsSub": "Estendi le funzionalità dell'IDE con migliaia di estensioni dal registro Open VSX.",
         "vsxNote": "Nota: GXCode estrae metadati e asset direttamente dal registro Open VSX per un'esperienza nativa.",
         "syncing": "Sincronizzazione...",
         "refresh": "Aggiorna Catalogo"

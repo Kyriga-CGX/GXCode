@@ -107,6 +107,7 @@ const renderMarketplace = () => {
         if (cat === 'agents') allInstalled = allInstalled.filter(i => i.type === 'agent');
         else if (cat === 'skills') allInstalled = allInstalled.filter(i => i.type === 'skill');
         else if (cat === 'ai-companion') allInstalled = allInstalled.filter(i => i.type === 'ai-companion');
+        else if (cat === 'addons') allInstalled = allInstalled.filter(i => i.type === 'addon');
 
         if (currentSearch.length > 1) {
             allInstalled = allInstalled.filter(i =>
@@ -117,12 +118,12 @@ const renderMarketplace = () => {
 
         mContent = renderMarketplaceContent(allInstalled, 'installed');
 
-        const subTabs = [['all', 'Tutti'], ['agents', 'Agenti'], ['skills', 'Skill'], ['ai-companion', 'Ai Companion']];
+        const subTabs = [['all', 'Tutti'], ['agents', 'Agenti'], ['skills', 'Skill'], ['addons', 'Addon'], ['ai-companion', 'Ai Companion']];
         mSubFilters = `
             <div style="display:flex;gap:8px;margin-bottom:16px;padding:0 32px;">
                 ${subTabs.map(([id, label]) => {
                     const isActive = cat === id;
-                    const color = id === 'agents' ? '#3b82f6' : id === 'skills' ? '#10b981' : id === 'ai-companion' ? '#a855f7' : '#6e7681';
+                    const color = id === 'agents' ? '#3b82f6' : id === 'skills' ? '#10b981' : id === 'ai-companion' ? '#a855f7' : id === 'addons' ? '#f59e0b' : '#6e7681';
                     return `<button onclick="window.setState({ activeMarketplaceCategory: '${id}' })" 
                                     style="padding:4px 12px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;border-radius:20px;cursor:pointer;transition:all 0.2s;
                                            ${isActive ? `background:${color}20;color:${color};border:1px solid ${color}40;` : 'background:#161b22;color:#484f58;border:1px solid #21262d;'}">
@@ -135,7 +136,14 @@ const renderMarketplace = () => {
         let itemsToRender = [];
         if (activeTab === 'agents') itemsToRender = state.marketplaceAgents || [];
         else if (activeTab === 'skills') itemsToRender = state.marketplaceSkills || [];
-        else if (activeTab === 'ai-companion') itemsToRender = state.marketplacePlugins || [];
+        else if (activeTab === 'addons') itemsToRender = state.marketplacePlugins || [];
+        else if (activeTab === 'ai-companion') {
+            mContent = `<div style="grid-column:1/-1;text-align:center;padding:80px 24px;background:#161b22;border:1px dashed #30363d;border-radius:12px;">
+                <div style="font-size:32px;margin-bottom:16px;">✨</div>
+                <h3 style="color:#fff;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">Coming Soon</h3>
+                <p style="color:#6e7681;font-size:11px;">La libreria ufficiale degli AI Companion specializzati è in arrivo.<br>Potrai assumere assistenti verticali per ogni tua esigenza.</p>
+            </div>`;
+        }
 
         if (currentSearch.length > 1) {
             itemsToRender = itemsToRender.filter(p =>
@@ -144,12 +152,12 @@ const renderMarketplace = () => {
             );
         }
         
-        mContent = (isLoading && activeTab === 'ai-companion')
+        mContent = mContent || ((isLoading && (activeTab === 'addons' || activeTab === 'agents'))
             ? `<div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px;gap:16px;">
                  <div style="width:48px;height:48px;border:4px solid rgba(59,130,246,0.2);border-top-color:#3b82f6;border-radius:50%;animation:spin 1s linear infinite;"></div>
-                 <p style="color:#6e7681;font-size:10px;font-family:monospace;text-transform:uppercase;letter-spacing:0.2em;">Connessione ai Companion...</p>
+                 <p style="color:#6e7681;font-size:10px;font-family:monospace;text-transform:uppercase;letter-spacing:0.2em;">Connessione al registro...</p>
                </div>`
-            : renderMarketplaceContent(itemsToRender, activeTab === 'ai-companion' ? 'ai-companion' : activeTab.slice(0, -1));
+            : renderMarketplaceContent(itemsToRender, activeTab === 'addons' ? 'addon' : activeTab.slice(0, -1)));
     }
 
     const tabBtn = (id, label) => {
@@ -165,6 +173,7 @@ const renderMarketplace = () => {
     const tabs = [
         ['agents', t('marketplace.agentsTab')],
         ['skills', t('marketplace.skillsTab')],
+        ['addons', t('marketplace.addonsTab')],
         ['ai-companion', t('marketplace.aiCompanionTab')],
         ['installed', 'Installati']
     ];

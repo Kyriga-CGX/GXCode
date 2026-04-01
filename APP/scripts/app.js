@@ -24,7 +24,7 @@ import { initAiKnowledgeBridge } from '../core/aiKnowledgeBridge.js';
 const sidebarContent = document.getElementById('sidebar-content');
 const tabAgents = document.getElementById('sidebar-tab-agents');
 const tabSkills = document.getElementById('sidebar-tab-skills');
-const tabAddons = document.getElementById('sidebar-tab-addons');
+const tabAiCompanion = document.getElementById('sidebar-tab-ai-companion');
 const sidebarTitle = document.getElementById('sidebar-dynamic-title');
 const sidebarSearch = document.getElementById('sidebar-search');
 const skillCategories = document.getElementById('skill-categories');
@@ -126,22 +126,22 @@ const renderSidebarItem = (item, type) => {
 // Gestione delle Tab Sidebar per Active View
 const updateSidebarTabs = () => {
     // Reset all
-    [tabAgents, tabSkills, tabAddons].forEach(t => {
+    [tabAgents, tabSkills, tabAiCompanion].forEach(t => {
         if (t) t.className = "flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300";
     });
 
     if (state.activeSidebarTab === 'agents') {
         sidebarTitle.textContent = window.t('sidebar.agents');
         sidebarTitle.dataset.i18n = 'sidebar.agents';
-        tabAgents.className = "flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-blue-400 border-blue-500 bg-[#161b22]";
+        if (tabAgents) tabAgents.className = "flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-blue-400 border-blue-500 bg-[#161b22]";
     } else if (state.activeSidebarTab === 'skills') {
         sidebarTitle.textContent = window.t('sidebar.skills');
         sidebarTitle.dataset.i18n = 'sidebar.skills';
-        tabSkills.className = "flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-purple-400 border-purple-500 bg-[#161b22]";
+        if (tabSkills) tabSkills.className = "flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-purple-400 border-purple-500 bg-[#161b22]";
     } else {
-        sidebarTitle.textContent = window.t('sidebar.addons');
-        sidebarTitle.dataset.i18n = 'sidebar.addons';
-        tabAddons.className = "flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-emerald-400 border-emerald-500 bg-[#161b22]";
+        sidebarTitle.textContent = "Companion";
+        sidebarTitle.dataset.i18n = ""; 
+        if (tabAiCompanion) tabAiCompanion.className = "flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-emerald-400 border-emerald-500 bg-[#161b22]";
     }
 };
 
@@ -173,6 +173,18 @@ const renderSidebar = () => {
                : state.activeSidebarTab === 'skills' ? 'skills' 
                : 'ai-companion';
     
+    // UI Adjustments for AI Companion
+    const searchContainer = sidebarSearch ? sidebarSearch.parentElement : null;
+    const createBtn = document.querySelector('[data-action="create-new"]');
+    
+    if (state.activeSidebarTab === 'ai-companion') {
+        if (searchContainer) searchContainer.classList.add('hidden');
+        if (createBtn) createBtn.setAttribute('title', 'Coming soon');
+    } else {
+        if (searchContainer) searchContainer.classList.remove('hidden');
+        if (createBtn) createBtn.removeAttribute('title');
+    }
+    
     // Filtro Ricerca
     let filtered = activeList.filter(item => 
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -187,28 +199,24 @@ const renderSidebar = () => {
     }
 
     if (filtered.length === 0) {
+        const isComingSoon = state.activeSidebarTab === 'ai-companion';
         sidebarContent.innerHTML = `
             <div class="flex flex-col items-center justify-center p-8 text-center gap-2 opacity-60">
-                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-800/50 px-2 py-1 rounded" data-i18n="sidebar.noResults">${window.t('sidebar.noResults')}</div>
-                <p class="text-[9px] text-gray-600 uppercase tracking-tighter" data-i18n="sidebar.searchHint">${window.t('sidebar.searchHint')}</p>
+                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-800/50 px-2 py-1 rounded" data-i18n="${isComingSoon ? '' : 'sidebar.noResults'}">
+                    ${isComingSoon ? 'Coming soon' : window.t('sidebar.noResults')}
+                </div>
+                <p class="text-[9px] text-gray-600 uppercase tracking-tighter" data-i18n="${isComingSoon ? '' : 'sidebar.searchHint'}">
+                    ${isComingSoon ? 'Funzione in fase di studio' : window.t('sidebar.searchHint')}
+                </p>
             </div>
         `;
         return;
     }
     
     if (state.activeSidebarTab === 'ai-companion') {
-        const aiContainer = document.createElement('div');
-        aiContainer.id = 'sidebar-ai-companion-container';
-        aiContainer.className = "flex-1 flex flex-col h-full overflow-hidden";
-        sidebarContent.appendChild(aiContainer);
-        
-        // Inizializziamo/Renderizziamo la chat nel sidebar
-        if (window.renderGxAgentChat) {
-            window.renderGxAgentChat('sidebar-ai-companion-container');
-        } else {
-            aiContainer.innerHTML = `<div class="p-8 text-center text-gray-500 uppercase text-[10px] tracking-widest font-bold">Ai Companion offline</div>`;
-        }
-        return;
+        // La chat (GX-Agent) è stata rimossa per ora su richiesta.
+        // Verrà mostrato il placeholder "Coming soon" gestito dal blocco filtered.length === 0.
+        filtered = []; // Forza lo stato vuoto per mostrare il Coming soon
     }
 
     filtered.forEach(item => {
@@ -224,7 +232,11 @@ const bootstrap = async () => {
     // Carica le traduzioni prima di tutto
     await loadLocale(state.language || 'it');
 
-    const tabAiCompanion = document.getElementById('sidebar-tab-ai-companion');
+    // --- WINDOW CONTROLS BINDINGS ---
+    document.getElementById('win-min')?.addEventListener('click', () => window.electronAPI.windowControl('minimize'));
+    document.getElementById('win-max')?.addEventListener('click', () => window.electronAPI.windowControl('maximize'));
+    document.getElementById('win-close')?.addEventListener('click', () => window.electronAPI.windowControl('close'));
+    document.getElementById('nav-devtools')?.addEventListener('click', () => window.electronAPI.openDevTools());
 
     // Leghiamo i tasti
     if (tabAgents) tabAgents.onclick = () => {
@@ -239,6 +251,22 @@ const bootstrap = async () => {
         setState({ activeSidebarTab: 'ai-companion' });
         skillCategories.classList.add('hidden');
     };
+    
+    // Gestione tasto + (Create New) - Disabilitato per AI Companion
+    const createBtn = document.querySelector('[data-action="create-new"]');
+    if (createBtn) {
+        const originalOnClick = createBtn.onclick;
+        createBtn.onclick = (e) => {
+            if (state.activeSidebarTab === 'ai-companion') {
+                e.preventDefault();
+                e.stopPropagation();
+                // Mostra un piccolo toast o feedback se necessario, ma qui l'utente vuole solo il tooltip
+                return;
+            }
+            // Se c'era un handler dinamico altrove, lo lasciamo agire, 
+            // ma app.js non definisce l'handler qui, è solitamente in crud.js o workspace.js
+        };
+    }
     
     // Gestione Ricerca
     if (sidebarSearch) {
@@ -491,11 +519,55 @@ const bootstrap = async () => {
         }
     });
 
-    // Window Controls
-    document.getElementById('nav-devtools')?.addEventListener('click', () => window.electronAPI.openDevTools());
-    document.getElementById('win-min')?.addEventListener('click', () => window.electronAPI.windowControl('minimize'));
-    document.getElementById('win-max')?.addEventListener('click', () => window.electronAPI.windowControl('maximize'));
-    document.getElementById('win-close')?.addEventListener('click', () => window.electronAPI.windowControl('close'));
+    // --- OPEN DROPDOWN LOGIC ---
+    const btnOpenDropdown = document.getElementById('btn-open-dropdown');
+    const openDropdownMenu = document.getElementById('open-dropdown-menu');
+    const optOpenFolder = document.getElementById('opt-open-folder');
+    const optOpenFile = document.getElementById('opt-open-file');
+    const optOpenWorkspace = document.getElementById('opt-open-workspace');
+
+    if (btnOpenDropdown && openDropdownMenu) {
+        btnOpenDropdown.onclick = (e) => {
+            e.stopPropagation();
+            openDropdownMenu.classList.toggle('hidden');
+        };
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            openDropdownMenu.classList.add('hidden');
+        });
+    }
+
+    if (optOpenFolder) {
+        optOpenFolder.onclick = async () => {
+            const result = await window.electronAPI.openFolder();
+            if (result) {
+                setState({ workspacePath: result.path, workspaceFiles: result.files });
+            }
+        };
+    }
+
+    if (optOpenFile) {
+        optOpenFile.onclick = async () => {
+            const result = await window.electronAPI.openFile();
+            if (result && result.path) {
+                // In un IDE, aprire un file singolo spesso significa caricarlo nell'editor
+                // ma qui lo aggiungiamo come "workspace" di un solo file per semplicità di UI
+                if (window.openFile) window.openFile(result.path);
+                window.gxToast(window.t('explorer.openedFile'), 'success');
+            }
+        };
+    }
+
+    if (optOpenWorkspace) {
+        optOpenWorkspace.onclick = async () => {
+            const result = await window.electronAPI.openWorkspace();
+            if (result && result.path) {
+                // Logica per caricare un file .code-workspace se presente
+                window.gxToast('Apertura Workspace non ancora pienamente implementata', 'info');
+            }
+        };
+    }
 
     // Inizializza i dati dal backend!
     // Triggers render automatico appena caricati!

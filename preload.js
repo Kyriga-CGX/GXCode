@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getVersion: () => ipcRenderer.invoke('get-app-version'),
   // Apertura VERO sistema operativo cartelle
   openFolder: () => ipcRenderer.invoke('open-project-folder'),
+  openFile: () => ipcRenderer.invoke('open-project-file'),
+  openWorkspace: () => ipcRenderer.invoke('open-project-workspace'),
   openSpecificFolder: (folderPath) => ipcRenderer.invoke('open-specific-folder', folderPath),
   // Lettura contenuto file per il Workspace
   readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),

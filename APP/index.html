@@ -134,10 +134,29 @@
                         <div id="pane-explorer" class="absolute inset-0 flex flex-col bg-[#0d1117]">
                              <div class="p-1.5 border-b border-gray-800 flex justify-between items-center shrink-0 bg-[#0a0d12]">
                                  <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-2" data-i18n="explorer.title">Progetto Locale</h3>
-                                 <button id="btn-open-folder" class="p-1 text-[10px] text-gray-300 hover:text-white hover:bg-blue-600/30 bg-gray-800/80 rounded transition flex items-center gap-1 border border-gray-700" data-i18n="[title]explorer.openFolder">
-                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 
-                                     <span data-i18n="explorer.openFolder">Apri Cartella</span>
-                                 </button>
+                                 <div class="relative">
+                                     <button id="btn-open-dropdown" class="p-1 px-2 text-[10px] text-gray-300 hover:text-white hover:bg-gray-700 bg-[#161b22] rounded transition flex items-center gap-2 border border-gray-800 shadow-sm group">
+                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 
+                                         <span data-i18n="explorer.openFolder">Apri Cartella</span>
+                                         <svg class="transition-transform duration-200 group-hover:translate-y-0.5" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+                                     </button>
+
+                                     <!-- Dropdown Menu -->
+                                     <div id="open-dropdown-menu" class="hidden absolute right-0 top-full mt-1 w-40 bg-[#161b22] border border-gray-800 rounded shadow-xl z-50 overflow-hidden py-1">
+                                         <button id="opt-open-folder" class="w-full text-left px-3 py-1.5 text-[10px] text-gray-300 hover:bg-blue-600/20 hover:text-white transition flex items-center gap-2">
+                                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                             <span data-i18n="explorer.openFolder">Apri Cartella</span>
+                                         </button>
+                                         <button id="opt-open-file" class="w-full text-left px-3 py-1.5 text-[10px] text-gray-300 hover:bg-blue-600/20 hover:text-white transition flex items-center gap-2">
+                                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                                             <span data-i18n="explorer.openFile">Apri File</span>
+                                         </button>
+                                         <button id="opt-open-workspace" class="w-full text-left px-3 py-1.5 text-[10px] text-gray-300 hover:bg-blue-600/20 hover:text-white transition flex items-center gap-2 border-t border-gray-800 mt-1 pt-2">
+                                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                                             <span data-i18n="explorer.openWorkspace">Apri Workspace</span>
+                                         </button>
+                                     </div>
+                                 </div>
                              </div>
                              <div id="workspace-tree-container" class="flex-1 overflow-y-auto custom-scrollbar p-1"></div>
                         </div>

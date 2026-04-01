@@ -23,6 +23,7 @@ export const showContextMenu = (e, path, isDirectory) => {
     const items = [
         { label: window.t('contextMenu.newFile'), icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>', onClick: () => createItem(path, isDirectory, 'file') },
         { label: window.t('contextMenu.newFolder'), icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>', onClick: () => createItem(path, isDirectory, 'folder') },
+        { label: window.t('contextMenu.newWorkspace'), icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>', onClick: () => createItem(path, isDirectory, 'workspace') },
         { divider: true },
         { label: window.t('contextMenu.reveal'), icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>', onClick: () => revealInExplorer(path) },
         { label: window.t('contextMenu.copyPath'), icon: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>', onClick: () => navigator.clipboard.writeText(path) },
@@ -95,6 +96,10 @@ const createItem = async (targetPath, isTargetDirectory, type) => {
         let res;
         if (type === 'file') {
             res = await window.electronAPI.fsWriteFile(`${parentDir}\\${name}`, '');
+        } else if (type === 'workspace') {
+            const wsName = name.endsWith('.code-workspace') ? name : `${name}.code-workspace`;
+            const template = JSON.stringify({ folders: [{ path: "." }], settings: {} }, null, 4);
+            res = await window.electronAPI.fsWriteFile(`${parentDir}\\${wsName}`, template);
         } else {
             res = await window.electronAPI.fsCreateFolder(parentDir, name);
         }
