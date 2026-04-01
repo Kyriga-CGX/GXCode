@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // File System / Shell (Context Menu)
   shellOpenPath: (targetPath) => ipcRenderer.invoke('shell-open-path', targetPath),
+  openGxCodeFolder: () => ipcRenderer.invoke('open-gxcode-folder'),
   clipboardRead: () => ipcRenderer.invoke('clipboard-read'),
   fsCreateFile: (dirPath, name) => ipcRenderer.invoke('fs-create-file', dirPath, name),
   fsCreateFolder: (dirPath, name) => ipcRenderer.invoke('fs-create-folder-v2', dirPath, name),

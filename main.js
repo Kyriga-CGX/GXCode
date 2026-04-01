@@ -1384,6 +1384,13 @@ app.whenReady().then(() => {
     return true;
   });
 
+  ipcMain.handle('open-gxcode-folder', async () => {
+    const p = path.join(os.homedir(), currentAiContext);
+    if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+    await shell.openPath(p);
+    return true;
+  });
+
   ipcMain.handle('fs-write-file', async (event, filePath, content) => {
     const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) {

@@ -144,6 +144,7 @@
             "youtrack": "MCP Youtrack Server",
             "marketplace": "Marketplace & Repo",
             "appearance": "Appearance",
+            "folders": "System Folders",
             "language": "Language",
             "updates": "Updates"
         },
@@ -172,6 +173,13 @@
             "title": "Select Interface",
             "skinDesc": "Layout optimized for {skin}",
             "customGrad": "Custom Gradient Color"
+        },
+        "folders": {
+            "title": "GXCode Directory",
+            "desc": "Direct access to configuration files, local logs, and the offline database of the IDE.",
+            "systemDir": "Global Folder",
+            "systemDirDesc": "Your privately created agents, Claude/Gemini chat logs, and custom downloaded plugins are saved in this folder outside your current project, so they follow you seamlessly everywhere you code.",
+            "openFolder": "Open .GXCODE directory"
         },
         "language": {
             "title": "Language",
