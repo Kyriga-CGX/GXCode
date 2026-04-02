@@ -177,15 +177,18 @@ export const initTests = () => {
     subscribe((newState, oldState) => {
         try {
             // Se cambiamo tab Testing, scansioniamo se necessario
-        if (newState.activeActivity === 'testing' && newState.testFilesCache.length === 0) {
-            scanWorkspaceForTests();
-        }
-        
-        // Se cambia il workspace, resettiamo tutto
-        if (newState.workspaceData?.path && (!oldState?.workspaceData || newState.workspaceData.path !== oldState.workspaceData.path)) {
-            setState({ testFilesCache: [] });
-            if (newState.activeActivity === 'testing') scanWorkspaceForTests();
-        }
+            if (newState.activeActivity === 'testing' && (!newState.testFilesCache || newState.testFilesCache.length === 0)) {
+                scanWorkspaceForTests();
+            }
+            
+            // Se cambia il workspace, resettiamo tutto
+            if (newState.workspaceData?.path && newState.workspaceData.path !== oldState?.workspaceData?.path) {
+                // AGGIUNTO GUARD PER EVITARE LOOP INFINITO
+                if (state.testFilesCache.length > 0) {
+                    setState({ testFilesCache: [] });
+                }
+                if (newState.activeActivity === 'testing') scanWorkspaceForTests();
+            }
 
         // Se cambia qualcosa che richiede re-render
             if (newState.testFilesCache !== oldState?.testFilesCache || 

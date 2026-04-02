@@ -104,7 +104,18 @@ export const subscribe = (listener) => {
 };
 
 export const setState = (newState) => {
-    Object.assign(state, newState);
+    // Verifichiamo se c'è un cambiamento reale per evitare loop infiniti
+    let hasChanges = false;
+    const prevState = { ...state };
+
+    for (const key in newState) {
+        if (state[key] !== newState[key]) {
+            state[key] = newState[key];
+            hasChanges = true;
+        }
+    }
+
+    if (!hasChanges) return;
     
     // Persistenza Automatica dei flag UI
     if (newState.activeSidebarTab) localStorage.setItem('gx-active-sidebar-tab', state.activeSidebarTab);
@@ -124,6 +135,6 @@ export const setState = (newState) => {
     if (newState.youtrackConfig) localStorage.setItem('gx-youtrack-config', JSON.stringify(state.youtrackConfig));
 
     for (const listener of listeners) {
-        listener(state);
+        listener(state, prevState);
     }
 };
