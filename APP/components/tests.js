@@ -129,22 +129,27 @@ export const initTests = () => {
         }
     };
 
-    const scanWorkspaceForTests = async () => {
-        if (!state.workspaceData || !state.workspaceData.path) return;
-        
-        await checkPlaywrightStatus();
-        if (!state.isPlaywrightInstalled) {
-            renderTestTree();
-            return;
-        }
+    let isScanning = false;
 
-        treeRoot.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-blue-400 font-bold text-center mt-10 animate-pulse" data-i18n="tests.scanning">${window.t('tests.scanning')}</div>`;
+    const scanWorkspaceForTests = async () => {
+        if (!state.workspaceData || !state.workspaceData.path || isScanning) return;
+        
+        isScanning = true;
         try {
+            await checkPlaywrightStatus();
+            if (!state.isPlaywrightInstalled) {
+                renderTestTree();
+                return;
+            }
+
+            treeRoot.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-blue-400 font-bold text-center mt-10 animate-pulse" data-i18n="tests.scanning">${window.t('tests.scanning')}</div>`;
             const results = await window.electronAPI.scanTests(state.workspaceData.path);
             setState({ testFilesCache: results });
             renderTestTree();
         } catch(e) {
             treeRoot.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-red-500 font-bold text-center mt-10">${window.t('tests.error').replace('{error}', e.message)}</div>`;
+        } finally {
+            isScanning = false;
         }
     };
 

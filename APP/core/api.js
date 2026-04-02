@@ -78,8 +78,9 @@ export const api = {
          
           // Fallback logic: if manual config is missing, check MCP servers
           if (!url || !token || !enabled) {
-              const mcpList = Object.values(state.mcpServers || {});
-              const ytMcp = mcpList.find(s => 
+              const mcpList1 = Object.values(state.mcpServers || {});
+              const mcpList2 = Object.values(state.claudeCliConfig?.mcpServers || {});
+              const ytMcp = [...mcpList1, ...mcpList2].find(s => 
                   s.args?.some(a => a.toLowerCase().includes('youtrack'))
               );
               
