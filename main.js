@@ -1729,6 +1729,35 @@ app.whenReady().then(() => {
     return child;
   }
 
+  // Helper per trovare il CWD corretto di un test (Workspace Aware v1.3.6)
+  function resolveTestCwd(filePath, workspacePath) {
+    if (!workspacePath) return path.dirname(filePath);
+    if (!workspacePath.endsWith('.code-workspace')) return workspacePath;
+
+    // Se siamo in un workspace, cerchiamo a quale cartella appartiene il file
+    try {
+      const content = fs.readFileSync(workspacePath, 'utf8');
+      const config = JSON.parse(content);
+      const folders = [];
+      if (config.folders && Array.isArray(config.folders)) {
+        for (const item of config.folders) {
+          let fp = item.path;
+          if (!path.isAbsolute(fp)) fp = path.resolve(path.dirname(workspacePath), fp);
+          folders.push(fp);
+        }
+      }
+      
+      // Troviamo la cartella che contiene il file (la più specifica/lunga)
+      const matchingFolder = folders
+        .filter(f => filePath.startsWith(f))
+        .sort((a, b) => b.length - a.length)[0];
+
+      return matchingFolder || path.dirname(filePath);
+    } catch (e) {
+      return path.dirname(filePath);
+    }
+  }
+
   // Handler per eseguire un test specifico usando Playwright (Headed per visibilità)
   ipcMain.handle('run-test', async (event, workspacePath, filePath, testName) => {
     return new Promise((resolve) => {
@@ -1736,13 +1765,14 @@ app.whenReady().then(() => {
         const escapedName = testName.replace(/"/g, '\\"');
         console.log(`[IPC] Esecuzione test (Headed): ${testName} in ${filePath}`);
 
-        if (!workspacePath || !fs.existsSync(workspacePath)) {
-            throw new Error(`Workspace non trovato: ${workspacePath}`);
+        const testCwd = resolveTestCwd(filePath, workspacePath);
+        if (!fs.existsSync(testCwd)) {
+            throw new Error(`Directory di esecuzione non trovata: ${testCwd}`);
         }
 
         // Usiamo safeSpawn per streaming real-time
         const child = safeSpawn('npx', ['playwright', 'test', filePath, '-g', testName, '--headed'], {
-          cwd: workspacePath,
+          cwd: testCwd,
           env: { ...process.env, FORCE_COLOR: '1' },
           shell: true
         });
@@ -1804,12 +1834,13 @@ app.whenReady().then(() => {
         const escapedName = testName.replace(/"/g, '\\"');
         console.log(`[IPC] DEBUG MODE (Inspector): ${testName}`);
 
-        if (!workspacePath || !fs.existsSync(workspacePath)) {
-            throw new Error(`Workspace non trovato: ${workspacePath}`);
+        const testCwd = resolveTestCwd(filePath, workspacePath);
+        if (!fs.existsSync(testCwd)) {
+             throw new Error(`Directory di debug non trovata: ${testCwd}`);
         }
 
         const child = safeSpawn('npx', ['playwright', 'test', filePath, '-g', testName], {
-          cwd: workspacePath,
+          cwd: testCwd,
           env: { ...process.env, PWDEBUG: '1', FORCE_COLOR: '1' },
           shell: true
         });
@@ -1838,44 +1869,96 @@ app.whenReady().then(() => {
     });
   });
 
-  // Handler per eseguire tutti i test nel progetto
+  // Handler per eseguire tutti i test nel progetto (Workspace Aware v1.3.6)
   ipcMain.handle('run-all-tests', async (event, workspacePath) => {
-    return new Promise((resolve, reject) => {
-      const cmd = `npx playwright test --reporter=json`;
-      console.log(`[IPC] Esecuzione tutti i test: ${cmd}`);
+    if (!workspacePath || !fs.existsSync(workspacePath)) return { error: 'Path non valido' };
 
-      exec(cmd, { cwd: workspacePath, env: process.env }, (error, stdout, stderr) => {
+    const folders = [];
+    if (workspacePath.endsWith('.code-workspace')) {
+      try {
+        const content = fs.readFileSync(workspacePath, 'utf8');
+        const config = JSON.parse(content);
+        if (config.folders && Array.isArray(config.folders)) {
+          for (const item of config.folders) {
+            let fp = item.path;
+            if (!path.isAbsolute(fp)) fp = path.resolve(path.dirname(workspacePath), fp);
+            if (fs.existsSync(fp)) folders.push(fp);
+          }
+        }
+      } catch (e) { }
+    } else {
+      folders.push(workspacePath);
+    }
+
+    if (folders.length === 0) return { error: 'Nessuna cartella trovata nel workspace.' };
+
+    return new Promise(async (resolve) => {
+      const allResults = { suites: [] };
+      let hasError = false;
+
+      for (const folder of folders) {
         try {
+          // Verifichiamo se Playwright è presente in questa specifica cartella
+          const hasPlaywright = fs.existsSync(path.join(folder, 'node_modules', '@playwright', 'test'));
+          if (!hasPlaywright) continue;
+
+          console.log(`[IPC] Esecuzione tutti i test in: ${folder}`);
+          const cmd = `npx playwright test --reporter=json`;
+          
+          const stdout = await new Promise((res) => {
+            exec(cmd, { cwd: folder, env: process.env }, (error, stdout) => res(stdout));
+          });
+
           const jsonStart = stdout.indexOf('{');
           const jsonEnd = stdout.lastIndexOf('}');
           if (jsonStart !== -1 && jsonEnd !== -1) {
-            const jsonStr = stdout.substring(jsonStart, jsonEnd + 1);
-            resolve(JSON.parse(jsonStr));
-          } else {
-            if (error) reject(new Error(stderr || stdout || 'Errore Test'));
-            else resolve({ success: true });
+            const data = JSON.parse(stdout.substring(jsonStart, jsonEnd + 1));
+            if (data.suites) allResults.suites.push(...data.suites);
           }
         } catch (e) {
-          if (error) reject(new Error('Esecuzione fallita'));
-          else resolve({ success: true });
+          console.error(`[run-all-tests] Errore nella cartella ${folder}:`, e);
+          hasError = true;
         }
-      });
+      }
+
+      resolve(allResults.suites.length > 0 ? allResults : { success: !hasError });
     });
   });
 
-  // Handler per verificare se Playwright è installato
+  // Handler per verificare se Playwright è installato (Supporta Workspaces v1.3.6)
   ipcMain.handle('check-playwright', async (event, workspacePath) => {
     if (!workspacePath || !fs.existsSync(workspacePath)) return { installed: false, error: 'Path non valido' };
     
-    return new Promise((resolve) => {
-      // Verifichiamo se esiste il pacchetto in node_modules o se npx può trovarlo
-      const checkPath = path.join(workspacePath, 'node_modules', '@playwright', 'test');
-      if (fs.existsSync(checkPath)) {
-        return resolve({ installed: true });
-      }
+    const foldersToCheck = [];
+    if (workspacePath.endsWith('.code-workspace')) {
+      try {
+        const content = fs.readFileSync(workspacePath, 'utf8');
+        const config = JSON.parse(content);
+        if (config.folders && Array.isArray(config.folders)) {
+          for (const item of config.folders) {
+            let fp = item.path;
+            if (!path.isAbsolute(fp)) {
+              fp = path.resolve(path.dirname(workspacePath), fp);
+            }
+            if (fs.existsSync(fp)) foldersToCheck.push(fp);
+          }
+        }
+      } catch (e) { console.error("[check-playwright] Error parsing workspace:", e); }
+    } else {
+      foldersToCheck.push(workspacePath);
+    }
 
-      // Prova a lanciare npx playwright --version per vedere se è disponibile globalmente/npx
-      exec('npx playwright --version', { cwd: workspacePath }, (err) => {
+    if (foldersToCheck.length === 0) return { installed: false };
+
+    // Verifichiamo se almeno una cartella ha Playwright
+    for (const folder of foldersToCheck) {
+      const checkPath = path.join(folder, 'node_modules', '@playwright', 'test');
+      if (fs.existsSync(checkPath)) return { installed: true };
+    }
+
+    // Fallback: Prova a lanciare npx playwright --version in una delle cartelle (o nella prima)
+    return new Promise((resolve) => {
+      exec('npx playwright --version', { cwd: foldersToCheck[0] }, (err) => {
         resolve({ installed: !err });
       });
     });
