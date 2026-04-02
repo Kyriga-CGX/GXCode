@@ -78,31 +78,27 @@ export const api = {
          
           // Fallback logic: if manual config is missing, check MCP servers
           if (!url || !token || !enabled) {
-              const ytMcp = state.mcpServers.find(s => 
-                  s.enabled && (s.name.toLowerCase().includes('youtrack'))
+              const mcpList = Object.values(state.mcpServers || {});
+              const ytMcp = mcpList.find(s => 
+                  s.args?.some(a => a.toLowerCase().includes('youtrack'))
               );
               
-              if (ytMcp) {
-                  // Caso 1: URL diretto nell'oggetto MCP
-                  if (!url && ytMcp.url?.startsWith('http')) {
-                    url = ytMcp.url;
-                  } 
-                  // Caso 2: URL e Token negli ARGS (npx mcp-remote style)
-                  else if (!url && ytMcp.args && Array.isArray(ytMcp.args)) {
-                    const remoteUrl = ytMcp.args.find(arg => arg.startsWith('http') && arg.includes('youtrack'));
-                    if (remoteUrl) {
-                        url = remoteUrl;
-                        // Estraiamo il token se presente nel Bearer
-                        const bearerArg = ytMcp.args.find(arg => arg.includes('Bearer '));
-                        if (bearerArg && !token) {
-                            token = bearerArg.split('Bearer ')[1]?.trim().replace(/['"]/g, '');
-                        }
-                    }
+              if (ytMcp && ytMcp.args) {
+                  // Caso: URL e Token negli ARGS (npx mcp-remote style)
+                  const remoteUrl = ytMcp.args.find(arg => arg.startsWith('http') && arg.toLowerCase().includes('youtrack'));
+                  if (remoteUrl) {
+                      url = remoteUrl.split('/mcp')[0]; 
+                      
+                      // Estraiamo il token se presente nel Bearer con Regex flessibile
+                      const headerIdx = ytMcp.args.findIndex(a => a === '--header');
+                      const authValue = headerIdx !== -1 ? ytMcp.args[headerIdx + 1] : null;
+
+                      if (authValue && !token) {
+                          token = authValue.replace(/^Authorization:\s*Bearer\s*/i, '').trim();
+                      }
                   }
 
-                  // Pulizia URL: rimuoviamo /mcp se presente (l'API YouTrack è alla root)
                   if (url) {
-                      url = url.replace(/\/mcp$/, '');
                       console.log(`[GX API] Smart-detected YouTrack from MCP: ${url}`);
                       enabled = true;
                   }

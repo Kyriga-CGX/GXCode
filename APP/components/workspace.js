@@ -976,13 +976,14 @@ export const initWorkspace = () => {
         const fileChanged = newState.activeFileId !== oldState?.activeFileId;
         const listChanged = newState.openFiles !== oldState?.openFiles;
         const bpsChanged = newState.breakpoints !== oldState?.breakpoints;
+        const workspaceChanged = newState.workspaceData?.path !== oldState?.workspaceData?.path;
 
         if (editor && themeChanged) {
             const isLight = newState.activeCgxTheme === 'light' || newState.activeCgxTheme === 'apple' || newState.activeCgxTheme === 'aero';
             editor.updateOptions({ theme: isLight ? 'gx-light' : 'gx-dark' });
         }
 
-        if (fileChanged || listChanged) {
+        if (fileChanged || listChanged || workspaceChanged) {
             renderWorkspace();
             renderActiveFile();
         }
