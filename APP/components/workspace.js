@@ -976,7 +976,7 @@ export const initWorkspace = () => {
         const fileChanged = newState.activeFileId !== oldState?.activeFileId;
         const listChanged = newState.openFiles !== oldState?.openFiles;
         const bpsChanged = newState.breakpoints !== oldState?.breakpoints;
-        const workspaceChanged = newState.workspaceData?.path !== oldState?.workspaceData?.path;
+        const workspaceChanged = newState.workspaceData !== oldState?.workspaceData;
         const expandedChanged = newState.expandedFolders !== oldState?.expandedFolders;
 
         if (editor && themeChanged) {
