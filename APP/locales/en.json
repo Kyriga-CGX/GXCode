@@ -94,7 +94,7 @@
             "unknown": "Unknown"
         }
     },
-    "testing": {
+    "tests": {
         "title": "Test Explorer",
         "runAll": "Run All Playwright",
         "scanHint": "Open workspace to scan for tests...",
@@ -324,16 +324,6 @@
         "toastError": "Debug start error: {error}",
         "toastStop": "Debug Terminated ⏹️",
         "toastPause": "Paused at line {line}"
-    },
-    "tests": {
-        "title": "Test",
-        "openWorkspace": "Open workspace to scan tests...",
-        "noTests": "No test files (.spec.js) found.",
-        "scanning": "Scanning Spec...",
-        "error": "Error: {error}",
-        "runningAll": "Running All...",
-        "runAll": "Run All Tests (Playwright)",
-        "debugTooltip": "Debug Test (Playwright Inspector)"
     },
     "tabs": {
         "diff": "Show changes",

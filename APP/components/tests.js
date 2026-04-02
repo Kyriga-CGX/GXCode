@@ -36,12 +36,12 @@ export const initTests = () => {
                         </div>
                     </div>
                     <div class="space-y-1">
-                        <h3 class="text-xs font-bold text-white uppercase tracking-wider">${window.t('tests.missingPlaywright')}</h3>
-                        <p class="text-[10px] text-gray-400">${window.t('tests.installDesc')}</p>
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider" data-i18n="tests.missingPlaywright">${window.t('tests.missingPlaywright')}</h3>
+                        <p class="text-[10px] text-gray-400" data-i18n="tests.installDesc">${window.t('tests.installDesc')}</p>
                     </div>
                     <button onclick="window.autoInstallPlaywright()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-lg transition uppercase flex items-center justify-center gap-2">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        <span>${window.t('tests.installPlaywright')}</span>
+                        <span data-i18n="tests.installPlaywright">${window.t('tests.installPlaywright')}</span>
                     </button>
                 </div>
             `;

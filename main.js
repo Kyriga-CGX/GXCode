@@ -2104,6 +2104,14 @@ app.whenReady().then(() => {
 
   ipcMain.handle('terminal-create', (event, id, shellType, workspacePath, apiKey) => {
     console.log(`[TERMINAL] Requesting new PTY - ID: ${id}, Shell: ${shellType}, Workspace: ${workspacePath}`);
+    
+    // Validazione CWD (Previene Error 267 su Windows se il path non esiste)
+    let safeCwd = workspacePath;
+    if (!safeCwd || !fs.existsSync(safeCwd)) {
+       console.warn(`[TERMINAL] Path "${safeCwd}" non valido o inesistente. Fallback su Home.`);
+       safeCwd = os.homedir(); 
+    }
+
     let shell = process.platform === 'win32' ? 'powershell.exe' : 'bash';
     let args = [];
 
@@ -2139,8 +2147,14 @@ app.whenReady().then(() => {
         name: 'xterm-color',
         cols: 80,
         rows: 24,
-        cwd: workspacePath || process.cwd(),
-        env: { ...process.env, ANTHROPIC_API_KEY: apiKey || process.env.ANTHROPIC_API_KEY }
+        cwd: safeCwd,
+        env: { 
+          ...process.env, 
+          ANTHROPIC_API_KEY: apiKey || process.env.ANTHROPIC_API_KEY,
+          // Forza output interattivo per Claude CLI
+          CI: 'false',
+          TERM: 'xterm-256color'
+        }
       });
 
       ptyProcesses[id] = ptyProcess;
