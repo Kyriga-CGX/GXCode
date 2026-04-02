@@ -131,12 +131,12 @@ export const initTerminal = async () => {
         });
 
         // Click Destro Intelligente: Copia se c'è selezione, Incolla altrimenti
-        termContainer.addEventListener('contextmenu', async (e) => {
+        // Attacchiamo l'evento all'elemento del terminale per maggiore precisione
+        term.element.addEventListener('contextmenu', async (e) => {
             e.preventDefault();
             if (term.hasSelection()) {
                 const text = term.getSelection();
                 window.electronAPI.clipboardWrite(text);
-                // Feedback visivo (opzionale)
             } else {
                 const text = await window.electronAPI.clipboardRead();
                 if (text) window.electronAPI.terminalWrite(id, text);
