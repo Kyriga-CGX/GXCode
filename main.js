@@ -2202,10 +2202,36 @@ app.whenReady().then(() => {
   ipcMain.handle('terminal-create', (event, id, shellType, workspacePath, apiKey) => {
     console.log(`[TERMINAL] Requesting new PTY - ID: ${id}, Shell: ${shellType}, Workspace: ${workspacePath}`);
     
-    // Validazione CWD (Previene Error 267 su Windows se il path non esiste)
+    // Validazione CWD (Previene Error 267 su Windows se il path non è una directory)
     let safeCwd = workspacePath;
-    if (!safeCwd || !fs.existsSync(safeCwd)) {
-       console.warn(`[TERMINAL] Path "${safeCwd}" non valido o inesistente. Fallback su Home.`);
+    try {
+      if (safeCwd && fs.existsSync(safeCwd)) {
+        const stats = fs.statSync(safeCwd);
+        if (!stats.isDirectory()) {
+          // Se è un file (es. .code-workspace), proviamo a risolvere la prima cartella interna
+          if (safeCwd.endsWith('.code-workspace')) {
+            const content = fs.readFileSync(safeCwd, 'utf8');
+            const config = JSON.parse(content);
+            if (config.folders && config.folders.length > 0) {
+              let f = config.folders[0].path;
+              if (!path.isAbsolute(f)) f = path.resolve(path.dirname(safeCwd), f);
+              safeCwd = f;
+            } else {
+              safeCwd = os.homedir();
+            }
+          } else {
+            safeCwd = path.dirname(safeCwd);
+          }
+        }
+      } else {
+        safeCwd = os.homedir();
+      }
+    } catch (e) {
+      safeCwd = os.homedir();
+    }
+
+    if (!fs.existsSync(safeCwd)) {
+       console.warn(`[TERMINAL] Final path "${safeCwd}" non esistente. Fallback su Home.`);
        safeCwd = os.homedir(); 
     }
 

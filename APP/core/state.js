@@ -93,7 +93,10 @@ export const state = {
     // Testing & Playwright State
     testFilesCache: [],
     isPlaywrightInstalled: true,
-    isTestingInProgress: false
+    isTestingInProgress: false,
+    
+    // Multi-Project Terminal Support (v1.3.8)
+    activeTerminalFolder: localStorage.getItem('gx-active-terminal-folder') || ''
 };
 
 const listeners = new Set();
@@ -133,6 +136,7 @@ export const setState = (newState) => {
     if (newState.claudeCliConfig) localStorage.setItem('gx-claude-cli-config', JSON.stringify(state.claudeCliConfig));
     if (newState.mcpServers) localStorage.setItem('gx-mcp-servers', JSON.stringify(state.mcpServers));
     if (newState.youtrackConfig) localStorage.setItem('gx-youtrack-config', JSON.stringify(state.youtrackConfig));
+    if (newState.hasOwnProperty('activeTerminalFolder')) localStorage.setItem('gx-active-terminal-folder', state.activeTerminalFolder);
 
     for (const listener of listeners) {
         listener(state, prevState);

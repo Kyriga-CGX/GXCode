@@ -7,23 +7,50 @@ export const initTerminal = async () => {
     const targetContainer = document.getElementById('pane-terminal');
     if (!targetContainer) return;
 
-    targetContainer.innerHTML = `
-        <div class="flex flex-col h-full w-full bg-[#06080a] overflow-hidden">
-            <div id="terminal-shell-header" class="h-8 border-b border-gray-800/50 flex items-center justify-between px-3 shrink-0 bg-[#161b22]/30">
-                <div class="flex items-center gap-1 overflow-x-auto no-scrollbar" id="terminal-tabs">
+    const renderHeader = () => {
+        const isWorkspace = state.workspaceData?.isWorkspace && state.workspaceData?.folders?.length > 0;
+        
+        targetContainer.innerHTML = `
+            <div class="flex flex-col h-full w-full bg-[#06080a] overflow-hidden">
+                <div id="terminal-shell-header" class="h-8 border-b border-gray-800/50 flex items-center justify-between px-3 shrink-0 bg-[#161b22]/30">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="flex items-center gap-1 overflow-x-auto no-scrollbar" id="terminal-tabs"></div>
+                        
+                        ${isWorkspace ? `
+                            <div class="h-4 w-[1px] bg-gray-800 mx-1"></div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <svg class="text-gray-500" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                <select id="terminal-folder-selector" class="bg-transparent border-none text-[9px] text-gray-400 font-bold uppercase tracking-wider focus:outline-none hover:text-white cursor-pointer max-w-[150px] truncate">
+                                    ${state.workspaceData.folders.map(f => `
+                                        <option value="${f.path}" ${state.activeTerminalFolder === f.path ? 'selected' : ''}>${f.name}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="flex gap-1 shrink-0 ml-2">
+                       <button id="btn-add-ps" class="p-1 px-1.5 text-[8px] font-bold text-blue-400 hover:bg-blue-500/10 rounded transition uppercase tracking-widest border border-blue-500/20 flex items-center gap-1" data-i18n="[title]terminal.newPs" title="${window.t('terminal.newPs')}">+ PS</button>
+                       <button id="btn-add-cmd" class="p-1 px-1.5 text-[8px] font-bold text-gray-400 hover:bg-gray-500/10 rounded transition uppercase tracking-widest border border-gray-500/20 flex items-center gap-1" data-i18n="[title]terminal.newCmd" title="${window.t('terminal.newCmd')}">+ CMD</button>
+                       <button id="btn-add-bash" class="p-1 px-1.5 text-[8px] font-bold text-orange-400 hover:bg-orange-500/10 rounded transition uppercase tracking-widest border border-orange-500/20 flex items-center gap-1" data-i18n="[title]terminal.newBash" title="${window.t('terminal.newBash')}">+ BASH</button>
+                       <button id="btn-clear-term" class="p-1 px-1.5 text-[8px] font-bold text-red-400 hover:bg-red-500/10 rounded transition uppercase tracking-widest border border-red-500/20 flex items-center gap-1" data-i18n="[title]terminal.clear" title="${window.t('terminal.clear')}">CLEAR</button>
+                       <button id="btn-split-term" class="p-1 px-1.5 text-[8px] font-bold text-emerald-400 hover:bg-emerald-500/10 rounded transition uppercase tracking-widest border border-emerald-500/20 flex items-center gap-1" data-i18n="[title]terminal.split" title="${window.t('terminal.split')}">SPLIT</button>
+                    </div>
                 </div>
-                <div class="flex gap-1 shrink-0 ml-2">
-                   <button id="btn-add-ps" class="p-1 px-1.5 text-[8px] font-bold text-blue-400 hover:bg-blue-500/10 rounded transition uppercase tracking-widest border border-blue-500/20 flex items-center gap-1" data-i18n="[title]terminal.newPs" title="${window.t('terminal.newPs')}">+ PS</button>
-                   <button id="btn-add-cmd" class="p-1 px-1.5 text-[8px] font-bold text-gray-400 hover:bg-gray-500/10 rounded transition uppercase tracking-widest border border-gray-500/20 flex items-center gap-1" data-i18n="[title]terminal.newCmd" title="${window.t('terminal.newCmd')}">+ CMD</button>
-                   <button id="btn-add-bash" class="p-1 px-1.5 text-[8px] font-bold text-orange-400 hover:bg-orange-500/10 rounded transition uppercase tracking-widest border border-orange-500/20 flex items-center gap-1" data-i18n="[title]terminal.newBash" title="${window.t('terminal.newBash')}">+ BASH</button>
-                   <button id="btn-clear-term" class="p-1 px-1.5 text-[8px] font-bold text-red-400 hover:bg-red-500/10 rounded transition uppercase tracking-widest border border-red-500/20 flex items-center gap-1" data-i18n="[title]terminal.clear" title="${window.t('terminal.clear')}">CLEAR</button>
-                   <button id="btn-split-term" class="p-1 px-1.5 text-[8px] font-bold text-emerald-400 hover:bg-emerald-500/10 rounded transition uppercase tracking-widest border border-emerald-500/20 flex items-center gap-1" data-i18n="[title]terminal.split" title="${window.t('terminal.split')}">SPLIT</button>
-                </div>
+                <div id="terminals-stack" class="flex-1 w-full relative overflow-hidden bg-[#06080a]"></div>
             </div>
-            <div id="terminals-stack" class="flex-1 w-full relative overflow-hidden bg-[#06080a]">
-            </div>
-        </div>
-    `;
+        `;
+
+        // Bind events for the newly rendered header
+        const selector = document.getElementById('terminal-folder-selector');
+        if (selector) {
+            selector.onchange = (e) => {
+                import('../core/state.js').then(m => m.setState({ activeTerminalFolder: e.target.value }));
+            };
+        }
+    };
+
+    renderHeader();
 
     const tabsContainer = document.getElementById('terminal-tabs');
     const stackContainer = document.getElementById('terminals-stack');
@@ -61,7 +88,8 @@ export const initTerminal = async () => {
         term.loadAddon(fitAddon);
         term.open(termContainer);
 
-        const res = await window.electronAPI.terminalCreate(id, shellType, state.workspaceData?.path);
+        const terminalCwd = state.activeTerminalFolder || state.workspaceData?.path;
+        const res = await window.electronAPI.terminalCreate(id, shellType, terminalCwd);
         
         if (res && !res.success) {
             term.write(`\r\n\x1b[31;1m${window.t('terminal.errorStart').replace('{shell}', shellType.toUpperCase())}\x1b[0m\r\n`);
@@ -219,5 +247,29 @@ export const initTerminal = async () => {
                 };
             });
         }
+
+        if (newState.workspaceData !== oldState?.workspaceData || newState.activeTerminalFolder !== oldState?.activeTerminalFolder) {
+            renderHeader();
+            // Re-bind buttons that were in the header
+            const bPs = document.getElementById('btn-add-ps');
+            const bCmd = document.getElementById('btn-add-cmd');
+            const bBash = document.getElementById('btn-add-bash');
+            const bClear = document.getElementById('btn-clear-term');
+            const bSplit = document.getElementById('btn-split-term');
+
+            if (bPs) bPs.onclick = () => createTerminal('t' + Date.now(), 'ps');
+            if (bCmd) bCmd.onclick = () => createTerminal('t' + Date.now(), 'cmd');
+            if (bBash) bBash.onclick = () => createTerminal('t' + Date.now(), 'bash');
+            if (bClear) bClear.onclick = () => { if (activeTerminalId) terminals[activeTerminalId]?.term.clear(); };
+            if (bSplit) bSplit.onclick = () => { /* split logic already assigned below or can be moved here */ };
+        }
     });
+
+    // Inizializza i bottoni la prima volta
+    const bPs = document.getElementById('btn-add-ps');
+    const bCmd = document.getElementById('btn-add-cmd');
+    const bBash = document.getElementById('btn-add-bash');
+    if (bPs) bPs.onclick = () => createTerminal('t' + Date.now(), 'ps');
+    if (bCmd) bCmd.onclick = () => createTerminal('t' + Date.now(), 'cmd');
+    if (bBash) bBash.onclick = () => createTerminal('t' + Date.now(), 'bash');
 };

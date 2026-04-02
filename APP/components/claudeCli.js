@@ -59,7 +59,7 @@ export const startClaudeCli = async () => {
     claudeTerm.write('\x1b[33m[GXCODE] Avvio Claude Code CLI...\x1b[0m\r\n');
     
     const apiKey = state.anthropicApiKey;
-    const workspacePath = state.workspaceData?.path;
+    const workspacePath = state.activeTerminalFolder || state.workspaceData?.path;
 
     const res = await window.electronAPI.terminalCreate('claude-cli', 'claude', workspacePath, apiKey);
     
