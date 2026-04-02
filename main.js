@@ -14,6 +14,20 @@ try {
 }
 const WebSocket = require('ws');
 
+// --- SINGLE INSTANCE LOCK (v1.3.7) ---
+if (!app.requestSingleInstanceLock()) {
+  console.log("[GXCode] Istanza già in esecuzione. Chiusura...");
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const wins = BrowserWindow.getAllWindows();
+    if (wins.length > 0) {
+      if (wins[0].isMinimized()) wins[0].restore();
+      wins[0].focus();
+    }
+  });
+}
+
 class NodeDebugger {
   constructor(browserWindow) {
     this.window = browserWindow;
