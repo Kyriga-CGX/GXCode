@@ -72,16 +72,38 @@ export const api = {
         });
     },
     
-    // Phase 6: Sync Tickets
-    loadTickets: async () => {
-         const { url, token, enabled } = state.youtrackConfig;
-         if (!enabled || !url || !token) {
-            setState({ tickets: [] });
+    // Phase 6: Sync Issues (YouTrack)
+    loadIssues: async () => {
+         let { url, token, enabled } = state.youtrackConfig;
+         
+         // Fallback logic: if manual config is missing, check MCP servers
+         if (!url || !token || !enabled) {
+             const ytMcp = state.mcpServers.find(s => 
+                 s.enabled && (s.name.toLowerCase().includes('youtrack') || s.url.toLowerCase().includes('youtrack'))
+             );
+             
+             if (ytMcp) {
+                 console.log(`[GX API] YouTrack MCP found: ${ytMcp.name}. Using its URL.`);
+                 url = ytMcp.url;
+                 enabled = true; 
+             }
+         }
+
+         if (!enabled || !url) {
+            setState({ issues: [] });
             return;
          }
+
+         // Ensure token exists (even if it's the one from manual config)
+         if (!token) {
+            console.warn("[GX API] YouTrack URL found but Token is missing.");
+            setState({ issues: [] });
+            return;
+         }
+
          const query = `?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}`;
-         const tickets = await fetchJson(`/tickets${query}`);
-         setState({ tickets: tickets || [] });
+         const issues = await fetchJson(`/issues${query}`);
+         setState({ issues: issues || [] });
     },
     
     // 3. I metodi di Installa risolvono istantaneamente il problema di asincronia

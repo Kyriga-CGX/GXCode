@@ -8,7 +8,7 @@
 
 /* Tailwind Safelist: Forced utilities for dynamic components */
 @utility safelist-dynamic-ui {
-  /* Ticket Statuses */
+  /* Issue Statuses */
   @apply bg-emerald-500/10 text-emerald-400 border-emerald-500/30;
   @apply bg-red-500/10 text-red-400 border-red-500/30;
   @apply bg-purple-500/10 text-purple-400 border-purple-500/30;
@@ -17,7 +17,7 @@
   @apply bg-cyan-500/10 text-cyan-400 border-cyan-500/30;
   @apply bg-gray-500/10 text-gray-400 border-gray-500/30;
   
-  /* Ticket Border Lefts */
+  /* Issue Border Lefts */
   @apply border-l-emerald-500 border-l-red-500 border-l-purple-500 border-l-blue-500 border-l-yellow-500 border-l-cyan-500 border-l-gray-700;
   @apply border-l-[3px];
   

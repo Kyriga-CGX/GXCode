@@ -4,7 +4,7 @@ import { loadLocale } from '../core/i18n.js';
 import { initMarketplace } from '../components/marketplace.js';
 import { initTerminal } from '../components/terminal.js';
 import { initSettings } from '../components/settings.js';
-import { initTickets } from '../components/tickets.js';
+import { initIssues } from '../components/issues.js';
 import { initWorkspace } from '../components/workspace.js';
 import { initCrud } from '../components/crud.js';
 import { gxConfirm } from '../components/dialogs.js';
@@ -34,9 +34,9 @@ let activeCategory = 'all';
 
 // DOM Elements Left Sidebar
 const leftTabExplorer = document.getElementById('left-tab-explorer');
-const leftTabTickets = document.getElementById('left-tab-tickets');
+const leftTabIssues = document.getElementById('left-tab-issues');
 const paneExplorer = document.getElementById('pane-explorer');
-const paneTickets = document.getElementById('pane-tickets');
+const paneIssues = document.getElementById('pane-issues');
 const updateActivityBar = (activity) => {
     const icons = {
         explorer: document.getElementById('activity-explorer'),
@@ -147,17 +147,17 @@ const updateSidebarTabs = () => {
 
 // La funzione vitale che svuota e ririempie la dom IN TEMPO REALE
 const updateLeftSidebarTabs = () => {
-    if (!leftTabExplorer || !leftTabTickets || !paneExplorer || !paneTickets) return;
+    if (!leftTabExplorer || !leftTabIssues || !paneExplorer || !paneIssues) return;
 
     if (state.activeLeftTab === 'explorer') {
         leftTabExplorer.className = "flex-1 py-2 text-[10px] uppercase tracking-wider font-semibold border-b-[2px] transition text-gray-300 border-blue-500 bg-[#161b22]";
-        leftTabTickets.className = "flex-1 py-2 text-[10px] uppercase tracking-wider font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300";
+        leftTabIssues.className = "flex-1 py-2 text-[10px] uppercase tracking-wider font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300";
         paneExplorer.classList.remove('hidden');
-        paneTickets.classList.add('hidden');
+        paneIssues.classList.add('hidden');
     } else {
-        leftTabTickets.className = "flex-1 py-2 text-[10px] uppercase tracking-wider font-semibold border-b-[2px] transition text-gray-300 border-blue-500 bg-[#161b22]";
+        leftTabIssues.className = "flex-1 py-2 text-[10px] uppercase tracking-wider font-semibold border-b-[2px] transition text-gray-300 border-blue-500 bg-[#161b22]";
         leftTabExplorer.className = "flex-1 py-2 text-[10px] uppercase tracking-wider font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300";
-        paneTickets.classList.remove('hidden');
+        paneIssues.classList.remove('hidden');
         paneExplorer.classList.add('hidden');
     }
 };
@@ -309,7 +309,7 @@ const bootstrap = async () => {
     initMarketplace();
     initTerminal();
     initSettings();
-    initTickets();
+    initIssues();
     initWorkspace();
     // initContextMenu(); <-- Rimossa poiché non necessaria e non esportata
     // Esposizione Globale per componenti Legacy/Agenti
@@ -457,7 +457,7 @@ const bootstrap = async () => {
 
     // Tab Left Sidebar Bindings
     if (leftTabExplorer) leftTabExplorer.onclick = () => setState({ activeLeftTab: 'explorer' });
-    if (leftTabTickets) leftTabTickets.onclick = () => setState({ activeLeftTab: 'tickets' });
+    if (leftTabIssues) leftTabIssues.onclick = () => setState({ activeLeftTab: 'issues' });
 
     // Split Marketplace Buttons Bindings
     const openMarket = async (tab) => {

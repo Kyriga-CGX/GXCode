@@ -649,6 +649,22 @@ window.submitMCPForm = () => {
         
         // Sincronizza con il backend (così l'Agente può usarli)
         api.syncMCPServers?.(mcpServers);
+
+        // Auto-Link YouTrack if name matches
+        if (name.toLowerCase().includes('youtrack')) {
+            console.log("[GX Settings] YouTrack MCP detected, linking to Tickets tab...");
+            // Se non c'è già una configurazione manuale, impostiamo questa
+            if (!state.youtrackConfig.url || !state.youtrackConfig.token) {
+                setState({ 
+                    youtrackConfig: { 
+                        ...state.youtrackConfig, 
+                        url: url, 
+                        enabled: true 
+                    } 
+                });
+                window.gxToast("YouTrack MCP collegato alla tab Tickets. Inserisci il token se richiesto.", 'info');
+            }
+        }
         
         nameEl.value = '';
         urlEl.value = '';

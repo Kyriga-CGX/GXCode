@@ -42,8 +42,8 @@ export const state = {
     isRightSidebarOpen: localStorage.getItem('gx-is-right-open') !== 'false', // Default true
     isTerminalMinimized: localStorage.getItem('gx-is-terminal-minimized') === 'true',
     
-    tickets: [],
-    activeTicketId: null,
+    issues: [],
+    activeIssueId: null,
     activeAgentId: localStorage.getItem('gx-active-agent-id'),
     workspaceData: null,
     openFiles: JSON.parse(localStorage.getItem('gx-open-files') || '[]'),

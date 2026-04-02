@@ -384,7 +384,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         for (const leaf of leaves) {
             const text = leaf.textContent.toLowerCase();
-            if (text.includes("codecraft") || text.includes("gx code ai") || text.includes("gxcode ai") || text.includes("seleziona un ticket") || text.includes("select a ticket")) {
+            if (text.includes("codecraft") || text.includes("gx code ai") || text.includes("gxcode ai") || text.includes("seleziona un'issue") || text.includes("select an issue")) {
                 let current = leaf.parentElement;
                 while (current && current.tagName !== 'BODY') {
                     if (current.querySelector('textarea') || current.querySelector('input[type="text"]')) {

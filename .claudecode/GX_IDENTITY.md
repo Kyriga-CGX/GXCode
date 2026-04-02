@@ -5,6 +5,10 @@ Questo file è autogenerato da GXCode per informare l'AI sugli strumenti disponi
 ## DISPONIBILI GX-SKILLS
 Puoi richiamare queste skill usando il comando terminale: `gx-skill run "<nome_skill>"`
 
-*Nessuna skill installata.*
+### asd
+- **Descrizione**: asd
+- **Comando**: `gx-skill run "asd"`
+
 
 ## AGENTI SUGGERITI
+- **asdasd**: general

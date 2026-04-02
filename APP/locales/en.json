@@ -25,7 +25,7 @@
         "openWorkspace": "Open Workspace",
         "openedFile": "File opened successfully",
         "files": "📁 Files",
-        "tickets": "🎫 Tickets",
+        "issues": "🎫 Issues",
         "emptyTitle": "You haven't opened any folder yet.",
         "emptyDesc": "Press the Open button at the top of the panel.",
         "deleteConfirm": "Permanently delete this file?\nThis operation is not reversible.",
@@ -49,10 +49,16 @@
         "tickets": "🎫 Tickets",
         "syncingCore": "Syncing Core..."
     },
-    "tickets": {
+    "issues": {
         "type": "Type",
         "priority": "Priority",
-        "state": "State"
+        "state": "State",
+        "tags": "Tags",
+        "sprint": "Sprint",
+        "openInBrowser": "Open in YouTrack",
+        "details": "Issue Details",
+        "noAssignee": "Unassigned",
+        "related": "Related Links"
     },
     "search": {
         "title": "Search",

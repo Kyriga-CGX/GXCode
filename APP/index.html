@@ -127,7 +127,7 @@
                 <div id="pane-explorer-root" class="flex-1 flex flex-col overflow-hidden">
                     <div class="flex border-b border-gray-800 shrink-0">
                         <button id="left-tab-explorer" class="flex-1 py-2 text-[10px] uppercase tracking-wider font-semibold border-b-[2px] transition text-gray-300 border-blue-500 bg-[#161b22]" data-i18n="sidebar.files">📁 Files</button>
-                        <button id="left-tab-tickets" class="flex-1 py-2 text-[10px] uppercase tracking-wider font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300" data-i18n="sidebar.tickets">🎫 Tickets</button>
+                        <button id="left-tab-issues" class="flex-1 py-2 text-[10px] uppercase tracking-wider font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300" data-i18n="sidebar.issues">🎫 Issue</button>
                     </div>
                     
                     <div class="flex-1 overflow-hidden relative">
@@ -162,12 +162,12 @@
                              <div id="workspace-tree-container" class="flex-1 overflow-y-auto custom-scrollbar p-1"></div>
                         </div>
                         
-                        <!-- TICKETS PANE -->
-                        <div id="pane-tickets" class="absolute inset-0 flex flex-col hidden bg-[#0d1117]">
+                        <!-- ISSUES PANE -->
+                        <div id="pane-issues" class="absolute inset-0 flex flex-col hidden bg-[#0d1117]">
                              <div class="p-2 border-b border-gray-800 flex justify-between items-center shrink-0 bg-[#0a0d12]">
-                                 <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">YouTrack Assigned</h3>
+                                 <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">YouTrack Issues</h3>
                              </div>
-                             <div id="tickets-content" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar"></div>
+                             <div id="issues-content" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar"></div>
                         </div>
 
                         <!-- GIT PANE (Source Control) -->
@@ -373,11 +373,11 @@
                 <button id="sidebar-tab-ai-companion" class="flex-1 py-3 text-sm font-semibold border-b-[2px] transition text-gray-500 border-transparent hover:text-gray-300" data-i18n="sidebar.aiCompanion">Ai Companion</button>
             </div>
             
-            <!-- EX TICKET DEFAULTS HEADER -->
+            <!-- EX ISSUE DEFAULTS HEADER -->
             <div class="p-3 bg-[#12161d] border-b border-gray-800 flex justify-between text-[10px] text-gray-400 tracking-widest uppercase">
-                <div class="flex flex-col gap-1 items-start"><span data-i18n="tickets.type">Type</span><span class="text-white font-bold">Task</span></div>
-                <div class="flex flex-col gap-1 items-center"><span data-i18n="tickets.priority">Priority</span><span class="text-blue-400 font-bold">Normal</span></div>
-                <div class="flex flex-col gap-1 items-end"><span data-i18n="tickets.state">State</span><span class="text-green-400 font-bold">Open</span></div>
+                <div class="flex flex-col gap-1 items-start"><span data-i18n="issues.type">Type</span><span class="text-white font-bold">Task</span></div>
+                <div class="flex flex-col gap-1 items-center"><span data-i18n="issues.priority">Priority</span><span class="text-blue-400 font-bold">Normal</span></div>
+                <div class="flex flex-col gap-1 items-end"><span data-i18n="issues.state">State</span><span class="text-green-400 font-bold">Open</span></div>
             </div>
 
 <!-- Migrated panes to Left Sidebar -->

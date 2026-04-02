@@ -25,7 +25,7 @@
         "openWorkspace": "Apri Workspace",
         "openedFile": "File aperto con successo",
         "files": "📁 Files",
-        "tickets": "🎫 Tickets",
+        "issues": "🎫 Issue",
         "emptyTitle": "Non hai ancora aperto nessuna cartella.",
         "emptyDesc": "Premi il tasto Apri in alto nel pannello.",
         "deleteConfirm": "Eliminare definitivamente questo file?\nQuesta operazione non è reversibile.",
@@ -49,10 +49,16 @@
         "tickets": "🎫 Tickets",
         "syncingCore": "Sincronizzazione Core..."
     },
-    "tickets": {
+    "issues": {
         "type": "Tipo",
         "priority": "Priorità",
-        "state": "Stato"
+        "state": "Stato",
+        "tags": "Tag",
+        "sprint": "Sprint",
+        "openInBrowser": "Apri in YouTrack",
+        "details": "Dettagli Issue",
+        "noAssignee": "Nessun Assegnatario",
+        "related": "Link Correlati"
     },
     "search": {
         "title": "Ricerca",

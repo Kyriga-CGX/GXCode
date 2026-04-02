@@ -380,16 +380,19 @@ apiApp.delete("/api/agents/:id", (req, res) => {
 });
 
 // ---- ENDPOINT TICKETS (YouTrack Real Integration) ----
-apiApp.get("/api/tickets", async (req, res) => {
+apiApp.get("/api/issues", async (req, res) => {
   const { url, token } = req.query;
 
   if (!url || !token) {
-    return res.json(tickets); // Restituisce l'array vuoto (mock) se mancano i parametri
+    return res.json([]); 
   }
 
   try {
-    const issuesUrl = `${url.replace(/\/$/, '')}/api/issues?fields=idReadable,summary,description,project(name),priority(name),state(name),assignee(fullName)`;
-    console.log(`[SPY-YOUTRACK] Sto contattando: ${issuesUrl}`);
+    // Rich fields: id, title, desc, project, priority, state, assignee, tags, links (related issues), customFields (Sprints)
+    const fields = "idReadable,summary,description,project(name),priority(name),state(name),assignee(fullName),tags(name,color(id,background,foreground)),links(direction,issue(idReadable,summary)),customFields(name,value(name,text,id))";
+    const issuesUrl = `${url.replace(/\/$/, '')}/api/issues?fields=${fields}&$top=100`;
+    
+    console.log(`[GX-ISSUES] Fetching: ${issuesUrl}`);
 
     const response = await fetch(issuesUrl, {
       method: 'GET',
@@ -402,30 +405,51 @@ apiApp.get("/api/tickets", async (req, res) => {
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error("[SPY-YOUTRACK] Errore API:", errorData);
+      console.error("[GX-ISSUES] API Error:", errorData);
       throw new Error(`YouTrack Error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log(`[SPY-YOUTRACK] Trovati ${data.length} ticket.`);
+    console.log(`[GX-ISSUES] Found ${data.length} issues.`);
     
-    // Formattiamo per la nostra UI (opzionale se l'app si aspetta già il formato YouTrack)
-    const formatted = data.map(issue => ({
-      id: issue.idReadable,
-      name: issue.summary,
-      description: issue.description,
-      project: issue.project?.name,
-      priority: issue.priority?.name,
-      status: issue.state?.name,
-      assignee: issue.assignee?.fullName
-    }));
+    const formatted = data.map(issue => {
+      // Estraiamo lo Sprint dai customFields se presente
+      const sprintField = issue.customFields?.find(f => f.name.toLowerCase() === 'sprint');
+      const sprint = Array.isArray(sprintField?.value) 
+        ? sprintField.value.map(v => v.name || v.text).join(', ')
+        : (sprintField?.value?.name || sprintField?.value?.text || null);
+
+      return {
+        id: issue.idReadable,
+        name: issue.summary,
+        description: issue.description,
+        project: issue.project?.name,
+        priority: issue.priority?.name,
+        status: issue.state?.name,
+        assignee: issue.assignee?.fullName,
+        tags: issue.tags?.map(t => ({
+            name: t.name,
+            color: t.color?.id || '1' // YouTrack scale color IDs
+        })) || [],
+        links: issue.links?.map(l => ({
+            direction: l.direction,
+            id: l.issue?.idReadable,
+            summary: l.issue?.summary
+        })) || [],
+        sprint: sprint,
+        rawUrl: `${url.replace(/\/$/, '')}/issue/${issue.idReadable}`
+      };
+    });
 
     res.json(formatted);
   } catch (err) {
-    console.error("[SPY-YOUTRACK] Fetch failed:", err.message);
+    console.error("[GX-ISSUES] Fetch failed:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
+
+// Retro-compatibilità per un breve periodo se necessario
+apiApp.get("/api/tickets", (req, res) => res.redirect(301, `/api/issues?url=${req.query.url}&token=${req.query.token}`));
 
 // ---- ENDPOINT MCP SERVERS ----
 apiApp.get("/api/mcp-servers", (req, res) => {
@@ -1610,51 +1634,74 @@ app.whenReady().then(() => {
     const testFiles = [];
     const MAX_FILES = 100;
 
-    const searchRecursively = (dir) => {
-      if (testFiles.length >= MAX_FILES) return;
-      try {
-        const files = fs.readdirSync(dir, { withFileTypes: true });
-        for (const file of files) {
-          if (testFiles.length >= MAX_FILES) return;
-          const fullPath = path.join(dir, file.name);
+    const scanSingleFolder = (dir, rootForRelative) => {
+      const searchRecursively = (currentDir) => {
+        if (testFiles.length >= MAX_FILES) return;
+        try {
+          const files = fs.readdirSync(currentDir, { withFileTypes: true });
+          for (const file of files) {
+            if (testFiles.length >= MAX_FILES) return;
+            const fullPath = path.join(currentDir, file.name);
 
-          if (file.isDirectory()) {
-            if (['node_modules', '.git', 'dist', 'build', '.next', '.claude', '.gemini'].includes(file.name)) continue;
-            searchRecursively(fullPath);
-          } else {
-            if (file.name.match(/\.(spec|test)\.(js|ts|jsx|tsx)$/i)) {
-              const content = fs.readFileSync(fullPath, 'utf8');
-              const lines = content.split('\n');
-              const testMatches = [];
+            if (file.isDirectory()) {
+              if (['node_modules', '.git', 'dist', 'build', '.next', '.claude', '.gemini'].includes(file.name)) continue;
+              searchRecursively(fullPath);
+            } else {
+              if (file.name.match(/\.(spec|test)\.(js|ts|jsx|tsx)$/i)) {
+                const content = fs.readFileSync(fullPath, 'utf8');
+                const lines = content.split('\n');
+                const testMatches = [];
+                const testRegex = /(?:test|it|describe)\s*\(['"`](.*?)['"`]/;
 
-              const testRegex = /(?:test|it|describe)\s*\(['"`](.*?)['"`]/;
+                for (let i = 0; i < lines.length; i++) {
+                  const match = lines[i].match(testRegex);
+                  if (match && match[1]) {
+                    testMatches.push({
+                      name: match[1],
+                      line: i + 1,
+                      status: 'idle'
+                    });
+                  }
+                }
 
-              for (let i = 0; i < lines.length; i++) {
-                const match = lines[i].match(testRegex);
-                if (match && match[1]) {
-                  testMatches.push({
-                    name: match[1],
-                    line: i + 1,
-                    status: 'idle'
+                if (testMatches.length > 0) {
+                  testFiles.push({
+                    file: file.name,
+                    fullPath: fullPath,
+                    relativePath: path.relative(rootForRelative, fullPath),
+                    testMatches
                   });
                 }
               }
+            }
+          }
+        } catch (e) { }
+      };
+      searchRecursively(dir);
+    };
 
-              if (testMatches.length > 0) {
-                testFiles.push({
-                  file: file.name,
-                  fullPath: fullPath,
-                  relativePath: path.relative(folderPath, fullPath),
-                  testMatches
-                });
-              }
+    if (folderPath.endsWith('.code-workspace')) {
+      try {
+        const content = fs.readFileSync(folderPath, 'utf8');
+        const config = JSON.parse(content);
+        if (config.folders && Array.isArray(config.folders)) {
+          for (const item of config.folders) {
+            let fp = item.path;
+            if (!path.isAbsolute(fp)) {
+              fp = path.resolve(path.dirname(folderPath), fp);
+            }
+            if (fs.existsSync(fp) && fs.statSync(fp).isDirectory()) {
+              scanSingleFolder(fp, fp); // Per i workspace, usiamo la cartella del progetto come root relativa
             }
           }
         }
-      } catch (e) { }
-    };
+      } catch (e) {
+        console.error("[Scan Tests] Workspace Error:", e);
+      }
+    } else {
+      scanSingleFolder(folderPath, folderPath);
+    }
 
-    searchRecursively(folderPath);
     return testFiles;
   });
 
