@@ -2159,10 +2159,14 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.removeHandler('clipboard-read');
   ipcMain.handle('clipboard-read', () => {
     const { clipboard } = require('electron');
     return clipboard.readText();
+  });
+  ipcMain.handle('clipboard-write', (event, text) => {
+    const { clipboard } = require('electron');
+    clipboard.writeText(text);
+    return true;
   });
 
   ipcMain.handle('git-diff', async (event, workspacePath, filePath) => {

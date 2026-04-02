@@ -114,10 +114,33 @@ export const initTerminal = async () => {
         window.electronAPI.onTerminalData(id, (data) => term.write(data));
         term.onResize(size => window.electronAPI.terminalResize(id, size.cols, size.rows));
 
+        // Supporto Professionale per Copia/Incolla (Scorciatoie Tastiera)
+        term.attachCustomKeyEventHandler((e) => {
+            if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'V')) return false; // Lascia passare le varianti shift per usi xterm nativi
+            if (e.ctrlKey && e.key === 'c' && term.hasSelection()) {
+                window.electronAPI.clipboardWrite(term.getSelection());
+                return false;
+            }
+            if (e.ctrlKey && e.key === 'v') {
+                window.electronAPI.clipboardRead().then(text => {
+                    if (text) window.electronAPI.terminalWrite(id, text);
+                });
+                return false;
+            }
+            return true;
+        });
+
+        // Click Destro Intelligente: Copia se c'è selezione, Incolla altrimenti
         termContainer.addEventListener('contextmenu', async (e) => {
             e.preventDefault();
-            const text = await window.electronAPI.clipboardRead();
-            if (text) window.electronAPI.terminalWrite(id, text);
+            if (term.hasSelection()) {
+                const text = term.getSelection();
+                window.electronAPI.clipboardWrite(text);
+                // Feedback visivo (opzionale)
+            } else {
+                const text = await window.electronAPI.clipboardRead();
+                if (text) window.electronAPI.terminalWrite(id, text);
+            }
         });
 
         terminals[id] = { term, fitAddon, container: termContainer, label, shellType, colorClass };
