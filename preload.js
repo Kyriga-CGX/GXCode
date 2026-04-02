@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Phase 4: IDE Features
   searchFiles: (folderPath, query) => ipcRenderer.invoke('search-files', folderPath, query),
   scanTests: (folderPath) => ipcRenderer.invoke('scan-tests', folderPath),
+  checkPlaywright: (workspacePath) => ipcRenderer.invoke('check-playwright', workspacePath),
   runTest: (workspacePath, filePath, testName) => ipcRenderer.invoke('run-test', workspacePath, filePath, testName),
   debugTest: (workspacePath, filePath, testName) => ipcRenderer.invoke('debug-test', workspacePath, filePath, testName),
   runAllTests: (workspacePath) => ipcRenderer.invoke('run-all-tests', workspacePath),

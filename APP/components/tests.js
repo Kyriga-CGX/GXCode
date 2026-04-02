@@ -121,8 +121,12 @@ export const initTests = () => {
 
     const checkPlaywrightStatus = async () => {
         if (!state.workspaceData || !state.workspaceData.path) return;
-        const res = await window.electronAPI.invoke('check-playwright', state.workspaceData.path);
-        setState({ isPlaywrightInstalled: res.installed });
+        try {
+            const res = await window.electronAPI.checkPlaywright(state.workspaceData.path);
+            setState({ isPlaywrightInstalled: !!res?.installed });
+        } catch (e) {
+            console.error("Errore check playwright:", e);
+        }
     };
 
     const scanWorkspaceForTests = async () => {
@@ -157,8 +161,8 @@ export const initTests = () => {
         `;
 
         try {
-            // Utilizziamo execute-command in CWD del progetto
-            await window.electronAPI.invoke('execute-command', 'npm install -D @playwright/test && npx playwright install', state.workspaceData.path);
+            // Utilizziamo executeCommand (esposto in preload.js) in CWD del progetto
+            await window.electronAPI.executeCommand('npm install -D @playwright/test && npx playwright install', state.workspaceData.path);
             window.showToast(window.t('tests.installSuccess'), 'success');
             await checkPlaywrightStatus();
             if (state.isPlaywrightInstalled) scanWorkspaceForTests();
@@ -171,7 +175,8 @@ export const initTests = () => {
     };
 
     subscribe((newState, oldState) => {
-        // Se cambiamo tab Testing, scansioniamo se necessario
+        try {
+            // Se cambiamo tab Testing, scansioniamo se necessario
         if (newState.activeActivity === 'testing' && newState.testFilesCache.length === 0) {
             scanWorkspaceForTests();
         }
@@ -183,10 +188,13 @@ export const initTests = () => {
         }
 
         // Se cambia qualcosa che richiede re-render
-        if (newState.testFilesCache !== oldState?.testFilesCache || 
-            newState.isPlaywrightInstalled !== oldState?.isPlaywrightInstalled ||
-            newState.isTestingInProgress !== oldState?.isTestingInProgress) {
-            renderTestTree();
+            if (newState.testFilesCache !== oldState?.testFilesCache || 
+                newState.isPlaywrightInstalled !== oldState?.isPlaywrightInstalled ||
+                newState.isTestingInProgress !== oldState?.isTestingInProgress) {
+                renderTestTree();
+            }
+        } catch (e) {
+            console.error("[Tests] Error in subscribe listener:", e);
         }
     });
 
