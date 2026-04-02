@@ -1713,31 +1713,62 @@ app.whenReady().then(() => {
     return testFiles;
   });
 
+  // Helper per spawn sicuro (previene crash main process)
+  function safeSpawn(command, args, options) {
+    if (options.cwd && !fs.existsSync(options.cwd)) {
+      throw new Error(`Directory non esistente: ${options.cwd}`);
+    }
+    
+    const child = spawn(command, args, options);
+    
+    // Aggiungiamo un listener immediato per crash asincroni (es. ENOENT su Windows)
+    child.on('error', (err) => {
+      console.error(`[SAFE-SPAWN] Errore critico nel processo figlio (${command}):`, err);
+    });
+    
+    return child;
+  }
+
   // Handler per eseguire un test specifico usando Playwright (Headed per visibilità)
   ipcMain.handle('run-test', async (event, workspacePath, filePath, testName) => {
     return new Promise((resolve) => {
-      const escapedName = testName.replace(/"/g, '\\"');
-      console.log(`[IPC] Esecuzione test (Headed): ${testName} in ${filePath}`);
+      try {
+        const escapedName = testName.replace(/"/g, '\\"');
+        console.log(`[IPC] Esecuzione test (Headed): ${testName} in ${filePath}`);
 
-      // Usiamo spawn per streaming real-time
-      const child = spawn('npx', ['playwright', 'test', filePath, '-g', testName, '--headed'], {
-        cwd: workspacePath,
-        env: { ...process.env, FORCE_COLOR: '1' },
-        shell: true
-      });
+        if (!workspacePath || !fs.existsSync(workspacePath)) {
+            throw new Error(`Workspace non trovato: ${workspacePath}`);
+        }
 
-      child.stdout.on('data', (data) => {
-        event.sender.send('test-output', data.toString());
-      });
+        // Usiamo safeSpawn per streaming real-time
+        const child = safeSpawn('npx', ['playwright', 'test', filePath, '-g', testName, '--headed'], {
+          cwd: workspacePath,
+          env: { ...process.env, FORCE_COLOR: '1' },
+          shell: true
+        });
 
-      child.stderr.on('data', (data) => {
-        event.sender.send('test-output', data.toString());
-      });
+        child.stdout.on('data', (data) => {
+          event.sender.send('test-output', data.toString());
+        });
 
-      child.on('close', (code) => {
-        console.log(`[IPC] Test completato con codice: ${code}`);
-        resolve(code === 0);
-      });
+        child.stderr.on('data', (data) => {
+          event.sender.send('test-output', data.toString());
+        });
+
+        child.on('error', (err) => {
+          event.sender.send('test-output', `\r\n\x1b[31m[ERRORE] Impossibile avviare il processo: ${err.message}\x1b[0m\r\n`);
+          resolve(false);
+        });
+
+        child.on('close', (code) => {
+          console.log(`[IPC] Test completato con codice: ${code}`);
+          resolve(code === 0);
+        });
+      } catch (err) {
+        console.error("[IPC] Errore critico run-test:", err);
+        event.sender.send('test-output', `\r\n\x1b[31m[ERRORE CRITICO] ${err.message}\x1b[0m\r\n`);
+        resolve(false);
+      }
     });
   });
 
@@ -1769,26 +1800,41 @@ app.whenReady().then(() => {
   // Handler per il Debug di un test (lancia Playwright Inspector con streaming)
   ipcMain.handle('debug-test', async (event, workspacePath, filePath, testName) => {
     return new Promise((resolve) => {
-      const escapedName = testName.replace(/"/g, '\\"');
-      console.log(`[IPC] DEBUG MODE (Inspector): ${testName}`);
+      try {
+        const escapedName = testName.replace(/"/g, '\\"');
+        console.log(`[IPC] DEBUG MODE (Inspector): ${testName}`);
 
-      const child = spawn('npx', ['playwright', 'test', filePath, '-g', testName], {
-        cwd: workspacePath,
-        env: { ...process.env, PWDEBUG: '1', FORCE_COLOR: '1' },
-        shell: true
-      });
+        if (!workspacePath || !fs.existsSync(workspacePath)) {
+            throw new Error(`Workspace non trovato: ${workspacePath}`);
+        }
 
-      child.stdout.on('data', (data) => {
-        event.sender.send('test-output', data.toString());
-      });
+        const child = safeSpawn('npx', ['playwright', 'test', filePath, '-g', testName], {
+          cwd: workspacePath,
+          env: { ...process.env, PWDEBUG: '1', FORCE_COLOR: '1' },
+          shell: true
+        });
 
-      child.stderr.on('data', (data) => {
-        event.sender.send('test-output', data.toString());
-      });
+        child.stdout.on('data', (data) => {
+          event.sender.send('test-output', data.toString());
+        });
 
-      child.on('close', (code) => {
-        resolve(code === 0);
-      });
+        child.stderr.on('data', (data) => {
+          event.sender.send('test-output', data.toString());
+        });
+        
+        child.on('error', (err) => {
+            event.sender.send('test-output', `\r\n\x1b[31m[ERRORE DEBUG] Impossibile avviare il debugger: ${err.message}\x1b[0m\r\n`);
+            resolve(false);
+        });
+
+        child.on('close', (code) => {
+          resolve(code === 0);
+        });
+      } catch (err) {
+        console.error("[IPC] Errore critico debug-test:", err);
+        event.sender.send('test-output', `\r\n\x1b[31m[ERRORE CRITICO] ${err.message}\x1b[0m\r\n`);
+        resolve(false);
+      }
     });
   });
 
@@ -1813,6 +1859,24 @@ app.whenReady().then(() => {
           if (error) reject(new Error('Esecuzione fallita'));
           else resolve({ success: true });
         }
+      });
+    });
+  });
+
+  // Handler per verificare se Playwright è installato
+  ipcMain.handle('check-playwright', async (event, workspacePath) => {
+    if (!workspacePath || !fs.existsSync(workspacePath)) return { installed: false, error: 'Path non valido' };
+    
+    return new Promise((resolve) => {
+      // Verifichiamo se esiste il pacchetto in node_modules o se npx può trovarlo
+      const checkPath = path.join(workspacePath, 'node_modules', '@playwright', 'test');
+      if (fs.existsSync(checkPath)) {
+        return resolve({ installed: true });
+      }
+
+      // Prova a lanciare npx playwright --version per vedere se è disponibile globalmente/npx
+      exec('npx playwright --version', { cwd: workspacePath }, (err) => {
+        resolve({ installed: !err });
       });
     });
   });

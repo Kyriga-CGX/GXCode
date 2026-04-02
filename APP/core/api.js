@@ -79,16 +79,32 @@ export const api = {
           // Fallback logic: if manual config is missing, check MCP servers
           if (!url || !token || !enabled) {
               const ytMcp = state.mcpServers.find(s => 
-                  s.enabled && (s.name.toLowerCase().includes('youtrack') || s.url.toLowerCase().includes('youtrack'))
+                  s.enabled && (s.name.toLowerCase().includes('youtrack'))
               );
               
               if (ytMcp) {
-                  // Only use MCP URL as YouTrack URL if it's an absolute https/http link and not a local bridge port 
-                  // unless explicitly configured in settings.
-                  if (!url && ytMcp.url.startsWith('http')) {
-                    console.log(`[GX API] YouTrack MCP found: ${ytMcp.name}. Using its URL: ${ytMcp.url}`);
+                  // Caso 1: URL diretto nell'oggetto MCP
+                  if (!url && ytMcp.url?.startsWith('http')) {
                     url = ytMcp.url;
-                    enabled = true;
+                  } 
+                  // Caso 2: URL e Token negli ARGS (npx mcp-remote style)
+                  else if (!url && ytMcp.args && Array.isArray(ytMcp.args)) {
+                    const remoteUrl = ytMcp.args.find(arg => arg.startsWith('http') && arg.includes('youtrack'));
+                    if (remoteUrl) {
+                        url = remoteUrl;
+                        // Estraiamo il token se presente nel Bearer
+                        const bearerArg = ytMcp.args.find(arg => arg.includes('Bearer '));
+                        if (bearerArg && !token) {
+                            token = bearerArg.split('Bearer ')[1]?.trim().replace(/['"]/g, '');
+                        }
+                    }
+                  }
+
+                  // Pulizia URL: rimuoviamo /mcp se presente (l'API YouTrack è alla root)
+                  if (url) {
+                      url = url.replace(/\/mcp$/, '');
+                      console.log(`[GX API] Smart-detected YouTrack from MCP: ${url}`);
+                      enabled = true;
                   }
               }
           }

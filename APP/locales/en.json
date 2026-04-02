@@ -97,7 +97,18 @@
     "testing": {
         "title": "Test Explorer",
         "runAll": "Run All Playwright",
-        "scanHint": "Open workspace to scan for tests..."
+        "scanHint": "Open workspace to scan for tests...",
+        "openWorkspace": "Open a Workspace to see tests",
+        "noTests": "No Playwright tests found",
+        "scanning": "Scanning Tests...",
+        "runningAll": "Running tests...",
+        "debugTooltip": "Run in Debug Mode (Inspector)",
+        "error": "Test Error: {error}",
+        "missingPlaywright": "Playwright not found",
+        "installPlaywright": "Install Playwright",
+        "installingPlaywright": "Installing...",
+        "installSuccess": "Playwright installed successfully! 🎉",
+        "installDesc": "Playwright is not installed in this project. Install it now to run tests."
     },
     "terminal": {
         "tab": "Terminal",

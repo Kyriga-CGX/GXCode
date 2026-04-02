@@ -88,7 +88,12 @@ export const state = {
     _geminiAuthenticating: false,
     _geminiAuthError: null,
     _geminiNeedsKey: false,
-    appVersion: "..." 
+    appVersion: "...",
+    
+    // Testing & Playwright State
+    testFilesCache: [],
+    isPlaywrightInstalled: true,
+    isTestingInProgress: false
 };
 
 const listeners = new Set();

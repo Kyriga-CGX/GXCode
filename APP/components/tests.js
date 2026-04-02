@@ -13,16 +13,39 @@ export const initTests = () => {
         }
     });
 
-    let testFilesCache = [];
-
     // Aggiorniamo la UI dei Test in base allo stato
     const renderTestTree = () => {
-        if (!state.workspaceData || !state.workspaceData.path) {
+        const { workspaceData, testFilesCache, isPlaywrightInstalled, isTestingInProgress } = state;
+
+        if (!workspaceData || !workspaceData.path) {
             treeRoot.innerHTML = `<div class="opacity-30 text-[10px] uppercase text-gray-500 font-bold text-center mt-10" data-i18n="tests.openWorkspace">${window.t('tests.openWorkspace')}</div>`;
             if (btnRunAll) {
                 btnRunAll.classList.add('opacity-50', 'cursor-not-allowed');
                 btnRunAll.disabled = true;
             }
+            return;
+        }
+
+        // UI per Playwright mancante
+        if (!isPlaywrightInstalled) {
+            treeRoot.innerHTML = `
+                <div class="p-4 text-center space-y-4">
+                    <div class="flex justify-center">
+                        <div class="p-3 bg-yellow-500/10 rounded-full text-yellow-500">
+                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider">${window.t('tests.missingPlaywright')}</h3>
+                        <p class="text-[10px] text-gray-400">${window.t('tests.installDesc')}</p>
+                    </div>
+                    <button onclick="window.autoInstallPlaywright()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-lg transition uppercase flex items-center justify-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>${window.t('tests.installPlaywright')}</span>
+                    </button>
+                </div>
+            `;
+            if (btnRunAll) btnRunAll.disabled = true;
             return;
         }
 
@@ -37,7 +60,7 @@ export const initTests = () => {
 
         if (btnRunAll) {
             btnRunAll.classList.remove('opacity-50', 'cursor-not-allowed');
-            btnRunAll.disabled = false;
+            btnRunAll.disabled = isTestingInProgress;
         }
 
         treeRoot.innerHTML = testFilesCache.map(file => {
@@ -96,34 +119,83 @@ export const initTests = () => {
         }).join('');
     };
 
+    const checkPlaywrightStatus = async () => {
+        if (!state.workspaceData || !state.workspaceData.path) return;
+        const res = await window.electronAPI.invoke('check-playwright', state.workspaceData.path);
+        setState({ isPlaywrightInstalled: res.installed });
+    };
+
     const scanWorkspaceForTests = async () => {
         if (!state.workspaceData || !state.workspaceData.path) return;
         
+        await checkPlaywrightStatus();
+        if (!state.isPlaywrightInstalled) {
+            renderTestTree();
+            return;
+        }
+
         treeRoot.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-blue-400 font-bold text-center mt-10 animate-pulse" data-i18n="tests.scanning">${window.t('tests.scanning')}</div>`;
         try {
-            testFilesCache = await window.electronAPI.scanTests(state.workspaceData.path);
+            const results = await window.electronAPI.scanTests(state.workspaceData.path);
+            setState({ testFilesCache: results });
             renderTestTree();
         } catch(e) {
             treeRoot.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-red-500 font-bold text-center mt-10">${window.t('tests.error').replace('{error}', e.message)}</div>`;
         }
     };
 
+    // Auto-Installation Logic
+    window.autoInstallPlaywright = async () => {
+        if (!state.workspaceData || !state.workspaceData.path) return;
+        
+        setState({ isTestingInProgress: true });
+        treeRoot.innerHTML = `
+            <div class="p-10 text-center animate-pulse">
+                <div class="text-blue-400 font-bold uppercase text-[10px]">${window.t('tests.installingPlaywright')}</div>
+                <div class="text-[9px] text-gray-500 mt-2">Running: npm install -D @playwright/test</div>
+            </div>
+        `;
+
+        try {
+            // Utilizziamo execute-command in CWD del progetto
+            await window.electronAPI.invoke('execute-command', 'npm install -D @playwright/test && npx playwright install', state.workspaceData.path);
+            window.showToast(window.t('tests.installSuccess'), 'success');
+            await checkPlaywrightStatus();
+            if (state.isPlaywrightInstalled) scanWorkspaceForTests();
+        } catch(e) {
+            window.showToast("Installazione fallita: " + e.message, 'error');
+        } finally {
+            setState({ isTestingInProgress: false });
+            renderTestTree();
+        }
+    };
+
     subscribe((newState, oldState) => {
-        if (newState.activeActivity === 'testing' && testFilesCache.length === 0) {
+        // Se cambiamo tab Testing, scansioniamo se necessario
+        if (newState.activeActivity === 'testing' && newState.testFilesCache.length === 0) {
             scanWorkspaceForTests();
         }
         
+        // Se cambia il workspace, resettiamo tutto
         if (newState.workspaceData?.path && (!oldState?.workspaceData || newState.workspaceData.path !== oldState.workspaceData.path)) {
-            testFilesCache = [];
+            setState({ testFilesCache: [] });
             if (newState.activeActivity === 'testing') scanWorkspaceForTests();
+        }
+
+        // Se cambia qualcosa che richiede re-render
+        if (newState.testFilesCache !== oldState?.testFilesCache || 
+            newState.isPlaywrightInstalled !== oldState?.isPlaywrightInstalled ||
+            newState.isTestingInProgress !== oldState?.isTestingInProgress) {
+            renderTestTree();
         }
     });
 
     if (btnRunAll) {
         btnRunAll.onclick = async () => {
-            if (!state.workspaceData || !state.workspaceData.path) return;
+            if (!state.workspaceData || !state.workspaceData.path || state.isTestingInProgress) return;
             
             console.log("Run All Tests triggered");
+            setState({ isTestingInProgress: true });
             btnRunAll.classList.add('animate-pulse', 'text-yellow-400');
             btnRunAll.innerHTML = `<svg class="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> ${window.t('tests.runningAll')}`;
             
@@ -134,6 +206,7 @@ export const initTests = () => {
             } catch(e) {
                 console.error("Errore run all:", e);
             } finally {
+                setState({ isTestingInProgress: false });
                 btnRunAll.classList.remove('animate-pulse', 'text-yellow-400');
                 btnRunAll.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 3 14 9-14 9V3z"/></svg> <span data-i18n="tests.runAll">${window.t('tests.runAll')}</span>`;
             }
@@ -144,36 +217,33 @@ export const initTests = () => {
         const testName = decodeURIComponent(testNameEncoded);
         console.log(`[Tests] Debugging: ${testName}`);
         
-        testFilesCache.forEach(f => {
-            if (f.fullPath === absPath) {
-                f.testMatches.forEach(t => {
-                    if (t.name === testName) t.status = 'running';
-                });
-            }
+        setState({
+            testFilesCache: state.testFilesCache.map(f => {
+                if (f.fullPath === absPath) {
+                    return { ...f, testMatches: f.testMatches.map(t => t.name === testName ? { ...t, status: 'running' } : t) };
+                }
+                return f;
+            }),
+            activeBottomTab: 'terminal',
+            isTerminalMinimized: false
         });
-        renderTestTree();
 
         try {
-            // Focus Terminal Tab and switch bottom panel
-            setState({ activeBottomTab: 'terminal', isTerminalMinimized: false });
-            
             if (window.writeToTestTerminal) {
                 window.writeToTestTerminal(`\x1b[1;36m>>> [GX] STARTING DEBUG: ${testName}\x1b[0m\r\n`);
-                window.writeToTestTerminal(`\x1b[90mCommand: PWDEBUG=1 npx playwright test ...\x1b[0m\r\n\r\n`);
             }
-            
             await window.electronAPI.debugTest(state.workspaceData.path, absPath, testName);
         } catch(e) {
             console.error("Debug fallito:", e);
         } finally {
-            testFilesCache.forEach(f => {
-                if (f.fullPath === absPath) {
-                    f.testMatches.forEach(t => {
-                        if (t.name === testName) t.status = 'idle';
-                    });
-                }
+            setState({
+                testFilesCache: state.testFilesCache.map(f => {
+                    if (f.fullPath === absPath) {
+                        return { ...f, testMatches: f.testMatches.map(t => t.name === testName ? { ...t, status: 'idle' } : t) };
+                    }
+                    return f;
+                })
             });
-            renderTestTree();
         }
     };
 
@@ -182,78 +252,68 @@ export const initTests = () => {
         const testName = decodeURIComponent(encodedTestName);
         console.log("Run single test", testName, "in", filePath);
 
-        testFilesCache = testFilesCache.map(f => {
-            if (f.fullPath === filePath) {
-                f.testMatches = f.testMatches.map(t => t.name === testName ? { ...t, status: 'running' } : t);
-            }
-            return f;
+        setState({
+            testFilesCache: state.testFilesCache.map(f => {
+                if (f.fullPath === filePath) {
+                    return { ...f, testMatches: f.testMatches.map(t => t.name === testName ? { ...t, status: 'running' } : t) };
+                }
+                return f;
+            }),
+            activeBottomTab: 'terminal',
+            isTerminalMinimized: false
         });
-        renderTestTree();
 
         try {
-            // Focus Terminal Tab and switch bottom panel
-            setState({ activeBottomTab: 'terminal', isTerminalMinimized: false });
-
             if (window.writeToTestTerminal) {
                 window.writeToTestTerminal(`\x1b[1;32m>>> [GX] RUNNING TEST: ${testName}\x1b[0m\r\n`);
-                window.writeToTestTerminal(`\x1b[90mCommand: npx playwright test ... --headed\x1b[0m\r\n\r\n`);
             }
-
             const success = await window.electronAPI.runTest(state.workspaceData.path, filePath, testName);
             
-            if (window.writeToTestTerminal) {
-                window.writeToTestTerminal(`\r\n\x1b[1;${success ? '32' : '31'}m>>> [GX] TEST ${success ? 'PASSED' : 'FAILED'}: ${testName}\x1b[0m\r\n\r\n`);
-            }
-
-            if (!success) throw new Error("Test failed");
-            testFilesCache = testFilesCache.map(f => {
-                if (f.fullPath === filePath) {
-                    f.testMatches = f.testMatches.map(t => t.name === testName ? { ...t, status: 'passed' } : t);
-                }
-                return f;
+            setState({
+                testFilesCache: state.testFilesCache.map(f => {
+                    if (f.fullPath === filePath) {
+                        return { ...f, testMatches: f.testMatches.map(t => t.name === testName ? { ...t, status: success ? 'passed' : 'failed' } : t) };
+                    }
+                    return f;
+                })
             });
         } catch(e) {
-            testFilesCache = testFilesCache.map(f => {
-                if (f.fullPath === filePath) {
-                    f.testMatches = f.testMatches.map(t => t.name === testName ? { ...t, status: 'failed' } : t);
-                }
-                return f;
+             setState({
+                testFilesCache: state.testFilesCache.map(f => {
+                    if (f.fullPath === filePath) {
+                        return { ...f, testMatches: f.testMatches.map(t => t.name === testName ? { ...t, status: 'failed' } : t) };
+                    }
+                    return f;
+                })
             });
         }
-        renderTestTree();
     };
 
     window.runFileTests = async (encodedFilePath) => {
         const filePath = decodeURIComponent(encodedFilePath);
         console.log("[GX-TESTS] Running all tests in file:", filePath);
 
-        testFilesCache = testFilesCache.map(f => {
-            if (f.fullPath === filePath) {
-                f.testMatches = f.testMatches.map(t => ({ ...t, status: 'running' }));
-            }
-            return f;
+        setState({
+            testFilesCache: state.testFilesCache.map(f => {
+                if (f.fullPath === filePath) {
+                    return { ...f, testMatches: f.testMatches.map(t => ({ ...t, status: 'running' })) };
+                }
+                return f;
+            })
         });
-        renderTestTree();
 
         try {
             const report = await window.electronAPI.runFileTests(state.workspaceData.path, filePath);
-            testFilesCache = testFilesCache.map(f => {
-                if (f.fullPath === filePath) {
-                    f.testMatches = f.testMatches.map(t => {
-                        return { ...t, status: report.errors && report.errors.length > 0 ? 'failed' : 'passed' };
-                    });
-                }
-                return f;
+            setState({
+                testFilesCache: state.testFilesCache.map(f => {
+                    if (f.fullPath === filePath) {
+                        return { ...f, testMatches: f.testMatches.map(t => ({ ...t, status: report.errors && report.errors.length > 0 ? 'failed' : 'passed' })) };
+                    }
+                    return f;
+                })
             });
         } catch(e) {
             console.error("Errore run file:", e);
-            testFilesCache = testFilesCache.map(f => {
-                if (f.fullPath === filePath) {
-                    f.testMatches = f.testMatches.map(t => ({ ...t, status: 'failed' }));
-                }
-                return f;
-            });
         }
-        renderTestTree();
     };
 };

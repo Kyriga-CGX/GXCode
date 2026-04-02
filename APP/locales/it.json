@@ -97,7 +97,18 @@
     "testing": {
         "title": "Test Explorer",
         "runAll": "Esegui Tutti Playwright",
-        "scanHint": "Apri workspace per scansionare i tests..."
+        "scanHint": "Apri workspace per scansionare i tests...",
+        "openWorkspace": "Apri un Workspace per vedere i test",
+        "noTests": "Nessun test Playwright trovato",
+        "scanning": "Scansione Test...",
+        "runningAll": "Esecuzione in corso...",
+        "debugTooltip": "Esegui in Modalità Debug (Inspector)",
+        "error": "Errore Test: {error}",
+        "missingPlaywright": "Playwright non rilevato",
+        "installPlaywright": "Installa Playwright",
+        "installingPlaywright": "Installazione in corso...",
+        "installSuccess": "Playwright installato con successo! 🎉",
+        "installDesc": "Playwright non è installato nel progetto. Installalo ora per avviare i test."
     },
     "terminal": {
         "tab": "Terminale",
