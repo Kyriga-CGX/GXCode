@@ -145,6 +145,35 @@ const setupListeners = () => {
     };
 
     btn.onclick = handleSend;
+
+    // Supporto Copia/Incolla Pro (Richiesto dall'utente)
+    const messagesContainer = document.getElementById('gx-chat-messages');
+    if (messagesContainer) {
+        messagesContainer.oncontextmenu = async (e) => {
+            const selection = window.getSelection().toString();
+            if (selection) {
+                e.preventDefault();
+                window.electronAPI.clipboardWrite(selection);
+            }
+        };
+    }
+
+    input.oncontextmenu = async (e) => {
+        const selection = input.value.substring(input.selectionStart, input.selectionEnd);
+        if (selection) {
+            e.preventDefault();
+            window.electronAPI.clipboardWrite(selection);
+        } else {
+            e.preventDefault();
+            const text = await window.electronAPI.clipboardRead();
+            if (text) {
+                const start = input.selectionStart;
+                const end = input.selectionEnd;
+                input.value = input.value.substring(0, start) + text + input.value.substring(end);
+                input.dispatchEvent(new Event('input')); // Trigger auto-resize
+            }
+        }
+    };
 };
 
 const handleSend = async () => {
@@ -174,7 +203,6 @@ const handleSend = async () => {
                 role: "user",
                 parts: [{ text: `[GX-SYSTEM-PROMPT] ${personaPrompt}` }]
             });
-            // Aggiungiamo un acknowledgement della AI (opzionale o implicito, ma qui lo simuliamo per Gemini)
         }
     }
 

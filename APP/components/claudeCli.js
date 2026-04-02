@@ -35,16 +35,34 @@ export const initClaudeCli = async () => {
     window.electronAPI.onTerminalData('claude-cli', (data) => claudeTerm.write(data));
     claudeTerm.onResize(size => window.electronAPI.terminalResize('claude-cli', size.cols, size.rows));
 
-    // Funzionalità Pro: Incolla con Tasto Destro (Richiesto dall'utente)
-    container.addEventListener('contextmenu', async (e) => {
+    // Supporto Professionale per Copia/Incolla (Scorciatoie Tastiera)
+    claudeTerm.attachCustomKeyEventHandler((e) => {
+        if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'V')) return false;
+        if (e.ctrlKey && e.key === 'c' && claudeTerm.hasSelection()) {
+            window.electronAPI.clipboardWrite(claudeTerm.getSelection());
+            return false;
+        }
+        if (e.ctrlKey && e.key === 'v') {
+            window.electronAPI.clipboardRead().then(text => {
+                if (text) window.electronAPI.terminalWrite('claude-cli', text);
+            });
+            return false;
+        }
+        return true;
+    });
+
+    // Click Destro Intelligente: Copia se c'è selezione, Incolla altrimenti
+    claudeTerm.element.addEventListener('contextmenu', async (e) => {
         e.preventDefault();
         try {
-            const text = await window.electronAPI.clipboardRead();
-            if (text) {
-                window.electronAPI.terminalWrite('claude-cli', text);
+            if (claudeTerm.hasSelection()) {
+                window.electronAPI.clipboardWrite(claudeTerm.getSelection());
+            } else {
+                const text = await window.electronAPI.clipboardRead();
+                if (text) window.electronAPI.terminalWrite('claude-cli', text);
             }
         } catch (err) {
-            console.error("[CLAUDE-CLI] Errore incolla:", err);
+            console.error("[CLAUDE-CLI] Errore appunti:", err);
         }
     });
 
