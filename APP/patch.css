@@ -174,7 +174,7 @@ html[data-cgx-theme="apple"] .bg-black\/20, html[data-cgx-theme="light"] .bg-bla
     color: var(--text-main) !important;
 }
 
-/* Active states for Tabs & Tickets */
+/* Active states for Tabs & Issues */
 html[data-cgx-theme="apple"] .bg-\[\#161b22\].text-blue-400,
 html[data-cgx-theme="light"] .bg-\[\#161b22\].text-blue-400 {
     background-color: rgba(0, 113, 227, 0.08) !important;

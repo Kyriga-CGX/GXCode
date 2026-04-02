@@ -707,7 +707,7 @@ window.toggleYoutrack = () => {
     const youtrackConfig = { ...state.youtrackConfig, enabled: !state.youtrackConfig.enabled };
     setState({ youtrackConfig });
     // Se attivato, prova a caricare subito i ticket
-    if (youtrackConfig.enabled) api.loadTickets();
+    if (youtrackConfig.enabled) api.loadIssues();
 };
 
 window.saveYoutrackConfig = () => {
@@ -717,7 +717,7 @@ window.saveYoutrackConfig = () => {
     setState({ youtrackConfig });
     
     // Ricarica immediatamente i ticket per mostrare i cambiamenti
-    api.loadTickets();
+    api.loadIssues();
     
     window.gxToast(window.t('settings.youtrack.success'), 'info');
 };

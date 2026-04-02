@@ -46,7 +46,7 @@
         "editTooltip": "Modifica e Assegna Skill",
         "deleteTooltip": "Disinstalla fisicamente",
         "files": "📁 Files",
-        "tickets": "🎫 Tickets",
+        "issues": "🎫 Issue",
         "syncingCore": "Sincronizzazione Core..."
     },
     "issues": {
@@ -174,7 +174,7 @@
             "searchProject": "Cerca in tutto il progetto",
             "format": "Formattazione (Prettier)",
             "openMarketplace": "Apri Marketplace",
-            "switchExplorer": "Switch Explorer/Tickets"
+            "switchExplorer": "Toggle Explorer/Issues"
         },
         "appearance": {
             "title": "Seleziona Interfaccia",
@@ -276,7 +276,7 @@
         "devops": "DevOps"
     },
     "panels": {
-        "toggleLeft": "Toggle Explorer/Tickets (Sinistra)",
+        "toggleLeft": "Toggle Explorer/Issues (Sinistra)",
         "toggleTerminal": "Toggle Terminale (Basso)",
         "toggleRight": "Toggle Agents/Skills (Destra)"
     },

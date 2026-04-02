@@ -72,4 +72,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Gemini OAuth
   geminiLogin: () => ipcRenderer.invoke('gemini:login'),
   onGeminiAuthSuccess: (callback) => ipcRenderer.on('gemini:auth-success', (event, data) => callback(data)),
+  
+  // Test Runner Output
+  onTestOutput: (callback) => ipcRenderer.on('test-output', (event, data) => callback(data)),
 });

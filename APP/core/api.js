@@ -76,30 +76,34 @@ export const api = {
     loadIssues: async () => {
          let { url, token, enabled } = state.youtrackConfig;
          
-         // Fallback logic: if manual config is missing, check MCP servers
-         if (!url || !token || !enabled) {
-             const ytMcp = state.mcpServers.find(s => 
-                 s.enabled && (s.name.toLowerCase().includes('youtrack') || s.url.toLowerCase().includes('youtrack'))
-             );
-             
-             if (ytMcp) {
-                 console.log(`[GX API] YouTrack MCP found: ${ytMcp.name}. Using its URL.`);
-                 url = ytMcp.url;
-                 enabled = true; 
-             }
-         }
+          // Fallback logic: if manual config is missing, check MCP servers
+          if (!url || !token || !enabled) {
+              const ytMcp = state.mcpServers.find(s => 
+                  s.enabled && (s.name.toLowerCase().includes('youtrack') || s.url.toLowerCase().includes('youtrack'))
+              );
+              
+              if (ytMcp) {
+                  // Only use MCP URL as YouTrack URL if it's an absolute https/http link and not a local bridge port 
+                  // unless explicitly configured in settings.
+                  if (!url && ytMcp.url.startsWith('http')) {
+                    console.log(`[GX API] YouTrack MCP found: ${ytMcp.name}. Using its URL: ${ytMcp.url}`);
+                    url = ytMcp.url;
+                    enabled = true;
+                  }
+              }
+          }
 
-         if (!enabled || !url) {
-            setState({ issues: [] });
-            return;
-         }
+          if (!enabled || !url) {
+             setState({ issues: [] });
+             return;
+          }
 
-         // Ensure token exists (even if it's the one from manual config)
-         if (!token) {
-            console.warn("[GX API] YouTrack URL found but Token is missing.");
-            setState({ issues: [] });
-            return;
-         }
+          // Ensure token exists (even if it's the one from manual config)
+          if (!token) {
+             console.warn("[GX API] YouTrack URL found but Token is missing. Sync disabled.");
+             setState({ issues: [] });
+             return;
+          }
 
          const query = `?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}`;
          const issues = await fetchJson(`/issues${query}`);

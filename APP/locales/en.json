@@ -46,7 +46,7 @@
         "editTooltip": "Edit and Assign Skills",
         "deleteTooltip": "Uninstall permanently",
         "files": "📁 Files",
-        "tickets": "🎫 Tickets",
+        "issues": "🎫 Issues",
         "syncingCore": "Syncing Core..."
     },
     "issues": {
@@ -173,7 +173,7 @@
             "searchProject": "Search entire project",
             "format": "Format (Prettier)",
             "openMarketplace": "Open Marketplace",
-            "switchExplorer": "Switch Explorer/Tickets"
+            "switchExplorer": "Toggle Explorer/Issues"
         },
         "appearance": {
             "title": "Select Interface",
@@ -235,7 +235,7 @@
             "toastTemplate": "{name} template loaded. Complete the configuration! ✨"
         },
         "youtrack": {
-            "desc": "Configure specific integration for Youtrack tickets via MCP.",
+            "desc": "Configure specific integration for Youtrack issues via MCP.",
             "url": "Server URL",
             "token": "App Token",
             "sync": "Enable Ticket Sync",
@@ -275,7 +275,7 @@
         "devops": "DevOps"
     },
     "panels": {
-        "toggleLeft": "Toggle Explorer/Tickets (Left)",
+        "toggleLeft": "Toggle Explorer/Issues (Left)",
         "toggleTerminal": "Toggle Terminal (Bottom)",
         "toggleRight": "Toggle Agents/Skills (Right)"
     },

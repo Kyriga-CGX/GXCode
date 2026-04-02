@@ -143,6 +143,21 @@ export const initTerminal = async () => {
         }
     };
 
+    // --- TEST RUNNER TERMINAL HELPER ---
+    window.writeToTestTerminal = async (data) => {
+        const testId = 'test-runner';
+        if (!terminals[testId]) {
+            await createTerminal(testId, 'ps');
+            // Rinominiamo il label per chiarezza
+            terminals[testId].label = 'TEST RUNNER';
+            terminals[testId].colorClass = 'text-emerald-400';
+            renderTabs();
+        }
+        
+        switchTerminal(testId);
+        terminals[testId].term.write(data);
+    };
+
     if (btnAddPs) btnAddPs.onclick = () => createTerminal('t' + Date.now(), 'ps');
     if (btnAddCmd) btnAddCmd.onclick = () => createTerminal('t' + Date.now(), 'cmd');
     if (btnAddBash) btnAddBash.onclick = () => createTerminal('t' + Date.now(), 'bash');

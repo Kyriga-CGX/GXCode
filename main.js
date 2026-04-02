@@ -403,15 +403,23 @@ apiApp.get("/api/issues", async (req, res) => {
       }
     });
 
+    console.log(`[GX-ISSUES] Response status: ${response.status}`);
+
     if (!response.ok) {
       const errorData = await response.text();
-      console.error("[GX-ISSUES] API Error:", errorData);
-      throw new Error(`YouTrack Error: ${response.status}`);
+      console.error("[GX-ISSUES] API Error Body:", errorData);
+      throw new Error(`YouTrack Error: ${response.status} - ${errorData.substring(0, 50)}`);
     }
 
     const data = await response.json();
-    console.log(`[GX-ISSUES] Found ${data.length} issues.`);
+    console.log(`[GX-ISSUES] Found ${Array.isArray(data) ? data.length : 'NaN'} raw items.`);
     
+    // Se non è un array, logga l'oggetto per capire cosa sta succedendo
+    if (!Array.isArray(data)) {
+        console.warn("[GX-ISSUES] Data is not an array:", data);
+        return res.json([]);
+    }
+
     const formatted = data.map(issue => {
       // Estraiamo lo Sprint dai customFields se presente
       const sprintField = issue.customFields?.find(f => f.name.toLowerCase() === 'sprint');
@@ -1705,37 +1713,30 @@ app.whenReady().then(() => {
     return testFiles;
   });
 
-  // Handler per eseguire un test specifico usando Playwright
+  // Handler per eseguire un test specifico usando Playwright (Headed per visibilità)
   ipcMain.handle('run-test', async (event, workspacePath, filePath, testName) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const escapedName = testName.replace(/"/g, '\\"');
-      const cmd = `npx playwright test "${filePath}" -g "${escapedName}" --reporter=json`;
+      console.log(`[IPC] Esecuzione test (Headed): ${testName} in ${filePath}`);
 
-      console.log(`[IPC] Esecuzione test: ${cmd}`);
+      // Usiamo spawn per streaming real-time
+      const child = spawn('npx', ['playwright', 'test', filePath, '-g', testName, '--headed'], {
+        cwd: workspacePath,
+        env: { ...process.env, FORCE_COLOR: '1' },
+        shell: true
+      });
 
-      exec(cmd, { cwd: workspacePath, env: process.env }, (error, stdout, stderr) => {
-        try {
-          const jsonStart = stdout.indexOf('{');
-          const jsonEnd = stdout.lastIndexOf('}');
-          if (jsonStart !== -1 && jsonEnd !== -1) {
-            const jsonStr = stdout.substring(jsonStart, jsonEnd + 1);
-            const result = JSON.parse(jsonStr);
+      child.stdout.on('data', (data) => {
+        event.sender.send('test-output', data.toString());
+      });
 
-            // Simple Playwright JSON logic: if errors.length === 0, it passed
-            const pass = result.errors ? result.errors.length === 0 : true;
-            if (error && !pass) {
-              reject(new Error('Test fallito'));
-            } else {
-              resolve(true); // Test passed
-            }
-          } else {
-            if (error) reject(new Error(stderr || stdout || 'Errore Test'));
-            else resolve(true);
-          }
-        } catch (e) {
-          if (error) reject(new Error('Test fallito'));
-          else resolve(true);
-        }
+      child.stderr.on('data', (data) => {
+        event.sender.send('test-output', data.toString());
+      });
+
+      child.on('close', (code) => {
+        console.log(`[IPC] Test completato con codice: ${code}`);
+        resolve(code === 0);
       });
     });
   });
@@ -1765,24 +1766,28 @@ app.whenReady().then(() => {
     });
   });
 
-  // Handler per il Debug di un test (lancia Playwright Inspector)
+  // Handler per il Debug di un test (lancia Playwright Inspector con streaming)
   ipcMain.handle('debug-test', async (event, workspacePath, filePath, testName) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const escapedName = testName.replace(/"/g, '\\"');
-      const cmd = `npx playwright test "${filePath}" -g "${escapedName}" --headed`;
+      console.log(`[IPC] DEBUG MODE (Inspector): ${testName}`);
 
-      console.log(`[IPC] DEBUG TEST: ${cmd}`);
+      const child = spawn('npx', ['playwright', 'test', filePath, '-g', testName], {
+        cwd: workspacePath,
+        env: { ...process.env, PWDEBUG: '1', FORCE_COLOR: '1' },
+        shell: true
+      });
 
-      // Lanciamo con variabile d'ambiente PWDEBUG=1
-      const debugEnv = { ...process.env, PWDEBUG: '1' };
+      child.stdout.on('data', (data) => {
+        event.sender.send('test-output', data.toString());
+      });
 
-      exec(cmd, { cwd: workspacePath, env: debugEnv }, (error, stdout, stderr) => {
-        if (error) {
-          console.error("[IPC] Debug Error:", stderr);
-          resolve(false); // Il debug può essere chiuso dall'utente, non lo consideriamo errore fatale
-        } else {
-          resolve(true);
-        }
+      child.stderr.on('data', (data) => {
+        event.sender.send('test-output', data.toString());
+      });
+
+      child.on('close', (code) => {
+        resolve(code === 0);
       });
     });
   });

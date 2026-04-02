@@ -6,6 +6,13 @@ export const initTests = () => {
     
     if (!treeRoot) return;
 
+    // Listen for test output globally
+    window.electronAPI.onTestOutput((data) => {
+        if (window.writeToTestTerminal) {
+            window.writeToTestTerminal(data);
+        }
+    });
+
     let testFilesCache = [];
 
     // Aggiorniamo la UI dei Test in base allo stato
@@ -89,16 +96,11 @@ export const initTests = () => {
         }).join('');
     };
 
-    // Scansiona rapidamente i file .spec.js con una RegExp personalizzata via backend
-    // Usiamo il motore `search-files` che abbiamo già creato per cercare 'test(' e 'describe('?
-    // In realtà, per parsare i test serve logica specifica. 
-    // Manderemo un comando IPC 'scan-tests' che legge i nomi dei test usando AST o regex rapida.
     const scanWorkspaceForTests = async () => {
         if (!state.workspaceData || !state.workspaceData.path) return;
         
         treeRoot.innerHTML = `<div class="opacity-50 text-[10px] uppercase text-blue-400 font-bold text-center mt-10 animate-pulse" data-i18n="tests.scanning">${window.t('tests.scanning')}</div>`;
         try {
-            // Un nuovo handler IPC che chiameremo scan-tests e ci darà { fullPath, relativePath, testMatches: [{name, line, status}] }
             testFilesCache = await window.electronAPI.scanTests(state.workspaceData.path);
             renderTestTree();
         } catch(e) {
@@ -106,21 +108,17 @@ export const initTests = () => {
         }
     };
 
-    // Sottoscriviamo allo stato per scansionare i test solo quando il workspace viene caricato
     subscribe((newState, oldState) => {
-        // Se si passa all'attività testing e The workspaceData non è cambiato ma i test non sono cachati
         if (newState.activeActivity === 'testing' && testFilesCache.length === 0) {
             scanWorkspaceForTests();
         }
         
-        // Se il workspace cambia (o viene caricato la prima volta), invalidiamo la cache dei test e riscansiamo se la tab è aperta
         if (newState.workspaceData?.path && (!oldState?.workspaceData || newState.workspaceData.path !== oldState.workspaceData.path)) {
             testFilesCache = [];
             if (newState.activeActivity === 'testing') scanWorkspaceForTests();
         }
     });
 
-    // Binding Globali Runtime
     if (btnRunAll) {
         btnRunAll.onclick = async () => {
             if (!state.workspaceData || !state.workspaceData.path) return;
@@ -130,10 +128,8 @@ export const initTests = () => {
             btnRunAll.innerHTML = `<svg class="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> ${window.t('tests.runningAll')}`;
             
             try {
-                // Eseguiamo i test e aspettiamo il report JSON
                 const report = await window.electronAPI.runAllTests(state.workspaceData.path);
                 console.log("Test Report:", report);
-                // Aggiorniamo la UI (idealmente dovremmo mappare il report sulla cache)
                 await scanWorkspaceForTests(); 
             } catch(e) {
                 console.error("Errore run all:", e);
@@ -148,7 +144,6 @@ export const initTests = () => {
         const testName = decodeURIComponent(testNameEncoded);
         console.log(`[Tests] Debugging: ${testName}`);
         
-        // Update local status for visual feedback
         testFilesCache.forEach(f => {
             if (f.fullPath === absPath) {
                 f.testMatches.forEach(t => {
@@ -159,11 +154,18 @@ export const initTests = () => {
         renderTestTree();
 
         try {
+            // Focus Terminal Tab and switch bottom panel
+            setState({ activeBottomTab: 'terminal', isTerminalMinimized: false });
+            
+            if (window.writeToTestTerminal) {
+                window.writeToTestTerminal(`\x1b[1;36m>>> [GX] STARTING DEBUG: ${testName}\x1b[0m\r\n`);
+                window.writeToTestTerminal(`\x1b[90mCommand: PWDEBUG=1 npx playwright test ...\x1b[0m\r\n\r\n`);
+            }
+            
             await window.electronAPI.debugTest(state.workspaceData.path, absPath, testName);
         } catch(e) {
             console.error("Debug fallito:", e);
         } finally {
-            // Re-render status (idle again as debug ended)
             testFilesCache.forEach(f => {
                 if (f.fullPath === absPath) {
                     f.testMatches.forEach(t => {
@@ -180,7 +182,6 @@ export const initTests = () => {
         const testName = decodeURIComponent(encodedTestName);
         console.log("Run single test", testName, "in", filePath);
 
-        // UI state optimistic: running
         testFilesCache = testFilesCache.map(f => {
             if (f.fullPath === filePath) {
                 f.testMatches = f.testMatches.map(t => t.name === testName ? { ...t, status: 'running' } : t);
@@ -190,8 +191,21 @@ export const initTests = () => {
         renderTestTree();
 
         try {
-            await window.electronAPI.runTest(filePath, testName);
-            // On success
+            // Focus Terminal Tab and switch bottom panel
+            setState({ activeBottomTab: 'terminal', isTerminalMinimized: false });
+
+            if (window.writeToTestTerminal) {
+                window.writeToTestTerminal(`\x1b[1;32m>>> [GX] RUNNING TEST: ${testName}\x1b[0m\r\n`);
+                window.writeToTestTerminal(`\x1b[90mCommand: npx playwright test ... --headed\x1b[0m\r\n\r\n`);
+            }
+
+            const success = await window.electronAPI.runTest(state.workspaceData.path, filePath, testName);
+            
+            if (window.writeToTestTerminal) {
+                window.writeToTestTerminal(`\r\n\x1b[1;${success ? '32' : '31'}m>>> [GX] TEST ${success ? 'PASSED' : 'FAILED'}: ${testName}\x1b[0m\r\n\r\n`);
+            }
+
+            if (!success) throw new Error("Test failed");
             testFilesCache = testFilesCache.map(f => {
                 if (f.fullPath === filePath) {
                     f.testMatches = f.testMatches.map(t => t.name === testName ? { ...t, status: 'passed' } : t);
@@ -213,7 +227,6 @@ export const initTests = () => {
         const filePath = decodeURIComponent(encodedFilePath);
         console.log("[GX-TESTS] Running all tests in file:", filePath);
 
-        // UI Feedback: mark all tests in this file as running
         testFilesCache = testFilesCache.map(f => {
             if (f.fullPath === filePath) {
                 f.testMatches = f.testMatches.map(t => ({ ...t, status: 'running' }));
@@ -224,15 +237,9 @@ export const initTests = () => {
 
         try {
             const report = await window.electronAPI.runFileTests(state.workspaceData.path, filePath);
-            console.log("[GX-TESTS] File report:", report);
-            
-            // Map report results back to cache
             testFilesCache = testFilesCache.map(f => {
                 if (f.fullPath === filePath) {
                     f.testMatches = f.testMatches.map(t => {
-                        // Playwright usually reports tests with titles
-                        // Here we simulate simple pass/fail based on error count for the file for now
-                        // or better, if report is detailed, map by title
                         return { ...t, status: report.errors && report.errors.length > 0 ? 'failed' : 'passed' };
                     });
                 }
