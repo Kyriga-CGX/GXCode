@@ -96,6 +96,22 @@ window.closeAllFiles = () => {
     }
 };
 
+const refreshWorkspace = async () => {
+    const currentPath = state.workspaceData?.path;
+    if (currentPath && window.electronAPI?.openSpecificFolder) {
+        console.log(`[GX-WORKSPACE] Refreshing workspace: ${currentPath}`);
+        const data = await window.electronAPI.openSpecificFolder(currentPath);
+        if (data && !data.error) {
+            if (data.isWorkspace) {
+                setState({ workspaceData: data, files: data.folders || [] });
+            } else {
+                setState({ workspaceData: data, files: data.files || [] });
+            }
+        }
+    }
+    if (window.renderWorkspace) window.renderWorkspace();
+};
+
 window.createNewFile = () => {
     if (window.gxPrompt) {
         window.gxPrompt(
@@ -104,19 +120,17 @@ window.createNewFile = () => {
             "nuovo_file.js",
             async (fileName) => {
                 try {
-                    let fullPath = fileName;
-                    // Se c'è un workspace aperto, creiamo il file lì dentro
-                    if (state.workspaceData && state.workspaceData.path) {
-                        const pathDelimiter = state.workspaceData.path.includes('\\') ? '\\' : '/';
-                        fullPath = state.workspaceData.path + pathDelimiter + fileName;
-                    }
+                    const parentDir = state.workspaceData?.path?.replace(/\\/g, '/');
+                    if (!parentDir) throw new Error("Nessuna cartella aperta");
                     
-                    await window.electronAPI.fsWriteFile(fullPath, "");
+                    const res = await window.electronAPI.fsCreateFile(parentDir, fileName);
+                    if (res && res.error) throw new Error(res.error);
+
+                    const pathDelimiter = parentDir.includes('/') ? '/' : '\\';
+                    const fullPath = parentDir + pathDelimiter + fileName;
+                    
                     window.openFileInIDE(fullPath, fileName);
-                    
-                    // Forza il refresh del file tree se possibile
-                    if (window.renderWorkspace) window.renderWorkspace();
-                    
+                    await refreshWorkspace();
                     if (window.gxToast) window.gxToast(`File ${fileName} creato`, "success");
                 } catch (err) {
                     if (window.gxToast) window.gxToast("Errore creazione file: " + err.message, "error");
@@ -125,6 +139,32 @@ window.createNewFile = () => {
         );
     }
 };
+
+window.createNewFolder = () => {
+    if (window.gxPrompt) {
+        window.gxPrompt(
+            "NUOVA CARTELLA",
+            "Inserisci il nome della cartella",
+            "nuova_cartella",
+            async (folderName) => {
+                try {
+                    const parentDir = state.workspaceData?.path?.replace(/\\/g, '/');
+                    if (!parentDir) throw new Error("Nessuna cartella aperta");
+
+                    const res = await window.electronAPI.fsCreateFolder(parentDir, folderName);
+                    if (res && res.error) throw new Error(res.error);
+
+                    await refreshWorkspace();
+                    if (window.gxToast) window.gxToast(`Cartella ${folderName} creata`, "success");
+                } catch (err) {
+                    if (window.gxToast) window.gxToast("Errore creazione cartella: " + err.message, "error");
+                }
+            }
+        );
+    }
+};
+
+window.refreshWorkspace = refreshWorkspace;
 
 window.showFileDiff = () => {
     if (window.gxToast) window.gxToast("Funzionalità Diff in arrivo...", "info");
@@ -230,7 +270,8 @@ window.openFolder = async () => {
         if (result && result.path) {
             setState({ 
                 workspaceData: { path: result.path, name: result.name },
-                files: result.files || [] 
+                files: result.files || [],
+                activeTerminalFolder: result.path // Sincronizziamo il terminale
             });
             if (window.api) await window.api.loadAll();
             if (window.gxToast) window.gxToast(`Cartella aperta: ${result.name}`, "success");
@@ -246,7 +287,8 @@ window.openWorkspaceNative = async () => {
         if (result && result.path) {
             setState({ 
                 workspaceData: { path: result.path, isWorkspace: true, name: result.name },
-                files: result.folders || [] 
+                files: result.folders || [],
+                activeTerminalFolder: result.path // Sincronizziamo il terminale
             });
             if (window.api) await window.api.loadAll();
             if (window.gxToast) window.gxToast(`Workspace aperto: ${result.name}`, "success");
@@ -367,11 +409,16 @@ window.openFileInIDE = async (filePath, name) => {
 
 // --- GESTIONE DROP-DOWN EXPLORER ---
 export const initExplorerToolbar = () => {
+    const btnNewFile = document.getElementById('explorer-new-file');
+    const btnNewFolder = document.getElementById('explorer-new-folder');
     const btnDropdown = document.getElementById('btn-open-dropdown');
     const menuDropdown = document.getElementById('open-dropdown-menu');
     const optOpenFolder = document.getElementById('opt-open-folder');
     const optOpenFile = document.getElementById('opt-open-file');
     const optOpenWorkspace = document.getElementById('opt-open-workspace');
+
+    if (btnNewFile) btnNewFile.onclick = () => window.createNewFile();
+    if (btnNewFolder) btnNewFolder.onclick = () => window.createNewFolder();
 
     if (btnDropdown && menuDropdown) {
         btnDropdown.onclick = (e) => {
@@ -394,6 +441,12 @@ export const fetchFolderContents = async (targetPath) => {
     try {
         const result = await window.electronAPI.openSpecificFolder(targetPath);
         if (!result || !result.files) return;
+
+        // Se stiamo aprendo una cartella specifica come root (es: al caricamento sessione) 
+        // e lo stato non ha un workspaceData pronto, sincronizziamo il terminale.
+        if (targetPath === state.workspaceData?.path) {
+            setState({ activeTerminalFolder: targetPath });
+        }
 
         const mergeChildren = (files, path, newChildren) => {
             return files.map(f => {

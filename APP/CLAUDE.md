@@ -11,12 +11,13 @@ This project is being managed by **GXCode IDE**.
 - **Skills Location**: `~/.GXCODE/skills`
 
 ## CURRENT WORKSPACE CONTEXT
-- **Root Path**: C:\Users\Kyrig\OneDrive\Desktop\GXCODE\APP
 - **Open Editor Tabs**:
-  - `C:/Users/Kyrig/OneDrive/Desktop/GXCODE/tests/example.spec.js` 
-  - `C:/Users/Kyrig/OneDrive/Desktop/GXCODE/.gitignore` 
-  - `C:/Users/Kyrig/OneDrive/Desktop/GXCODE/lines.txt` 
-  - `C:/Users/Kyrig/OneDrive/Desktop/GXCODE/main.js` **[ACTIVE]**
+  - `C:/Users/Kyrig/OneDrive/Desktop/GXCODE/regex2.json` 
+  - `C:/Users/Kyrig/OneDrive/Desktop/GXCODE/regex.json` 
+  - `C:/Users/Kyrig/OneDrive/Desktop/prova/CLAUDE.md` 
+  - `C:/Users/Kyrig/OneDrive/Desktop/prova/nuovo_file.js` 
+  - `C:/Users/Kyrig/OneDrive/Desktop/prova/nuodfgvo_file.js` 
+  - `C:/Users/Kyrig/OneDrive/Desktop/prova/nuova_cartella/CLAUDE.md` **[ACTIVE]**
 
 
 ## INSTRUCTIONS

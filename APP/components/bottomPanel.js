@@ -3,6 +3,7 @@ import { initCustomAi } from './customAi.js';
 import { initGemini } from './gemini.js';
 import { initPorts } from './ports.js';
 import { initGxAgent, renderGxAgentChat } from './gxAgent.js';
+import { initOllama } from './ollama.js';
 import { initClaudeCli, startClaudeCli, focusClaudeCli } from './claudeCli.js';
 
 export const initBottomPanel = () => {
@@ -18,6 +19,7 @@ export const initBottomPanel = () => {
         output: document.getElementById('pane-output'),
         'debug-console': document.getElementById('pane-debug-console'),
         ports: document.getElementById('pane-ports'),
+        'ai-ollama': document.getElementById('pane-ollama'),
         'ai-gemini': document.getElementById('pane-agent'), // Reindirizzato all'Agente
         'ai-claude': document.getElementById('pane-ai-claude'),
         'ai-custom': document.getElementById('pane-ai-custom')
@@ -29,6 +31,7 @@ export const initBottomPanel = () => {
         output: document.getElementById('tab-output-btn'),
         'debug-console': document.getElementById('tab-debug-console-btn'),
         ports: document.getElementById('tab-ports-btn'),
+        'ai-ollama': document.getElementById('tab-ollama-btn'),
         'ai-gemini': document.getElementById('tab-gemini-btn'),
         'ai-claude': document.getElementById('tab-claude-btn'),
         'ai-custom': document.getElementById('tab-custom-ai-btn')
@@ -48,10 +51,15 @@ export const initBottomPanel = () => {
 
             Object.entries(buttons).forEach(([id, btn]) => {
                 if (btn) {
-                    if (id === tabId) {
-                        btn.className = "h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-[var(--accent)] text-gray-200 hover:text-white bg-[var(--bg-side-alt)]";
+                    const isActive = id === tabId;
+                    btn.classList.toggle('evolution-tab-btn--active', isActive);
+                    // Rimuoviamo classi di utilità che potrebbero entrare in conflitto con lo stato attivo
+                    if (isActive) {
+                        btn.style.borderBottomColor = 'var(--accent)';
+                        btn.style.opacity = '1';
                     } else {
-                        btn.className = "h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-transparent text-gray-500 hover:text-gray-300";
+                        btn.style.borderBottomColor = 'transparent';
+                        btn.style.opacity = '0.5';
                     }
                 }
             });
@@ -64,6 +72,8 @@ export const initBottomPanel = () => {
                     startClaudeCli();
                     focusClaudeCli();
                 }
+            } else if (tabId === 'ai-ollama') {
+                if (window.scrollOllamaToBottom) window.scrollOllamaToBottom();
             }
 
             // Auto-espansione: se il pannello è troppo basso, lo alziamo al 70% dell'altezza disponibile
@@ -133,6 +143,7 @@ export const initBottomPanel = () => {
 
     // Inizializza logic Custom AI, Gemini e Ports
     initCustomAi();
+    initOllama();
     initGemini();
     initPorts();
     // Claude CLI viene inizializzato qui ma startato al click

@@ -79,6 +79,21 @@ export const state = {
         return { ...defaults, ...saved };
     })(),
 
+    ollamaConfig: (() => {
+        const defaults = {
+            endpoint: "http://localhost:11434",
+            activeModel: "",
+            models: [],
+            messages: [],
+            sessions: [], // Array of {id, name, messages, timestamp}
+            activeSessionId: null,
+            apiKey: "",
+            isSetup: false
+        };
+        const saved = JSON.parse(localStorage.getItem('gx-ollama-config') || '{}');
+        return { ...defaults, ...saved };
+    })(),
+
     claudeCliConfig: (() => {
         const defaults = {
             command: "npx @anthropic-ai/claude-code",
@@ -90,6 +105,8 @@ export const state = {
     })(),
 
     _geminiLoading: false,
+    _ollamaLoading: false,
+    _ollamaStreaming: false,
     _geminiAuthenticating: false,
     _geminiAuthError: null,
     _geminiNeedsKey: false,
@@ -152,6 +169,7 @@ export const setState = (newState) => {
     if (newState.hasOwnProperty('anthropicApiKey')) localStorage.setItem('gx-anthropic-api-key', state.anthropicApiKey);
     if (newState.hasOwnProperty('customAiConfig')) localStorage.setItem('gx-custom-ai-config', JSON.stringify(state.customAiConfig));
     if (newState.hasOwnProperty('geminiConfig')) localStorage.setItem('gx-gemini-config', JSON.stringify(state.geminiConfig));
+    if (newState.hasOwnProperty('ollamaConfig')) localStorage.setItem('gx-ollama-config', JSON.stringify(state.ollamaConfig));
     if (newState.hasOwnProperty('claudeCliConfig')) localStorage.setItem('gx-claude-cli-config', JSON.stringify(state.claudeCliConfig));
     if (newState.hasOwnProperty('mcpServers')) localStorage.setItem('gx-mcp-servers', JSON.stringify(state.mcpServers));
     if (newState.hasOwnProperty('youtrackConfig')) localStorage.setItem('gx-youtrack-config', JSON.stringify(state.youtrackConfig));

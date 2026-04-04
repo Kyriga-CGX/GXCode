@@ -65,6 +65,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // File System / Shell (Context Menu)
   shellOpenPath: (targetPath) => ipcRenderer.invoke('shell-open-path', targetPath),
+  shellOpenExternal: (url) => ipcRenderer.invoke('shell-open-external', url),
   openGxCodeFolder: () => ipcRenderer.invoke('open-gxcode-folder'),
   clipboardRead: () => ipcRenderer.invoke('clipboard-read'),
   clipboardWrite: (text) => ipcRenderer.invoke('clipboard-write', text),
@@ -72,6 +73,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fsCreateFolder: (dirPath, name) => ipcRenderer.invoke('fs-create-folder-v2', dirPath, name),
   fsWriteFile: (filePath, content) => ipcRenderer.invoke('fs-write-file', filePath, content),
   fsDelete: (targetPath) => ipcRenderer.invoke('fs-delete', targetPath),
+  fsRename: (oldPath, newPath) => ipcRenderer.invoke('fs-rename', oldPath, newPath),
   getAiPaths: () => ipcRenderer.invoke('get-ai-paths'),
   getGitRemote: (workspacePath) => ipcRenderer.invoke('git-remote-url', workspacePath),
 

@@ -1591,6 +1591,11 @@ app.whenReady().then(() => {
     await shell.openPath(targetPath);
     return true;
   });
+  
+  ipcMain.handle('shell-open-external', async (event, url) => {
+    await shell.openExternal(url);
+    return true;
+  });
 
   ipcMain.handle('open-gxcode-folder', async () => {
     const p = path.join(os.homedir(), currentAiContext);
@@ -1649,6 +1654,8 @@ app.whenReady().then(() => {
   ipcMain.handle('fs-create-file', async (event, dirPath, name) => {
     try {
       const filePath = path.join(dirPath, name);
+      const parentDir = path.dirname(filePath);
+      if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true });
       if (fs.existsSync(filePath)) return { error: 'File già esistente.' };
       fs.writeFileSync(filePath, '', 'utf-8');
       return { success: true, path: filePath };
@@ -1677,6 +1684,18 @@ app.whenReady().then(() => {
       } else {
         fs.unlinkSync(targetPath);
       }
+      return { success: true };
+    } catch (e) {
+      return { error: e.message };
+    }
+  });
+
+  ipcMain.handle('fs-rename', async (event, oldPath, newPath) => {
+    try {
+      if (!fs.existsSync(oldPath)) return { error: 'File o cartella sorgente non trovata.' };
+      if (fs.existsSync(newPath)) return { error: 'Un file o cartella con questo nome esiste già.' };
+      
+      fs.renameSync(oldPath, newPath);
       return { success: true };
     } catch (e) {
       return { error: e.message };
@@ -2425,6 +2444,7 @@ app.whenReady().then(() => {
     
     // Validazione CWD (Previene Error 267 su Windows se il path non è una directory)
     let safeCwd = workspacePath;
+    
     try {
       if (safeCwd && fs.existsSync(safeCwd)) {
         const stats = fs.statSync(safeCwd);
@@ -2438,23 +2458,28 @@ app.whenReady().then(() => {
               if (!path.isAbsolute(f)) f = path.resolve(path.dirname(safeCwd), f);
               safeCwd = f;
             } else {
-              safeCwd = os.homedir();
+              safeCwd = process.cwd();
             }
           } else {
             safeCwd = path.dirname(safeCwd);
           }
         }
       } else {
-        safeCwd = os.homedir();
+        // Fallback: se nessun workspace è fornito o il path non esiste, usiamo la cartella dove è avviato l'IDE (Project Root)
+        safeCwd = process.cwd();
+        console.log(`[TERMINAL] No valid path provided, using process.cwd(): ${safeCwd}`);
       }
     } catch (e) {
-      safeCwd = os.homedir();
+      console.error(`[TERMINAL] Error resolving path: ${e.message}`);
+      safeCwd = process.cwd();
     }
 
     if (!fs.existsSync(safeCwd)) {
        console.warn(`[TERMINAL] Final path "${safeCwd}" non esistente. Fallback su Home.`);
        safeCwd = os.homedir(); 
     }
+    
+    console.log(`[TERMINAL] Spawning PTY process with CWD: ${safeCwd}`);
 
     let shell = process.platform === 'win32' ? 'powershell.exe' : 'bash';
     let args = [];

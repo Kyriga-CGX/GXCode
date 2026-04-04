@@ -3,6 +3,8 @@ import { state, subscribe } from '../core/state.js';
 let terminals = {}; // terminalId -> { term, fitAddon, container, shellType, ... }
 let activeTerminalId = null;
 let isInitialized = false;
+let lastOpenedUrls = new Map(); // url -> timestamp
+const AUTO_OPEN_COOLDOWN = 10000; // 10 secondi
 
 export async function initTerminal() {
     const targetContainer = document.getElementById('pane-terminal');
@@ -25,11 +27,45 @@ export async function initTerminal() {
         }
     });
 
-    if (Object.keys(terminals).length === 0) {
-        await createTerminal('t1', 'ps');
-    } else if (activeTerminalId) {
+    if (activeTerminalId) {
         switchTerminal(activeTerminalId);
     }
+
+    // --- REATTIVITÀ AL BOOT: Creazione primo terminale ---
+    // Se non ci sono terminali, aspettiamo che il workspace venga caricato
+    let bootTerminalCreated = false;
+    const bootCheck = () => {
+        if (bootTerminalCreated || Object.keys(terminals).length > 0) return;
+        
+        const path = state.workspaceData?.path;
+        if (path) {
+            console.log(`[TERMINAL] Workspace rilevato al boot: ${path}. Creo terminale principale.`);
+            bootTerminalCreated = true;
+            // Forziamo il percorso del workspace per il primo terminale al boot
+            createTerminal('t1', 'ps', path);
+        }
+    };
+
+    // Sottoscriviamo per reagire al caricamento del workspace
+    subscribe(() => bootCheck());
+    
+    // Eseguiamo un controllo immediato: se il workspace è già caricato da localStorage
+    // lo inizializziamo subito senza attendere subscribe o timeout.
+    bootCheck();
+    
+    // Safety Fallback: se dopo 4 secondi (tempo caricamento app/monaco) non c'è ancora un terminale
+    setTimeout(() => {
+        if (!bootTerminalCreated && Object.keys(terminals).length === 0) {
+            console.log("[TERMINAL] Nessun workspace rilevato dopo timeout. Provo a caricare sessione...");
+            
+            // Proviamo a ri-prendere il path dal workspaceData se si è popolato nel frattempo (es. caricamento lento api)
+            const path = state.workspaceData?.path;
+            const fallbackPath = path || state.activeTerminalFolder || '';
+            
+            bootTerminalCreated = true;
+            createTerminal('t1', 'ps', fallbackPath);
+        }
+    }, 4500);
 
     const resizeObserver = new ResizeObserver(() => {
         Object.values(terminals).forEach(t => t.fitAddon.fit());
@@ -194,7 +230,25 @@ export async function createTerminal(id, shellType = 'ps', forcedPath = null) {
     const stackContainer = document.getElementById('terminals-stack');
     if (!stackContainer) return;
 
-    const currentFolderPath = forcedPath || state.activeTerminalFolder || state.workspaceData?.path || '';
+    const workspaceRoot = state.workspaceData?.path || '';
+    
+    // LOGICA DI PRIORITÀ:
+    // 1. forcedPath (es. da bootCheck o comando esplicito)
+    // 2. workspaceRoot (se activeTerminalFolder non è parte del workspace corrente)
+    // 3. activeTerminalFolder (se appartiene al workspace corrente)
+    let finalCwd = forcedPath || '';
+    
+    if (!finalCwd) {
+        if (state.activeTerminalFolder && workspaceRoot && state.activeTerminalFolder.startsWith(workspaceRoot)) {
+            finalCwd = state.activeTerminalFolder;
+        } else {
+            finalCwd = workspaceRoot || '';
+        }
+    }
+
+    const currentFolderPath = finalCwd;
+    
+    console.log(`[TERMINAL] Creazione terminale in: ${currentFolderPath || 'default/home'} (Workspace Root: ${workspaceRoot})`);
     const allFolders = getWorkspaceFolders();
     const folderName = allFolders.find(f => f.path === currentFolderPath)?.name || 'root';
     
@@ -225,7 +279,52 @@ export async function createTerminal(id, shellType = 'ps', forcedPath = null) {
     await window.electronAPI.terminalCreate(id, shellType, currentFolderPath);
     
     term.onData(data => window.electronAPI.terminalWrite(id, data));
-    window.electronAPI.onTerminalData(id, (data) => term.write(data));
+    
+    // --- SMART URL DETECTION & INTERACTION ---
+    window.electronAPI.onTerminalData(id, (data) => {
+        term.write(data);
+        
+        // Auto-open localhost links (npm start, etc.)
+        const urlRegex = /(https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0):[0-9]{3,5})/g;
+        let match;
+        while ((match = urlRegex.exec(data)) !== null) {
+            const url = match[1].replace('0.0.0.0', 'localhost');
+            const now = Date.now();
+            if (!lastOpenedUrls.has(url) || (now - lastOpenedUrls.get(url)) > AUTO_OPEN_COOLDOWN) {
+                console.log(`[TERMINAL] Auto-launching server: ${url}`);
+                lastOpenedUrls.set(url, now);
+                window.electronAPI.shellOpenExternal(url);
+            }
+        }
+    });
+
+    // Native Link Provider for CTRL + Click
+    term.registerLinkProvider({
+        provideLinks(bufferLineNumber, callback) {
+            const line = term.buffer.active.getLine(bufferLineNumber - 1).translateToString();
+            const urlRegex = /(https?:\/\/[^\s^"^'^<]+)/g;
+            let match;
+            const links = [];
+            while ((match = urlRegex.exec(line)) !== null) {
+                const url = match[1];
+                const startIndex = match.index;
+                links.push({
+                    range: { start: { x: startIndex + 1, y: bufferLineNumber }, end: { x: startIndex + url.length, y: bufferLineNumber } },
+                    text: url,
+                    activate: (event, text) => {
+                        if (event.ctrlKey) {
+                            window.electronAPI.shellOpenExternal(text);
+                        } else {
+                            // Feedback per l'utente: "Usa CTRL + Click per aprire"
+                            if (window.gxToast) window.gxToast("Usa CTRL + CLICK per aprire il link", "info");
+                        }
+                    }
+                });
+            }
+            callback(links);
+        }
+    });
+
     term.onResize(size => window.electronAPI.terminalResize(id, size.cols, size.rows));
 
     term.attachCustomKeyEventHandler((e) => {

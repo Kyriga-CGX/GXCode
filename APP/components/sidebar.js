@@ -289,7 +289,7 @@ export const renderSidebar = () => {
             const key = agent.slug || agent.id;
             const initial = (agent.name || 'A').charAt(0).toUpperCase();
             return `
-                <div class="sidebar-card-elite flex flex-col p-4 bg-[#0b0c10] border border-blue-500/20 rounded-md hover:border-blue-500/40 transition-all gap-3 animate-fade-in group mb-2.5 mx-3.5 shadow-2xl relative overflow-hidden"
+                <div class="sidebar-card-elite flex flex-col p-4 bg-[#0b0c10] border border-blue-500/20 rounded-md hover:border-blue-500/40 transition-all gap-3 group mb-2.5 mx-3.5 shadow-2xl relative overflow-hidden"
                      data-type="agents" data-id="${key}">
                     
                     <!-- Header: Icon + Name + Status -->
@@ -454,6 +454,17 @@ export const initSidebar = () => {
     window.updateLeftTabs = updateLeftTabs;
     window.updatePanes = updatePanes;
 
-    subscribe(() => renderSidebar());
+    subscribe((newState, oldState) => {
+        // OTTIMIZZAZIONE FLICKER: Renderizza il contenuto laterale solo se cambiano i dati rilevanti
+        const needsResSidebar =
+            newState.activeRightTab !== oldState?.activeRightTab ||
+            newState.agents !== oldState?.agents ||
+            newState.skills !== oldState?.skills ||
+            newState.activeSkillCategory !== oldState?.activeSkillCategory;
+
+        if (needsResSidebar) {
+            renderSidebar();
+        }
+    });
     renderSidebar();
 };

@@ -12,8 +12,15 @@ export const initGxAgent = () => {
     listAvailableModels();
     window.renderGxAgentChat = renderGxAgentChat;
 
-    // Sottoscrizione reattiva allo stato
-    subscribe((newState) => {
+    // Sottoscrizione reattiva allo stato (Ottimizzata per evitare flickering)
+    subscribe((newState, oldState) => {
+        const needsResAgentChat = 
+            newState.geminiConfig !== oldState?.geminiConfig || 
+            newState.activeAgentId !== oldState?.activeAgentId ||
+            newState.agents !== oldState?.agents;
+
+        if (!needsResAgentChat) return;
+
         const paneContainer = document.getElementById('pane-agent');
         if (paneContainer && !paneContainer.classList.contains('hidden')) {
             renderGxAgentChat('pane-agent');

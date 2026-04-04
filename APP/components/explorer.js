@@ -86,6 +86,11 @@ export const renderFileTree = (files, depth = 0) => {
             <div class="flex flex-col relative" style="margin-left: ${depth === 0 ? '0' : '20px'}">
                 <div class="explorer-item-card ${isActive ? 'active' : ''} ${isSelected ? 'selected-explorer-item' : ''}" 
                      data-path="${file.path}" data-name="${file.name}" data-is-directory="${isDirectory}"
+                     draggable="true"
+                     ondragstart="window.onExplorerDragStart(event, '${file.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')"
+                     ondragover="window.onExplorerDragOver(event, ${isDirectory})"
+                     ondragleave="window.onExplorerDragLeave(event)"
+                     ondrop="window.onExplorerDrop(event, '${file.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', ${isDirectory})"
                      onclick="window.selectExplorerItem('${file.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', ${isDirectory}); ${isDirectory ? `window.toggleExplorerFolder('${file.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')` : `window.openFileInIDE('${file.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${file.name.replace(/'/g, "\\'")}')`}">
                     
                     ${linesHtml}
@@ -160,3 +165,85 @@ window.handleExplorerContextMenu = (event, path, isDirectory) => {
         console.warn("[Explorer] window.showContextMenu non è definita!");
     }
 };
+
+// --- DRAG & DROP LOGIC (Evolution 2026) ---
+
+let activeDragPath = null;
+
+window.onExplorerDragStart = (event, path) => {
+    activeDragPath = path;
+    const name = path.split(/[\\/]/).pop();
+    event.dataTransfer.setData('text/plain', path);
+    event.dataTransfer.effectAllowed = 'move';
+    
+    // Visual feedback on the ghost image (optional)
+    console.log(`[DnD] Start dragging: ${name}`);
+};
+
+window.onExplorerDragOver = (event, isDirectory) => {
+    event.preventDefault();
+    if (!isDirectory) return;
+    
+    const card = event.currentTarget;
+    const targetPath = card.dataset.path;
+    
+    // Anticede: non puoi droppare su se stesso o in una sottocartella se è una cartella
+    if (activeDragPath === targetPath || targetPath.startsWith(activeDragPath + '/') || targetPath.startsWith(activeDragPath + '\\')) {
+        event.dataTransfer.dropEffect = 'none';
+        return;
+    }
+    
+    event.dataTransfer.dropEffect = 'move';
+    card.classList.add('drag-over-active');
+};
+
+window.onExplorerDragLeave = (event) => {
+    event.currentTarget.classList.remove('drag-over-active');
+};
+
+window.onExplorerDrop = async (event, targetPath, isDirectory) => {
+    event.preventDefault();
+    const card = event.currentTarget;
+    card.classList.remove('drag-over-active');
+    
+    if (!isDirectory || !activeDragPath) return;
+    if (activeDragPath === targetPath) return;
+
+    // Controllo se il target è una sottocartella del sorgente (loop infinito)
+    if (targetPath.startsWith(activeDragPath + '/') || targetPath.startsWith(activeDragPath + '\\')) {
+        if (window.gxToast) window.gxToast("Non puoi spostare una cartella dentro se stessa!", "error");
+        return;
+    }
+
+    const name = activeDragPath.split(/[\\/]/).pop();
+    const delimiter = targetPath.includes('/') ? '/' : '\\';
+    const newPath = targetPath.endsWith(delimiter) ? (targetPath + name) : (targetPath + delimiter + name);
+
+    console.log(`[DnD] Moving: ${activeDragPath} -> ${newPath}`);
+
+    try {
+        const res = await window.electronAPI.fsRename(activeDragPath, newPath);
+        if (res && res.error) {
+            throw new Error(res.error);
+        }
+        
+        if (window.gxToast) window.gxToast(`Spostato: ${name}`, "success");
+        if (window.refreshWorkspace) window.refreshWorkspace();
+    } catch (err) {
+        console.error("[DnD] Errore spostamento:", err);
+        if (window.gxToast) window.gxToast("Errore: " + err.message, "error");
+    } finally {
+        activeDragPath = null;
+    }
+};
+
+export function pingExplorerFile(path) {
+    // Cerchiamo l'elemento nel DOM tramite attributo data-path o data-id
+    const el = document.querySelector(`[data-path="${path}"]`) || document.querySelector(`[data-id="${path}"]`);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        el.classList.add('ai-glow-discovery');
+        setTimeout(() => el.classList.remove('ai-glow-discovery'), 4000);
+    }
+}
+window.pingExplorerFile = pingExplorerFile;

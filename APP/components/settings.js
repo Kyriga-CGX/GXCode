@@ -163,45 +163,71 @@ const renderTabContent = () => {
         }
         case 'ai': {
             return `
-                <div class="space-y-8">
-                    <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl shadow-inner">
-                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4" data-i18n="settings.ai.title">${window.t('settings.ai.title')}</h4>
-                        
-                        <div class="flex flex-col gap-3">
-                            <label class="text-[9px] font-bold text-gray-600 uppercase" data-i18n="settings.ai.geminiKey">${window.t('settings.ai.geminiKey')}</label>
-                            <input id="ai-gemini-key" type="password" value="${state.geminiApiKey || ''}" data-i18n="[placeholder]settings.ai.placeholder" placeholder="${window.t('settings.ai.placeholder')}" class="p-3 bg-[var(--bg-ghost)] border border-[var(--border-subtle)] rounded-lg text-xs text-gray-200 focus:border-blue-500 outline-none transition font-mono tracking-widest">
-                            <p class="text-[10px] text-gray-500 leading-relaxed" data-i18n="settings.ai.geminiDesc">${window.t('settings.ai.geminiDesc')}</p>
+                <div class="ai-settings-grid">
+                    <!-- GEMINI TILE -->
+                    <div class="ai-cloud-tile">
+                        <div class="ai-tile-header">
+                            <h4 class="ai-tile-title" data-i18n="settings.ai.title">${window.t('settings.ai.title')}</h4>
+                            <button onclick="window.saveGeminiKey()" class="ai-icon-btn success" title="Salva Gemini">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            </button>
                         </div>
-
-                        <button onclick="window.saveGeminiKey()" class="mt-6 w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold rounded-lg transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
-                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                             <span data-i18n="settings.ai.save">${window.t('settings.ai.save')}</span>
-                        </button>
+                        <div class="ai-input-group">
+                            <label class="ai-small-label" data-i18n="settings.ai.geminiKey">${window.t('settings.ai.geminiKey')}</label>
+                            <input id="ai-gemini-key" type="password" value="${state.geminiApiKey || ''}" placeholder="AI Studio Key..." class="ai-input-compact font-mono">
+                        </div>
+                        <p class="ai-tile-desc" data-i18n="settings.ai.geminiDesc">${window.t('settings.ai.geminiDesc')}</p>
                     </div>
 
-                    <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl shadow-inner mt-4">
-                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Anthropic Claude CLI</h4>
-                        
-                        <div class="flex flex-col gap-3">
-                            <label class="text-[9px] font-bold text-gray-600 uppercase">Anthropic API Key</label>
-                            <input id="ai-anthropic-key" type="password" value="${state.anthropicApiKey || ''}" placeholder="sk-ant-..." class="p-3 bg-[var(--bg-ghost)] border border-[var(--border-subtle)] rounded-lg text-xs text-gray-200 focus:border-orange-500 outline-none transition font-mono tracking-widest">
-                            <p class="text-[10px] text-gray-500 leading-relaxed">Inserisci qui la tua chiave Anthropic per usare <b>claudecode</b> direttamente nel tab dedicato.</p>
+                    <!-- ANTHROPIC TILE -->
+                    <div class="ai-cloud-tile">
+                        <div class="ai-tile-header">
+                            <h4 class="ai-tile-title">Anthropic Claude CLI</h4>
+                            <button onclick="window.saveAnthropicKey()" class="ai-icon-btn success" title="Salva Anthropic">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            </button>
                         </div>
-
-                        <button onclick="window.saveAnthropicKey()" class="mt-6 w-full py-3 bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-bold rounded-lg transition shadow-lg shadow-orange-900/20 flex items-center justify-center gap-2">
-                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                             <span>SALVA CHIAVE ANTHROPIC</span>
-                        </button>
+                        <div class="ai-input-group">
+                            <label class="ai-small-label">Anthropic API Key</label>
+                            <input id="ai-anthropic-key" type="password" value="${state.anthropicApiKey || ''}" placeholder="sk-ant-..." class="ai-input-compact font-mono">
+                        </div>
+                        <p class="ai-tile-desc">Configura <b>claudecode</b> per l'uso diretto nel terminale.</p>
                     </div>
 
-                    <div class="p-6 border border-blue-500/20 bg-blue-500/5 rounded-2xl">
-                         <div class="flex items-start gap-4">
+                    <!-- OLLAMA TILE -->
+                    <div class="ai-cloud-tile md:col-span-2">
+                        <div class="ai-tile-header">
+                            <h4 class="ai-tile-title">Local AI (Ollama / Local Gateway)</h4>
+                            <div class="flex gap-2">
+                                <button onclick="window.testOllamaConnection()" class="ai-icon-btn" title="Test Connessione">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                                </button>
+                                <button onclick="window.saveOllamaConfig()" class="ai-icon-btn success" title="Salva Ollama">
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="ai-input-group">
+                                <label class="ai-small-label">Endpoint URL</label>
+                                <input id="ai-ollama-endpoint" type="text" value="${state.ollamaConfig.endpoint || 'http://localhost:11434'}" class="ai-input-compact font-mono">
+                            </div>
+                            <div class="ai-input-group">
+                                <label class="ai-small-label">API Key (Opzionale)</label>
+                                <input id="ai-ollama-key" type="password" value="${state.ollamaConfig.apiKey || ''}" placeholder="Optional proxy key..." class="ai-input-compact font-mono">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- INFO BOX -->
+                    <div class="p-4 border border-blue-500/20 bg-blue-500/5 rounded-xl md:col-span-2">
+                         <div class="flex items-center gap-3">
                             <div class="p-2 bg-blue-500/20 rounded-lg text-blue-400">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                             </div>
                             <div>
-                                <div class="text-[11px] font-bold text-blue-300 uppercase tracking-widest mb-1">Google AI Studio</div>
-                                <p class="text-[10px] text-blue-200/60 leading-relaxed">Puoi ottenere una chiave gratuita su <a href="https://aistudio.google.com/" target="_blank" class="text-blue-400 hover:underline italic">aistudio.google.com</a>. Il piano gratuito di Gemini 1.5 Pro è perfetto per l'uso personale dell'IDE.</p>
+                                <div class="text-[9px] font-bold text-blue-300 uppercase tracking-widest">Centro AI GXCode</div>
+                                <p class="text-[8px] text-blue-200/60">Configura i tuoi assistenti Cloud e Locali per un'esperienza di sviluppo assistita completa.</p>
                             </div>
                          </div>
                     </div>
@@ -839,6 +865,57 @@ window.saveAnthropicKey = () => {
     const key = document.getElementById('ai-anthropic-key').value.trim();
     setState({ anthropicApiKey: key });
     window.gxToast("Chiave Anthropic salvata!", 'info');
+};
+
+window.saveOllamaConfig = () => {
+    const endpoint = document.getElementById('ai-ollama-endpoint').value.trim();
+    const apiKey = document.getElementById('ai-ollama-key').value.trim();
+    
+    setState({ 
+        ollamaConfig: { 
+            ...state.ollamaConfig, 
+            endpoint, 
+            apiKey, 
+            isSetup: !!endpoint 
+        } 
+    });
+    
+    window.gxToast("Configurazione Local AI salvata!", 'success');
+};
+
+window.testOllamaConnection = async () => {
+    const endpoint = document.getElementById('ai-ollama-endpoint').value.trim();
+    const apiKey = document.getElementById('ai-ollama-key').value.trim();
+    
+    if (!endpoint) {
+        window.gxToast("Inserisci un endpoint valido.", 'warning');
+        return;
+    }
+
+    window.gxToast("Test connessione in corso...", 'info');
+    
+    try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+        
+        const resp = await fetch(`${endpoint.replace(/\/$/, '')}/api/tags`, { headers });
+        if (resp.ok) {
+            const data = await resp.json();
+            const models = (data.models || []).map(m => m.name);
+            setState({ 
+                ollamaConfig: { 
+                    ...state.ollamaConfig, 
+                    models, 
+                    activeModel: state.ollamaConfig.activeModel || (models.length > 0 ? models[0] : "") 
+                } 
+            });
+            window.gxToast(`Connessione riuscita! ${models.length} modelli trovati.`, 'success');
+        } else {
+            throw new Error(`Status: ${resp.status}`);
+        }
+    } catch (err) {
+        window.gxToast(`Connessione fallita: ${err.message}`, 'error');
+    }
 };
 
 window.submitNewRepository = () => {
