@@ -51,7 +51,7 @@ graph TD
 
 Esplora la nuova interfaccia **Evolution 2026 Elite**, progettata per la massima produttività e un controllo totale degli strumenti AI.
 
-| Dashboard Agenti | Hub Marketplace |
+| Dashboard | Hub Marketplace |
 | :---: | :---: |
 | ![Dashboard Agenti](APP/assets/repo/dashboard_agents.png) | ![Marketplace Hub](APP/assets/repo/marketplace_hub.png) |
 
@@ -59,7 +59,7 @@ Esplora la nuova interfaccia **Evolution 2026 Elite**, progettata per la massima
 | :---: | :---: |
 | ![Nuovo Agente](APP/assets/repo/new_agent_modal.png) | ![Nuova Skill](APP/assets/repo/new_skill_modal.png) |
 
-| Vista Skill Sidebar |
+| Skin |
 | :---: |
 | ![Dashboard Skills](APP/assets/repo/dashboard_skills.png) |
 
