@@ -1,6 +1,6 @@
 # 🚀 GXCode Studio — Evolution 2026 Elite
 
-![GXCode Studio Elite Dashboard](APP/assets/repo/dashboard.png)
+![Dashboard Skills](APP/assets/repo/dashboard_skills.png)
 
 **Benvenuto nell'Era Elite.** GXCode Studio è l'IDE AI-Nativo di nuova generazione, progettato da **Cloud-GX** per ridefinire il concetto di sviluppo software tramite un'integrazione simbiotica tra codice umano e intelligenza artificiale locale e remota.
 
