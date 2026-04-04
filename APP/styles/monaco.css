@@ -1,0 +1,30 @@
+/* Monaco Breakpoint Gutter Style - PROFESSIONAL 26PX GLYPH MARGIN */
+.gx-breakpoint-real, .gx-breakpoint-hover {
+  display: block !important;
+  width: 26px !important;
+  height: 16px !important; 
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 7px 7px !important;
+  z-index: 100000 !important;
+}
+
+.gx-breakpoint-real {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='3.5' fill='%23ff4747' stroke='%23ffffff33' stroke-width='0.5'/%3E%3C/svg%3E") !important;
+}
+
+.gx-breakpoint-hover {
+  opacity: 0.4 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='3.5' fill='%23ff4747' stroke-opacity='0.5'/%3E%3C/svg%3E") !important;
+}
+
+.monaco-debug-active-line {
+  background: rgba(255, 255, 0, 0.1) !important;
+  outline: 1px solid rgba(255, 255, 0, 0.2);
+}
+
+.monaco-debug-active-glyph {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffcc00' d='M6 4l6 4-6 4V4z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}

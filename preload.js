@@ -28,7 +28,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onTerminalData: (id, callback) => ipcRenderer.on(`terminal-stdout-${id}`, (event, data) => callback(data)),
   
   // Phase 4: IDE Features
-  searchFiles: (folderPath, query) => ipcRenderer.invoke('search-files', folderPath, query),
+  searchFiles: (folderPath, query, options) => ipcRenderer.invoke('search-files', folderPath, query, options),
   scanTests: (folderPath) => ipcRenderer.invoke('scan-tests', folderPath),
   checkPlaywright: (workspacePath) => ipcRenderer.invoke('check-playwright', workspacePath),
   runTest: (workspacePath, filePath, testName) => ipcRenderer.invoke('run-test', workspacePath, filePath, testName),
@@ -37,9 +37,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   performUpdate: () => ipcRenderer.invoke('perform-update'),
   
-  // Gestione Finestra Personalizzata
-  windowControl: (action) => ipcRenderer.send('window-control', action),
+  // Gestione Finestra Personalizzata (invoke per garantire ricezione)
+  windowControl: (action) => ipcRenderer.invoke('window-control', action),
   openDevTools: () => ipcRenderer.send('open-devtools'),
+  onWindowMaximized: (cb) => ipcRenderer.on('window-maximized', cb),
+  onWindowUnmaximized: (cb) => ipcRenderer.on('window-unmaximized', cb),
   onUpdateReady: (callback) => ipcRenderer.on('update-ready-to-install', () => callback()),
   onUpdateAvailable: (callback) => ipcRenderer.on('update-available', () => callback()),
   onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (event, progress) => callback(progress)),
@@ -70,6 +72,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fsCreateFolder: (dirPath, name) => ipcRenderer.invoke('fs-create-folder-v2', dirPath, name),
   fsWriteFile: (filePath, content) => ipcRenderer.invoke('fs-write-file', filePath, content),
   fsDelete: (targetPath) => ipcRenderer.invoke('fs-delete', targetPath),
+  getAiPaths: () => ipcRenderer.invoke('get-ai-paths'),
+  getGitRemote: (workspacePath) => ipcRenderer.invoke('git-remote-url', workspacePath),
 
   // Gemini OAuth
   geminiLogin: () => ipcRenderer.invoke('gemini:login'),

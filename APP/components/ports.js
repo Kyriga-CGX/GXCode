@@ -30,14 +30,14 @@ export const initPorts = () => {
                         <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Active Services (${ports.length})</h3>
                         <button onclick="window.refreshPorts()" class="px-2 py-0.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 text-[9px] font-bold uppercase rounded border border-blue-500/20 transition">Refresh</button>
                     </div>
-                    <div class="grid grid-cols-5 gap-4 text-[9px] font-bold text-gray-600 uppercase tracking-wider pb-2 border-b border-gray-800">
+                    <div class="grid grid-cols-5 gap-4 text-[9px] font-bold text-gray-600 uppercase tracking-wider pb-2 border-b border-[var(--border-dim)]">
                         <div>Port</div>
                         <div>Protocol</div>
                         <div class="col-span-2">Address / Process</div>
                         <div class="text-right">Action</div>
                     </div>
                     ${ports.map(p => `
-                        <div class="grid grid-cols-5 gap-4 items-center p-1.5 hover:bg-white/5 rounded transition group">
+                        <div class="grid grid-cols-5 gap-4 items-center p-1.5 hover:bg-[var(--bg-side-alt)] rounded transition group">
                             <div class="text-blue-400 font-mono font-bold">${p.port}</div>
                             <div class="text-gray-500">${p.protocol}</div>
                             <div class="col-span-2 overflow-hidden truncate whitespace-nowrap text-gray-400 font-mono">

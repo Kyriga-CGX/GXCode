@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* Comprehensive Scan */
+@source "../../**/*.html";
+@source "../../**/*.js";
+@source "../**/*.html";
+@source "../**/*.js";
+
+/* GXCode v3: Base Design System */
+:root {
+  --radius: 0.5rem;
+}

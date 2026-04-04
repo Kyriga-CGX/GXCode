@@ -139,9 +139,62 @@ class NodeDebugger {
 }
 
 let nodeDebugger = null;
+let activeLineWatcher = null;
+let activeTestProcess = null; // Traccia il processo di test corrente (Playwright/Node)
 
 // ================== GESTIONE CONTESTO AI E DISCO Locale ==================
 let currentAiContext = '.GXCODE'; // Di base usa una cartella universale
+
+/**
+ * Aggiorna il file CLAUDE.md nel root del progetto con il path attuale.
+ * Se il file non esiste, lo crea.
+ */
+function updateClaudeContext(workspacePath) {
+  if (!workspacePath) return;
+  // Se è un workspace file, usiamo la sua directory
+  const rootDir = workspacePath.endsWith('.code-workspace') 
+    ? path.dirname(workspacePath) 
+    : workspacePath;
+
+  const claudePath = path.join(rootDir, 'CLAUDE.md');
+  const contextHeader = '## CURRENT WORKSPACE CONTEXT';
+  const contextLine = `- **Root Path**: ${rootDir}`;
+
+  try {
+    let content = '';
+    if (fs.existsSync(claudePath)) {
+      content = fs.readFileSync(claudePath, 'utf8');
+      
+      const lines = content.split('\n');
+      const headerIndex = lines.findIndex(l => l.includes(contextHeader));
+      
+      if (headerIndex !== -1) {
+        let found = false;
+        // Cerchiamo la riga del Root Path per aggiornarla
+        for (let i = headerIndex + 1; i < Math.min(headerIndex + 5, lines.length); i++) {
+          if (lines[i].includes('**Root Path**:')) {
+            lines[i] = contextLine;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          lines.splice(headerIndex + 1, 0, contextLine);
+        }
+        content = lines.join('\n');
+      } else {
+        content = content.trim() + `\n\n${contextHeader}\n${contextLine}\n`;
+      }
+    } else {
+      content = `# PROJECT GUIDELINES & TOOLS (GXCode)\n\n${contextHeader}\n${contextLine}\n`;
+    }
+    
+    fs.writeFileSync(claudePath, content, 'utf8');
+    console.log(`[GX-CLAUDE] Updated context in: ${claudePath}`);
+  } catch (err) {
+    console.error(`[GX-CLAUDE] Errore aggiornamento CLAUDE.md:`, err);
+  }
+}
 
 function getActiveAiPath(subfolder) {
   const home = os.homedir();
@@ -184,13 +237,16 @@ function deletePersistedData(type, id) {
       const p = path.join(dir, file);
       try {
         const data = JSON.parse(fs.readFileSync(p, 'utf-8'));
-        if (String(data.id) === String(id)) {
+        // Confronto robusto: controlliamo sia ID che Slug
+        if (String(data.id) === String(id) || String(data.slug) === String(id)) {
           fs.unlinkSync(p);
+          console.log(`[GX-DISK] Eliminato ${type}: ${file}`);
           return true;
         }
       } catch (e) { }
     }
   } catch (e) { }
+  console.warn(`[GX-DISK] Impossibile trovare file per ${type} con ID/Slug: ${id}`);
   return false;
 }
 
@@ -1316,7 +1372,34 @@ function createWindow() {
 app.whenReady().then(() => {
   const mainWindow = createWindow();
 
+  // ── Controlli Finestra Personalizzati ─────────────────────────────
+  ipcMain.handle('window-control', (event, action) => {
+    if (!mainWindow) return;
+    if (action === 'minimize') {
+      mainWindow.minimize();
+    } else if (action === 'maximize') {
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize();
+      } else {
+        mainWindow.maximize();
+      }
+    } else if (action === 'close') {
+      mainWindow.close();
+    }
+  });
 
+  // Notifica il renderer dello stato max/unmax per aggiornare l'icona del bottone
+  mainWindow.on('maximize', () => {
+    mainWindow.webContents.send('window-maximized');
+  });
+  mainWindow.on('unmaximize', () => {
+    mainWindow.webContents.send('window-unmaximized');
+  });
+
+  ipcMain.on('open-devtools', () => {
+    if (mainWindow) mainWindow.webContents.openDevTools();
+  });
+  // ──────────────────────────────────────────────────────────────────
 
   ipcMain.handle('open-project-folder', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -1326,6 +1409,7 @@ app.whenReady().then(() => {
     if (result.canceled || result.filePaths.length === 0) return null;
 
     const folderPath = result.filePaths[0];
+    updateClaudeContext(folderPath);
     try {
       const files = fs.readdirSync(folderPath, { withFileTypes: true }).map(f => ({
         name: f.name,
@@ -1373,6 +1457,7 @@ app.whenReady().then(() => {
 
     if (canceled || filePaths.length === 0) return null;
     const wsPath = filePaths[0];
+    updateClaudeContext(wsPath);
 
     try {
       const content = fs.readFileSync(wsPath, 'utf8');
@@ -1422,6 +1507,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('open-specific-folder', async (event, folderPath) => {
     console.log(`[GX FS] Richiesta apertura path specifico: ${folderPath}`);
+    updateClaudeContext(folderPath);
     try {
       if (!fs.existsSync(folderPath)) {
         console.warn(`[GX FS] Path non trovato: ${folderPath}`);
@@ -1514,12 +1600,24 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('fs-write-file', async (event, filePath, content) => {
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    try {
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(filePath, content, 'utf8');
+      return { success: true };
+    } catch (e) {
+      return { error: e.message };
     }
-    fs.writeFileSync(filePath, content, 'utf8');
-    return true;
+  });
+
+  ipcMain.handle('get-ai-paths', async () => {
+    return {
+      agents: getActiveAiPath('agents'),
+      skills: getActiveAiPath('skills'),
+      home: os.homedir()
+    };
   });
 
   ipcMain.handle('debug-start', async (event, filePath, breakpoints) => {
@@ -1606,33 +1704,84 @@ app.whenReady().then(() => {
     return { success: true };
   });
 
-  // Handler per Ricerca Globale nei file
-  ipcMain.handle('search-files', async (event, folderPath, query) => {
+  // Handler per Ricerca Globale nei file (Supporto Cc, W, .*, Include, Exclude, Workspace)
+  ipcMain.handle('search-files', async (event, folderPath, query, options = {}) => {
     if (!folderPath || !query) return [];
-    const results = [];
-    const MAX_RESULTS = 200;
+    
+    console.log(`[SEARCH] Query: "${query}" in: ${folderPath}`);
 
-    const searchRecursively = (dir) => {
+    const { 
+      caseSensitive = false, 
+      wholeWord = false, 
+      useRegex = false,
+      includePattern = '',
+      excludePattern = '' 
+    } = options;
+
+    const results = [];
+    const MAX_RESULTS = 250;
+
+    // Helper glob-to-regex semplice
+    const globToRegex = (glob) => {
+      if (!glob || !glob.trim()) return null;
+      let p = glob.trim()
+        .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+        .replace(/\*\*/g, '(.+)')
+        .replace(/\*\*/g, '(.+)')
+        .replace(/\*/g, '([^/\\n]+)')
+        .replace(/\?/g, '(.)');
+      return new RegExp(p, 'i');
+    };
+
+    const includeRx = globToRegex(includePattern);
+    const excludeRx = globToRegex(excludePattern);
+
+    let regex;
+    try {
+      if (useRegex) {
+        regex = new RegExp(query, caseSensitive ? '' : 'i');
+      } else {
+        let pattern = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (wholeWord) pattern = `\\b${pattern}\\b`;
+        regex = new RegExp(pattern, caseSensitive ? '' : 'i');
+      }
+    } catch (e) {
+      console.error("[SEARCH] Invalid Regex:", e.message);
+      return [];
+    }
+
+    const searchInDir = (dir, rootForRelative) => {
       if (results.length >= MAX_RESULTS) return;
       try {
+        if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return;
+        
         const files = fs.readdirSync(dir, { withFileTypes: true });
         for (const file of files) {
           if (results.length >= MAX_RESULTS) return;
           const fullPath = path.join(dir, file.name);
+          const relativePath = path.relative(rootForRelative, fullPath).replace(/\\/g, '/');
 
           if (file.isDirectory()) {
-            if (['node_modules', '.git', 'dist', 'build', '.next', '.claude', '.gemini'].includes(file.name)) continue;
-            searchRecursively(fullPath);
+            if (['node_modules', '.git', 'dist', 'build', '.next', '.claude', '.gemini', 'artifacts', '.gxcode'].includes(file.name.toLowerCase())) continue;
+            if (excludeRx && excludeRx.test(relativePath)) continue;
+            searchInDir(fullPath, rootForRelative);
           } else {
-            if (file.name.match(/\\.(png|jpe?g|gif|webp|ico|svg|pdf|zip|tar|gz|exe|dll|class|jar|woff2?|eot|ttf|mp3|mp4)$/i)) continue;
+            if (includeRx && !includeRx.test(relativePath)) continue;
+            if (excludeRx && excludeRx.test(relativePath)) continue;
+
+            if (file.name.match(/\.(png|jpe?g|gif|webp|ico|svg|pdf|zip|tar|gz|exe|dll|class|jar|woff2?|eot|ttf|mp3|mp4|bak|swp)$/i)) continue;
+            
             try {
+              const stats = fs.statSync(fullPath);
+              if (stats.size > 1024 * 500) continue; 
+
               const content = fs.readFileSync(fullPath, 'utf8');
               const lines = content.split('\n');
               for (let i = 0; i < lines.length; i++) {
-                if (lines[i].toLowerCase().includes(query.toLowerCase())) {
+                if (regex.test(lines[i])) {
                   results.push({
                     file: fullPath,
-                    relativePath: path.relative(folderPath, fullPath),
+                    relativePath: relativePath,
                     line: i + 1,
                     text: lines[i].trim().substring(0, 150)
                   });
@@ -1645,8 +1794,31 @@ app.whenReady().then(() => {
       } catch (e) { }
     };
 
-    searchRecursively(folderPath);
-    console.log(`[IPC] Ricerca completata per "${query}", trovati ${results.length} risultati.`);
+    // Gestione Workspace Multirete
+    if (folderPath.endsWith('.code-workspace')) {
+      try {
+        const content = fs.readFileSync(folderPath, 'utf8');
+        const config = JSON.parse(content);
+        if (config.folders && Array.isArray(config.folders)) {
+          for (const item of config.folders) {
+            let fp = item.path;
+            if (!path.isAbsolute(fp)) {
+              fp = path.resolve(path.dirname(folderPath), fp);
+            }
+            if (fs.existsSync(fp)) {
+              console.log(`[SEARCH] Sub-Folder: ${fp}`);
+              searchInDir(fp, fp); // Ogni folder usa se stessa come root per i path relativi
+            }
+          }
+        }
+      } catch (e) {
+        console.error("[SEARCH] Workspace Error:", e);
+      }
+    } else {
+      searchInDir(folderPath, folderPath);
+    }
+
+    console.log(`[SEARCH] Risultati trovati: ${results.length}`);
     return results;
   });
 
@@ -1776,7 +1948,8 @@ app.whenReady().then(() => {
   ipcMain.handle('run-test', async (event, workspacePath, filePath, testName) => {
     return new Promise((resolve) => {
       try {
-        const escapedName = testName.replace(/"/g, '\\"');
+        // Escaping del nome per prevenire errori con regex (specialmente per i punti e spazi)
+        const escapedName = testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         console.log(`[IPC] Esecuzione test (Headed): ${testName} in ${filePath}`);
 
         const testCwd = resolveTestCwd(filePath, workspacePath);
@@ -1784,19 +1957,34 @@ app.whenReady().then(() => {
             throw new Error(`Directory di esecuzione non trovata: ${testCwd}`);
         }
 
-        // Usiamo safeSpawn per streaming real-time
-        const child = safeSpawn('npx', ['playwright', 'test', filePath, '-g', testName, '--headed'], {
+        // Calcoliamo il percorso RELATIVO del file (unico modo affidabile su Windows)
+        // e normalizziamo le slash in '/'
+        const relativePath = path.relative(testCwd, filePath).replace(/\\/g, '/');
+        
+        const args = ['playwright', 'test', `"${relativePath}"` ];
+        const isFilePathName = testName && (testName.toLowerCase().endsWith('.js') || testName.toLowerCase().endsWith('.ts'));
+        
+        if (testName && !isFilePathName) {
+            args.push('-g', `"${escapedName}"`);
+        }
+        
+        args.push('--project=chromium');
+
+        const child = safeSpawn('npx', args, {
           cwd: testCwd,
-          env: { ...process.env, FORCE_COLOR: '1' },
+          env: { ...process.env, FORCE_COLOR: '1', COLUMNS: '120' },
           shell: true
         });
 
         child.stdout.on('data', (data) => {
-          event.sender.send('test-output', data.toString());
+          // Fondamentale: su XTerm \n deve essere preceduto da \r per tornare all'inizio riga
+          const formatted = data.toString().replace(/\r?\n/g, '\r\n');
+          event.sender.send('test-output', formatted);
         });
 
         child.stderr.on('data', (data) => {
-          event.sender.send('test-output', data.toString());
+          const formatted = data.toString().replace(/\r?\n/g, '\r\n');
+          event.sender.send('test-output', formatted);
         });
 
         child.on('error', (err) => {
@@ -1845,7 +2033,8 @@ app.whenReady().then(() => {
   ipcMain.handle('debug-test', async (event, workspacePath, filePath, testName) => {
     return new Promise((resolve) => {
       try {
-        const escapedName = testName.replace(/"/g, '\\"');
+        // Escaping del nome per prevenire errori con regex (importante per il match su Windows)
+        const escapedName = testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         console.log(`[IPC] DEBUG MODE (Inspector): ${testName}`);
 
         const testCwd = resolveTestCwd(filePath, workspacePath);
@@ -1853,26 +2042,43 @@ app.whenReady().then(() => {
              throw new Error(`Directory di debug non trovata: ${testCwd}`);
         }
 
-        const child = safeSpawn('npx', ['playwright', 'test', filePath, '-g', testName], {
+        const relativePath = path.relative(testCwd, filePath).replace(/\\/g, '/');
+
+        const args = ['playwright', 'test', `"${relativePath}"` ];
+        const isFilePathName = testName && (testName.toLowerCase().endsWith('.js') || testName.toLowerCase().endsWith('.ts'));
+
+        if (testName && !isFilePathName) {
+            args.push('-g', `"${escapedName}"`);
+        }
+
+        args.push('--headed', '--project=chromium', '--debug');
+
+        const child = safeSpawn('npx', args, {
           cwd: testCwd,
-          env: { ...process.env, PWDEBUG: '1', FORCE_COLOR: '1' },
+          env: { ...process.env, PWDEBUG: '0', FORCE_COLOR: '1', COLUMNS: '120' },
           shell: true
         });
 
+        activeTestProcess = child;
+
         child.stdout.on('data', (data) => {
-          event.sender.send('test-output', data.toString());
+          const formatted = data.toString().replace(/\r?\n/g, '\r\n');
+          event.sender.send('test-output', formatted);
         });
 
         child.stderr.on('data', (data) => {
-          event.sender.send('test-output', data.toString());
+          const formatted = data.toString().replace(/\r?\n/g, '\r\n');
+          event.sender.send('test-output', formatted);
         });
         
         child.on('error', (err) => {
             event.sender.send('test-output', `\r\n\x1b[31m[ERRORE DEBUG] Impossibile avviare il debugger: ${err.message}\x1b[0m\r\n`);
+            activeTestProcess = null;
             resolve(false);
         });
 
         child.on('close', (code) => {
+          activeTestProcess = null;
           resolve(code === 0);
         });
       } catch (err) {
@@ -2116,6 +2322,17 @@ app.whenReady().then(() => {
       return { success: true, files, branch };
     } catch (err) {
       return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('git-remote-url', async (event, workspacePath) => {
+    try {
+      const { execSync } = require('child_process');
+      const cwd = workspacePath || process.cwd();
+      const url = execSync('git remote get-url origin', { encoding: 'utf8', cwd }).trim();
+      return { success: true, url };
+    } catch (err) {
+      return { success: false, error: "No remote origin found" };
     }
   });
 

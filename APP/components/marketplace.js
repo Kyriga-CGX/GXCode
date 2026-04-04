@@ -9,7 +9,7 @@ window.__marketCache = new Map();
 
 const renderMarketplaceContent = (items, type) => {
     if (!items || items.length === 0) {
-        return `<div style="grid-column:1/-1;text-align:center;padding:48px 24px;color:#6e7681;font-size:11px;border:1px dashed #30363d;border-radius:12px;">${window.t('marketplace.noModules')}</div>`;
+        return `<div style="grid-column:1/-1;text-align:center;padding:48px 24px;color:rgba(255,255,255,0.4);font-size:11px;border:1px dashed var(--border-dim);border-radius:12px;">${window.t('marketplace.noModules')}</div>`;
     }
 
     const isInstalledTab = state.activeMarketplaceTab === 'installed';
@@ -41,19 +41,19 @@ const renderMarketplaceContent = (items, type) => {
         const badgeBg = realType === 'agent' ? 'rgba(59,130,246,0.1)' : realType === 'skill' ? 'rgba(16,185,129,0.1)' : realType === 'addon' ? 'rgba(168,85,247,0.1)' : 'rgba(110,118,129,0.1)';
 
         return `
-        <div style="padding:16px;border:1px solid #21262d;border-radius:12px;background:#161b22;display:flex;flex-direction:column;transition:border-color 0.2s;cursor:pointer;" 
-             onmouseover="this.style.borderColor='rgba(59,130,246,0.4)'" 
-             onmouseout="this.style.borderColor='#21262d'"
+        <div style="padding:16px;border:1px solid var(--border-dim);border-radius:12px;background:var(--bg-side-alt);display:flex;flex-direction:column;transition:border-color 0.2s;cursor:pointer;" 
+             onmouseover="this.style.borderColor='var(--accent)'" 
+             onmouseout="this.style.borderColor='var(--border-dim)'"
              ondblclick="window.previewMarketItem('${realType}s', '${key}')">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                 <div style="display:flex;flex-direction:column;gap:4px;overflow:hidden;">
                     <span style="font-size:8px;padding:2px 6px;border-radius:4px;border:1px solid ${sourceColor}40;background:${sourceBg};color:${sourceColor};text-transform:uppercase;font-weight:700;letter-spacing:0.1em;align-self:flex-start;">${item.source || 'GX Hub'}</span>
-                    <h3 style="margin:0;font-weight:700;color:#e6edf3;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</h3>
+                    <h3 style="margin:0;font-weight:700;color:var(--text-main, #fff);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</h3>
                 </div>
                 <span style="font-size:9px;padding:2px 6px;border-radius:4px;background:${badgeBg};color:${badgeColor};border:1px solid ${badgeColor}40;flex-shrink:0;text-transform:uppercase;font-weight:700;">${item.category || item.role || realType}</span>
             </div>
-            <p style="font-size:11px;color:#8b949e;margin:4px 0 16px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:48px;">${item.description || 'Modulo per GXCode AI Assistant.'}</p>
-            <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid rgba(33,38,45,0.5);">
+            <p style="font-size:11px;color:rgba(255,255,255,0.5);margin:4px 0 16px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:48px;">${item.description || 'Modulo per GXCode AI Assistant.'}</p>
+            <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--border-dim);">
                 <div style="display:flex;flex-direction:column;">
                     <span style="font-size:9px;color:#484f58;font-family:monospace;text-transform:uppercase;letter-spacing:0.1em;">${item.author || 'Registry'}</span>
                     <span style="font-size:8px;color:#30363d;font-family:monospace;font-style:italic;">${item.version || 'v1.0.0'}</span>
@@ -79,7 +79,8 @@ window.previewMarketItem = (type, id) => {
 
 const renderMarketplace = () => {
     if (!state.isMarketplaceOpen) {
-        modalsRoot.innerHTML = '';
+        const marketEl = document.getElementById('gx-market-overlay');
+        if (marketEl) marketEl.remove();
         return;
     }
 
@@ -126,7 +127,7 @@ const renderMarketplace = () => {
                     const color = id === 'agents' ? '#3b82f6' : id === 'skills' ? '#10b981' : id === 'ai-companion' ? '#a855f7' : id === 'addons' ? '#f59e0b' : '#6e7681';
                     return `<button onclick="window.setState({ activeMarketplaceCategory: '${id}' })" 
                                     style="padding:4px 12px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;border-radius:20px;cursor:pointer;transition:all 0.2s;
-                                           ${isActive ? `background:${color}20;color:${color};border:1px solid ${color}40;` : 'background:#161b22;color:#484f58;border:1px solid #21262d;'}">
+                                           ${isActive ? `background:${color}20;color:${color};border:1px solid ${color}40;` : 'background:var(--bg-side);color:rgba(255,255,255,0.3);border:1px solid var(--border-dim);'}">
                                  ${label}
                             </button>`;
                 }).join('')}
@@ -138,10 +139,10 @@ const renderMarketplace = () => {
         else if (activeTab === 'skills') itemsToRender = state.marketplaceSkills || [];
         else if (activeTab === 'addons') itemsToRender = state.marketplacePlugins || [];
         else if (activeTab === 'ai-companion') {
-            mContent = `<div style="grid-column:1/-1;text-align:center;padding:80px 24px;background:#161b22;border:1px dashed #30363d;border-radius:12px;">
+            mContent = `<div style="grid-column:1/-1;text-align:center;padding:80px 24px;background:var(--bg-side);border:1px dashed var(--border-dim);border-radius:12px;">
                 <div style="font-size:32px;margin-bottom:16px;">✨</div>
                 <h3 style="color:#fff;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.1em;">Coming Soon</h3>
-                <p style="color:#6e7681;font-size:11px;">La libreria ufficiale degli AI Companion specializzati è in arrivo.<br>Potrai assumere assistenti verticali per ogni tua esigenza.</p>
+                <p style="color:rgba(255,255,255,0.4);font-size:11px;">La libreria ufficiale degli AI Companion specializzati è in arrivo.<br>Potrai assumere assistenti verticali per ogni tua esigenza.</p>
             </div>`;
         }
 
@@ -180,9 +181,9 @@ const renderMarketplace = () => {
 
     modalsRoot.innerHTML = `
         <div id="gx-market-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;background:rgba(0,0,0,0.85);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:center;z-index:2147483647;padding:40px;box-sizing:border-box;">
-            <div style="background:#12161d;width:100%;max-width:1100px;height:85vh;border-radius:16px;border:1px solid #30363d;box-shadow:0 32px 120px rgba(0,0,0,0.95);display:flex;flex-direction:column;overflow:hidden;">
+            <div style="background:var(--bg-main);width:100%;max-width:1100px;height:85vh;border-radius:16px;border:1px solid var(--border-dim);box-shadow:0 32px 120px rgba(0,0,0,0.95);display:flex;flex-direction:column;overflow:hidden;">
                 
-                <div style="padding:20px 32px;border-bottom:1px solid #21262d;background:#161b22;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <div style="padding:20px 32px;border-bottom:1px solid var(--border-dim);background:var(--bg-side);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
                     <div style="display:flex;align-items:center;gap:16px;">
                         <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#4338ca);display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>
                         <div>
@@ -190,7 +191,7 @@ const renderMarketplace = () => {
                             <div style="font-size:9px;color:#484f58;font-family:monospace;text-transform:uppercase;letter-spacing:0.2em;margin-top:2px;">Discover &amp; Install</div>
                         </div>
                     </div>
-                    <div style="display:flex;background:#0d1117;padding:4px;border-radius:10px;border:1px solid #21262d;">
+                    <div style="display:flex;background:var(--bg-main);padding:4px;border-radius:10px;border:1px solid var(--border-dim);">
                         ${tabs.map(([id, label]) => tabBtn(id, label)).join('')}
                     </div>
                     <button onclick="window.closeMarketplace()" 
@@ -201,13 +202,13 @@ const renderMarketplace = () => {
                     </button>
                 </div>
 
-                <div style="padding:20px 32px;border-bottom:1px solid #21262d;background:rgba(13,17,23,0.5);flex-shrink:0;">
+                <div style="padding:20px 32px;border-bottom:1px solid var(--border-dim);background:rgba(0,0,0,0.2);flex-shrink:0;">
                     <div style="position:relative;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#484f58" stroke-width="2.5" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2.5" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                         <input id="market-global-search" type="text" 
                                placeholder="Cerca in ${activeTab}..." 
                                value="${currentSearch}"
-                               style="width:100%;background:#0d1117;border:1px solid #21262d;border-radius:10px;padding:10px 16px 10px 42px;font-size:12px;color:#c9d1d9;outline:none;box-sizing:border-box;">
+                               style="width:100%;background:var(--bg-main);border:1px solid var(--border-dim);border-radius:10px;padding:10px 16px 10px 42px;font-size:12px;color:var(--text-main, #fff);outline:none;box-sizing:border-box;">
                     </div>
                 </div>
 
@@ -219,9 +220,9 @@ const renderMarketplace = () => {
                     </div>
                 </div>
 
-                <div style="height:40px;padding:0 32px;background:#161b22;border-top:1px solid #21262d;display:flex;align-items:center;gap:8px;flex-shrink:0;">
-                    <div style="width:6px;height:6px;border-radius:50%;background:${isLoading ? '#3b82f6' : '#10b981'};${isLoading ? 'animation:pulse 1.5s ease-in-out infinite;' : ''}"></div>
-                    <span style="font-size:8px;color:#484f58;font-family:monospace;text-transform:uppercase;letter-spacing:0.2em;">${isLoading ? 'Syncing registries...' : 'Ready'}</span>
+                <div style="height:40px;padding:0 32px;background:var(--bg-side);border-top:1px solid var(--border-dim);display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                    <div style="width:6px;height:6px;border-radius:50%;background:${isLoading ? 'var(--accent)' : '#10b981'};${isLoading ? 'animation:pulse 1.5s ease-in-out infinite;' : ''}"></div>
+                    <span style="font-size:8px;color:rgba(255,255,255,0.3);font-family:monospace;text-transform:uppercase;letter-spacing:0.2em;">${isLoading ? 'Syncing registries...' : 'Ready'}</span>
                 </div>
             </div>
         </div>

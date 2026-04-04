@@ -31,7 +31,13 @@ export const initAiBridge = () => {
         }
 
         const escapedCode = activeFile.content.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-        const prompt = `Analizza questo codice:\n\n\`\`\`\n${escapedCode}\n\`\`\`\n\n`;
+        
+        // --- INIEZIONE CONTESTO DISCRETA (v1.4.5) ---
+        const skills = (state.skills || []).map(s => s.name).join(', ');
+        const guidelines = state.projectGuidelines ? `\nGUIDELINES: ${state.projectGuidelines}` : '';
+        const contextHeader = `[GX-CONTEXT: Skills(${skills})${guidelines}]\n\n`;
+
+        const prompt = `${contextHeader}Analizza questo codice:\n\n\`\`\`\n${escapedCode}\n\`\`\`\n\n`;
 
         // Inject script based on provider
         let script = "";

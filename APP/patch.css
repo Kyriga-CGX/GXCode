@@ -1,15 +1,7 @@
 /* ========================================================
-   1. GLOBAL THEME VARIABLES & SYSTEM
+   1. GLOBAL THEME VARIABLES & SYSTEM (Patch Extensions)
    ======================================================== */
 :root {
-    --bg-app: #0d1117;
-    --bg-sidebar: #0d1117;
-    --bg-header: #161b22;
-    --bg-workspace: #0f111a;
-    --border-color: rgba(255,255,255,0.08);
-    --text-main: #c9d1d9;
-    --text-dim: #8b949e;
-    --accent: #2188ff;
     --glass-blur: 0px;
 }
 
@@ -19,7 +11,6 @@ html[data-cgx-theme="liquid-glass"] {
     --bg-sidebar: rgba(10, 10, 15, 0.3);
     --bg-header: rgba(20, 20, 30, 0.4);
     --bg-workspace: transparent;
-    --border-color: rgba(255, 255, 255, 0.1);
     --text-main: #f0f6fc;
     --text-dim: #9198a1;
     --glass-blur: 25px;
@@ -50,7 +41,7 @@ html[data-cgx-theme="liquid-glass"] #modals-root > div > div {
     background-color: var(--bg-app) !important;
     backdrop-filter: blur(var(--glass-blur)) saturate(180%) !important;
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%) !important;
-    border-color: var(--border-color) !important;
+    border-color: var(--border-dim) !important;
     color: var(--text-main) !important;
 }
 
@@ -83,7 +74,7 @@ html[data-cgx-theme="liquid-glass"] input,
 html[data-cgx-theme="liquid-glass"] textarea,
 html[data-cgx-theme="liquid-glass"] .cgx-term-input {
     background-color: rgba(255, 255, 255, 0.03) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: var(--border-subtle) !important;
     color: #fff !important;
 }
 
@@ -95,7 +86,7 @@ html[data-cgx-theme="classic"] div[class*="bg-"],
 html[data-cgx-theme="classic"] aside, 
 html[data-cgx-theme="classic"] header {
     background-color: #1a1f26 !important;
-    border-color: #2d333b !important;
+    border-color: var(--border-dim) !important;
     color: #adbac7 !important;
 }
 
@@ -410,7 +401,7 @@ html[data-cgx-theme="light"] select {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 12.5px;
     border-radius: 6px;
-    border: 1px solid #333;
+    border: 1px solid var(--border-dim);
     overflow: hidden;
 }
 
@@ -424,7 +415,7 @@ html[data-cgx-theme="light"] select {
     align-items: center;
     gap: 4px;
     background: #141414;
-    border-bottom: 1px solid #222;
+    border-bottom: 1px solid var(--border-ghost);
     padding: 4px 8px 0;
     flex-shrink: 0;
 }
@@ -452,7 +443,7 @@ html[data-cgx-theme="light"] select {
 .cgx-term-tab.cgx-tab-active {
     color: #ddd;
     background: #1e1e1e;
-    border-color: #333;
+    border-color: var(--border-dim);
 }
 
 .cgx-term-tab-close {
@@ -505,7 +496,7 @@ html[data-cgx-theme="light"] select {
 .cgx-term-action-btn:hover {
     background: #1e1e1e;
     color: #aaa;
-    border-color: #3a3a3a;
+    border-color: var(--border-dim);
 }
 
 .cgx-term-action-btn.green:hover {
@@ -532,7 +523,7 @@ html[data-cgx-theme="light"] select {
 }
 
 .cgx-term-output-area::-webkit-scrollbar-thumb {
-    background: #2a2a2a;
+    background: var(--border-dim);
     border-radius: 2px;
 }
 
@@ -556,7 +547,7 @@ html[data-cgx-theme="light"] select {
     gap: 6px;
     padding: 5px 10px;
     background: #141414;
-    border-top: 1px solid #222;
+    border-top: 1px solid var(--border-ghost);
     flex-shrink: 0;
 }
 
@@ -703,7 +694,7 @@ html[data-cgx-theme="light"] select {
     top: 0;
     bottom: 4px;
     width: 1px;
-    background: rgba(255,255,255,0.08);
+    background: var(--border-dim);
     pointer-events: none;
 }
 
@@ -732,7 +723,7 @@ html[data-cgx-theme="light"] select {
 
 #workspace-tabs {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.08) transparent;
+    scrollbar-color: var(--border-dim) transparent;
 }
 
 #workspace-tabs::-webkit-scrollbar {
@@ -741,7 +732,7 @@ html[data-cgx-theme="light"] select {
 }
 
 #workspace-tabs::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.1);
+    background: var(--border-dim);
     border-radius: 10px;
 }
 
@@ -762,7 +753,7 @@ html[data-cgx-theme="light"] select {
     gap: 12px;
     margin-left: auto;
     padding: 0 10px;
-    border-left: 1px solid rgba(255,255,255,0.05);
+    border-left: 1px solid var(--border-ghost);
     height: 24px;
     flex-shrink: 0;
     color: #6e7681;
@@ -786,6 +777,17 @@ html[data-cgx-theme="light"] select {
 .tab-control-btn svg {
     width: 14px;
     height: 14px;
+}
+
+.tab-control-btn--active {
+    opacity: 1;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.12);
+    border-radius: 4px;
+}
+
+.tab-control-btn--active svg {
+    color: #3b82f6;
 }
 
 /* -- Context Menu Animations -- */

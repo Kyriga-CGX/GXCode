@@ -91,11 +91,16 @@ export const api = {
                       url = remoteUrl.split('/mcp')[0]; 
                       
                       // Estraiamo il token se presente nel Bearer con Regex flessibile
-                      const headerIdx = ytMcp.args.findIndex(a => a === '--header');
-                      const authValue = headerIdx !== -1 ? ytMcp.args[headerIdx + 1] : null;
+                      const hIdx = ytMcp.args.findIndex(a => a === '--header' || a === '-H');
+                      const authValue = hIdx !== -1 ? ytMcp.args[hIdx + 1] : null;
 
-                      if (authValue && !token) {
-                          token = authValue.replace(/^Authorization:\s*Bearer\s*/i, '').trim();
+                      if (authValue) {
+                          // Supporta 'Authorization: Bearer <token>', 'Authorization: <token>', o solo '<token>'
+                          token = authValue.replace(/^(Authorization:\s*)?(Bearer\s*)?/i, '').trim();
+                      } else {
+                          // Se non c'è header, cerchiamo un argomento che sembri un Permanent Token (inizia con perm:)
+                          const permToken = ytMcp.args.find(a => a.startsWith('perm:'));
+                          if (permToken) token = permToken;
                       }
                   }
 

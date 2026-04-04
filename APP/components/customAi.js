@@ -20,7 +20,7 @@ export const initCustomAi = () => {
         pane.style.display = ''; 
 
         pane.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; padding: 20px; position: relative; background-color: #0d1117; overflow: hidden;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; padding: 20px; position: relative; background-color: var(--bg-main); overflow: hidden;">
                 
                 <!-- Glow decorativo di sfondo -->
                 <div class="absolute inset-0 pointer-events-none opacity-20" style="overflow: hidden;">
@@ -45,12 +45,12 @@ export const initCustomAi = () => {
                     </div>
 
                     <!-- Input Card -->
-                    <div style="width: 100%; background: rgba(22, 27, 34, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); padding: 25px; border-radius: 16px; margin-top: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                    <div style="width: 100%; background: var(--bg-side); border: 1px solid var(--border-dim); padding: 25px; border-radius: 16px; margin-top: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                         <div style="position: relative;">
-                            <label style="position: absolute; top: -10px; left: 12px; background: #161b22; padding: 0 8px; color: #a78bfa; font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border-radius: 4px;">Chiave API</label>
+                            <label style="position: absolute; top: -10px; left: 12px; background: var(--bg-side); padding: 0 8px; color: #a78bfa; font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border-radius: 4px;">Chiave API</label>
                             <input type="password" id="custom-ai-api-input" 
                                    value="${state.customAiConfig.apiKey}"
-                                   style="width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px 16px; color: white; font-size: 13px; outline: none; transition: border-color 0.3s;"
+                                   style="width: 100%; background: var(--bg-main); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px 16px; color: white; font-size: 13px; outline: none; transition: border-color 0.3s;"
                                    placeholder="Inserisci la tua API Key...">
                         </div>
                     </div>
@@ -87,7 +87,7 @@ export const initCustomAi = () => {
         pane.style.display = ''; 
 
         pane.innerHTML = `
-            <div style="display: flex; flex-direction: column; height: 100%; width: 100%; background-color: #0d1117; position: relative; overflow: hidden;" class="animate-fade-in">
+            <div style="display: flex; flex-direction: column; height: 100%; width: 100%; background-color: var(--bg-main); position: relative; overflow: hidden;" class="animate-fade-in">
                 <!-- Top Header / Settings -->
                 <div class="absolute top-3 left-3 z-[20]">
                     <button id="custom-ai-settings-btn" class="p-2 text-gray-500 hover:text-[#a78bfa] transition rounded-lg hover:bg-[#a78bfa]/5">
@@ -106,16 +106,16 @@ export const initCustomAi = () => {
                 </div>
 
                 <!-- Bottom Bar -->
-                <div class="p-4 border-t border-gray-800/50 flex items-end gap-3 bg-[#0d1117]/80 backdrop-blur-md">
+                <div class="p-4 border-t border-[var(--border-dim)] flex items-end gap-3 bg-[var(--bg-main)] backdrop-blur-md">
                     <div class="flex-1 relative">
                         <textarea id="custom-ai-chat-input" 
                                   placeholder="Scrivi un messaggio..."
                                   rows="1"
-                                  class="w-full bg-[#161b22] border border-gray-800 rounded-2xl px-4 py-2.5 text-sm text-gray-300 outline-none focus:border-[#a78bfa]/50 transition duration-300 resize-none max-h-32"></textarea>
+                                  class="w-full bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl px-4 py-2.5 text-sm text-gray-300 outline-none focus:border-[#a78bfa]/50 transition duration-300 resize-none max-h-32"></textarea>
                     </div>
 
                     <div id="custom-ai-model-container" class="relative">
-                        <select id="custom-ai-model-select" class="bg-[#161b22] border border-gray-800 rounded-lg px-3 py-2 text-[10px] font-bold text-[#a78bfa] outline-none hover:border-[#a78bfa]/30 transition appearance-none pr-8 min-w-[120px]">
+                        <select id="custom-ai-model-select" class="bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-lg px-3 py-2 text-[10px] font-bold text-[#a78bfa] outline-none hover:border-[#a78bfa]/30 transition appearance-none pr-8 min-w-[120px]">
                             ${state.customAiConfig.models.length > 0 
                                 ? state.customAiConfig.models.map(m => `<option value="${m}" ${m === state.customAiConfig.activeModel ? 'selected' : ''}>${m}</option>`).join('')
                                 : `<option value="">${state.customAiConfig.activeModel || 'Caricamento...'}</option>`
@@ -129,7 +129,7 @@ export const initCustomAi = () => {
 
                 <!-- Settings Overlay -->
                 <div id="custom-ai-settings-overlay" class="absolute inset-0 z-[100] bg-[#06080a]/90 backdrop-blur-sm hidden flex items-center justify-center p-6 animate-fade-in">
-                    <div class="bg-[#161b22] border border-gray-800 rounded-xl w-full max-w-sm p-6 shadow-2xl">
+                    <div class="bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl w-full max-w-sm p-6 shadow-2xl">
                         <div class="flex items-center justify-between mb-6">
                             <h4 class="text-sm font-bold text-[#a78bfa] uppercase tracking-widest">Impostazioni AI</h4>
                             <button id="close-custom-settings" class="text-gray-500 hover:text-white transition">
@@ -139,11 +139,11 @@ export const initCustomAi = () => {
                         <div class="space-y-4">
                             <div>
                                 <label class="text-[9px] text-gray-500 uppercase font-bold mb-1.5 block">Endpoint URL</label>
-                                <input type="text" id="setting-custom-endpoint" value="${state.customAiConfig.endpoint}" class="w-full bg-[#0d1117] border border-gray-800 rounded px-3 py-2 text-xs text-gray-300 outline-none focus:border-[#a78bfa]/50 transition">
+                                <input type="text" id="setting-custom-endpoint" value="${state.customAiConfig.endpoint}" class="w-full bg-[var(--bg-main)] border border-[var(--border-dim)] rounded px-3 py-2 text-xs text-gray-300 outline-none focus:border-[#a78bfa]/50 transition">
                             </div>
                             <div>
                                 <label class="text-[9px] text-gray-500 uppercase font-bold mb-1.5 block">API Key</label>
-                                <input type="password" id="setting-custom-key" value="${state.customAiConfig.apiKey}" class="w-full bg-[#0d1117] border border-gray-800 rounded px-3 py-2 text-xs text-gray-300 outline-none focus:border-[#a78bfa]/50 transition">
+                                <input type="password" id="setting-custom-key" value="${state.customAiConfig.apiKey}" class="w-full bg-[var(--bg-main)] border border-[var(--border-dim)] rounded px-3 py-2 text-xs text-gray-300 outline-none focus:border-[#a78bfa]/50 transition">
                             </div>
         `;
 

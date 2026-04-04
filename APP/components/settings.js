@@ -3,14 +3,14 @@ import { loadLocale } from '../core/i18n.js';
 import { api } from '../core/api.js';
 
 const getSkins = () => [
-    { id: 'dark', label: window.t('settings.skins.dark') },
-    { id: 'light', label: window.t('settings.skins.light') },
-    { id: 'classic', label: window.t('settings.skins.classic') },
-    { id: 'apple', label: window.t('settings.skins.apple') },
-    { id: 'aero', label: window.t('settings.skins.aero') },
-    { id: 'liquid-glass', label: window.t('settings.skins.liquid-glass') },
-    { id: 'custom-gradient', label: window.t('settings.skins.custom-gradient') },
-    { id: 'anime', label: window.t('settings.skins.anime') }
+    { id: 'dark', label: 'Industrial Dark (Default)' },
+    { id: 'classic', label: 'Classic IDE' },
+    { id: 'neon-cyber', label: 'Neon Cyber 2026' },
+    { id: 'nordic-frost', label: 'Nordic Frost 2026' },
+    { id: 'aurora-oled', label: 'Aurora OLED 2026' },
+    { id: 'titanium-carbon', label: 'Titanium Carbon 2026' },
+    { id: 'solar-flare', label: 'Solar Flare 2026' },
+    { id: 'void-stealth', label: 'Void Stealth 2026' }
 ];
 
 const getSettingsTabs = () => [
@@ -49,7 +49,14 @@ const getSettingsTabs = () => [
 const getSavedSkin = () => localStorage.getItem('cgx-skin') || 'dark';
 
 const applyGlobalSkinEffects = () => {
-    document.documentElement.dataset.cgxTheme = getSavedSkin();
+    const skin = getSavedSkin();
+    document.documentElement.dataset.cgxTheme = skin;
+    
+    // Sync with state for global reactivity (Monaco, Terminal, etc.)
+    if (state.activeCgxTheme !== skin) {
+        setState({ activeCgxTheme: skin });
+    }
+
     const custom = localStorage.getItem('cgx-grad-color');
     if (custom) document.documentElement.style.setProperty('--cgx-grad-custom', custom);
 };
@@ -73,11 +80,11 @@ const renderTabContent = () => {
             const termFontSize = parseInt(localStorage.getItem('gx-terminal-font-size') || '13');
 
             return `
-                <div class="space-y-6 animate-fade-in">
+                <div class="space-y-6">
                     <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">${window.t('settings.preferences.title')}</h4>
 
                     <!-- Auto-Save Toggle -->
-                    <div class="flex items-center justify-between p-4 bg-[#161b22] border border-gray-800 rounded-lg group hover:border-blue-500/30 transition">
+                    <div class="flex items-center justify-between p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-lg group hover:border-blue-500/30 transition">
                         <div>
                             <div class="text-xs font-bold text-gray-200">${window.t('settings.preferences.autoSave')}</div>
                             <div class="text-[10px] text-gray-500 mt-0.5">${window.t('settings.preferences.autoSaveDesc')}</div>
@@ -89,7 +96,7 @@ const renderTabContent = () => {
                     </div>
 
                     <!-- Font Size Slider -->
-                    <div class="p-4 bg-[#161b22] border border-gray-800 rounded-lg group hover:border-blue-500/30 transition">
+                    <div class="p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-lg group hover:border-blue-500/30 transition">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-bold text-gray-200">${window.t('settings.preferences.fontSize')}</span>
                             <span id="pref-fontsize-val" class="text-xs text-blue-400 font-mono">${fontSize}px</span>
@@ -98,9 +105,9 @@ const renderTabContent = () => {
                     </div>
 
                     <!-- Tab Size -->
-                    <div class="flex items-center justify-between p-4 bg-[#161b22] border border-gray-800 rounded-lg group hover:border-blue-500/30 transition">
+                    <div class="flex items-center justify-between p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-lg group hover:border-blue-500/30 transition">
                         <span class="text-xs font-bold text-gray-200">${window.t('settings.preferences.tabSize')}</span>
-                        <select id="pref-tabsize" onchange="window.setPref('gx-tab-size', this.value)" class="bg-[#0d1117] border border-gray-700 text-gray-300 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500 transition cursor-pointer">
+                        <select id="pref-tabsize" onchange="window.setPref('gx-tab-size', this.value)" class="bg-[var(--bg-main)] border border-[var(--border-subtle)] text-gray-300 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500 transition cursor-pointer">
                             <option value="2" ${tabSize === 2 ? 'selected' : ''}>2 Spaces</option>
                             <option value="4" ${tabSize === 4 ? 'selected' : ''}>4 Spaces</option>
                             <option value="8" ${tabSize === 8 ? 'selected' : ''}>8 Spaces</option>
@@ -108,7 +115,7 @@ const renderTabContent = () => {
                     </div>
 
                     <!-- Word Wrap Toggle -->
-                    <div class="flex items-center justify-between p-4 bg-[#161b22] border border-gray-800 rounded-lg group hover:border-blue-500/30 transition">
+                    <div class="flex items-center justify-between p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-lg group hover:border-blue-500/30 transition">
                         <div>
                             <div class="text-xs font-bold text-gray-200">${window.t('settings.preferences.wordWrap')}</div>
                             <div class="text-[10px] text-gray-500 mt-0.5">${window.t('settings.preferences.wordWrapDesc')}</div>
@@ -120,7 +127,7 @@ const renderTabContent = () => {
                     </div>
 
                     <!-- Minimap Toggle -->
-                    <div class="flex items-center justify-between p-4 bg-[#161b22] border border-gray-800 rounded-lg group hover:border-blue-500/30 transition">
+                    <div class="flex items-center justify-between p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-lg group hover:border-blue-500/30 transition">
                         <div>
                             <div class="text-xs font-bold text-gray-200">${window.t('settings.preferences.minimap')}</div>
                             <div class="text-[10px] text-gray-500 mt-0.5">${window.t('settings.preferences.minimapDesc')}</div>
@@ -132,7 +139,7 @@ const renderTabContent = () => {
                     </div>
 
                     <!-- Auto-Update Toggle -->
-                    <div class="flex items-center justify-between p-4 bg-[#161b22] border border-gray-800 rounded-lg group hover:border-blue-500/30 transition">
+                    <div class="flex items-center justify-between p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-lg group hover:border-blue-500/30 transition">
                         <div>
                             <div class="text-xs font-bold text-gray-200">${window.t('settings.preferences.autoUpdate')}</div>
                             <div class="text-[10px] text-gray-500 mt-0.5">${window.t('settings.preferences.autoUpdateDesc')}</div>
@@ -144,7 +151,7 @@ const renderTabContent = () => {
                     </div>
 
                     <!-- Terminal Font Size -->
-                    <div class="p-4 bg-[#161b22] border border-gray-800 rounded-lg group hover:border-blue-500/30 transition">
+                    <div class="p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-lg group hover:border-blue-500/30 transition">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-bold text-gray-200">${window.t('settings.preferences.termFontSize')}</span>
                             <span id="pref-termfontsize-val" class="text-xs text-blue-400 font-mono">${termFontSize}px</span>
@@ -156,13 +163,13 @@ const renderTabContent = () => {
         }
         case 'ai': {
             return `
-                <div class="space-y-8 animate-fade-in">
-                    <div class="p-6 bg-[#161b22] border border-gray-800 rounded-2xl shadow-inner">
+                <div class="space-y-8">
+                    <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl shadow-inner">
                         <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4" data-i18n="settings.ai.title">${window.t('settings.ai.title')}</h4>
                         
                         <div class="flex flex-col gap-3">
                             <label class="text-[9px] font-bold text-gray-600 uppercase" data-i18n="settings.ai.geminiKey">${window.t('settings.ai.geminiKey')}</label>
-                            <input id="ai-gemini-key" type="password" value="${state.geminiApiKey || ''}" data-i18n="[placeholder]settings.ai.placeholder" placeholder="${window.t('settings.ai.placeholder')}" class="p-3 bg-black/40 border border-gray-700 rounded-lg text-xs text-gray-200 focus:border-blue-500 outline-none transition font-mono tracking-widest">
+                            <input id="ai-gemini-key" type="password" value="${state.geminiApiKey || ''}" data-i18n="[placeholder]settings.ai.placeholder" placeholder="${window.t('settings.ai.placeholder')}" class="p-3 bg-[var(--bg-ghost)] border border-[var(--border-subtle)] rounded-lg text-xs text-gray-200 focus:border-blue-500 outline-none transition font-mono tracking-widest">
                             <p class="text-[10px] text-gray-500 leading-relaxed" data-i18n="settings.ai.geminiDesc">${window.t('settings.ai.geminiDesc')}</p>
                         </div>
 
@@ -172,12 +179,12 @@ const renderTabContent = () => {
                         </button>
                     </div>
 
-                    <div class="p-6 bg-[#161b22] border border-gray-800 rounded-2xl shadow-inner mt-4">
+                    <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl shadow-inner mt-4">
                         <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Anthropic Claude CLI</h4>
                         
                         <div class="flex flex-col gap-3">
                             <label class="text-[9px] font-bold text-gray-600 uppercase">Anthropic API Key</label>
-                            <input id="ai-anthropic-key" type="password" value="${state.anthropicApiKey || ''}" placeholder="sk-ant-..." class="p-3 bg-black/40 border border-gray-700 rounded-lg text-xs text-gray-200 focus:border-orange-500 outline-none transition font-mono tracking-widest">
+                            <input id="ai-anthropic-key" type="password" value="${state.anthropicApiKey || ''}" placeholder="sk-ant-..." class="p-3 bg-[var(--bg-ghost)] border border-[var(--border-subtle)] rounded-lg text-xs text-gray-200 focus:border-orange-500 outline-none transition font-mono tracking-widest">
                             <p class="text-[10px] text-gray-500 leading-relaxed">Inserisci qui la tua chiave Anthropic per usare <b>claudecode</b> direttamente nel tab dedicato.</p>
                         </div>
 
@@ -205,7 +212,7 @@ const renderTabContent = () => {
             const currentShortcuts = state.shortcuts || {};
             
             return `
-                <div class="space-y-6 animate-fade-in">
+                <div class="space-y-6">
                     <div class="flex items-center justify-between">
                         <div>
                             <h4 class="text-xs font-bold text-gray-200 uppercase tracking-widest leading-none">${window.t('settings.tabs.keybinds')}</h4>
@@ -218,7 +225,7 @@ const renderTabContent = () => {
 
                     <div class="space-y-3 pt-2">
                         ${Object.entries(currentShortcuts).map(([key, binding]) => `
-                            <div class="flex items-center justify-between p-4 bg-[#161b22] border border-gray-800 rounded-xl group hover:border-blue-500/30 transition shadow-sm overflow-hidden relative">
+                            <div class="flex items-center justify-between p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl group hover:border-blue-500/30 transition shadow-sm overflow-hidden relative">
                                 <div class="relative z-10">
                                     <div class="text-[11px] font-bold text-gray-300 mb-0.5">${binding.label}</div>
                                     <div class="text-[9px] text-gray-600 font-mono tracking-tighter">${binding.action}</div>
@@ -248,13 +255,13 @@ const renderTabContent = () => {
         }
         case 'mcp':
             return `
-                <div class="space-y-8 animate-fade-in">
+                <div class="space-y-8">
                     <!-- Predefined Templates -->
                     <div class="space-y-4">
                         <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest" data-i18n="settings.mcp.predefined">${window.t('settings.mcp.predefined')}</h4>
                         <div class="grid grid-cols-2 gap-4">
                             ${MCP_TEMPLATES.map(t => `
-                                <div onclick="window.useMCPTemplate('${t.id}')" class="p-4 bg-[#161b22] border border-gray-800 rounded-xl hover:border-blue-500/50 cursor-pointer transition group relative overflow-hidden">
+                                <div onclick="window.useMCPTemplate('${t.id}')" class="p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl hover:border-blue-500/50 cursor-pointer transition group relative overflow-hidden">
                                     <div class="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-bl-full group-hover:bg-blue-500/10 transition"></div>
                                     <div class="flex items-start gap-3 relative z-10">
                                         <span class="text-2xl">${t.icon}</span>
@@ -269,16 +276,16 @@ const renderTabContent = () => {
                     </div>
 
                     <!-- Add New Professional Form -->
-                    <div class="p-6 bg-[#161b22] border border-gray-800 rounded-2xl shadow-inner">
+                    <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl shadow-inner">
                         <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4" data-i18n="settings.mcp.title">${window.t('settings.mcp.title')}</h4>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="flex flex-col gap-2">
                                 <label class="text-[9px] font-bold text-gray-600 uppercase" data-i18n="settings.mcp.name">${window.t('settings.mcp.name')}</label>
-                                <input id="mcp-new-name" type="text" data-i18n="[placeholder]settings.mcp.placeholderName" placeholder="${window.t('settings.mcp.placeholderName')}" class="p-2.5 bg-black/40 border border-gray-700 rounded-lg text-xs text-gray-200 focus:border-blue-500 outline-none transition">
+                                <input id="mcp-new-name" type="text" data-i18n="[placeholder]settings.mcp.placeholderName" placeholder="${window.t('settings.mcp.placeholderName')}" class="p-2.5 bg-[var(--bg-ghost)] border border-[var(--border-subtle)] rounded-lg text-xs text-gray-200 focus:border-blue-500 outline-none transition">
                             </div>
                             <div class="flex flex-col gap-2">
                                 <label class="text-[9px] font-bold text-gray-600 uppercase" data-i18n="settings.mcp.url">${window.t('settings.mcp.url')}</label>
-                                <input id="mcp-new-url" type="text" data-i18n="[placeholder]settings.mcp.placeholderUrl" placeholder="${window.t('settings.mcp.placeholderUrl')}" class="p-2.5 bg-black/40 border border-gray-700 rounded-lg text-xs text-gray-200 focus:border-blue-500 outline-none transition">
+                                <input id="mcp-new-url" type="text" data-i18n="[placeholder]settings.mcp.placeholderUrl" placeholder="${window.t('settings.mcp.placeholderUrl')}" class="p-2.5 bg-[var(--bg-ghost)] border border-[var(--border-subtle)] rounded-lg text-xs text-gray-200 focus:border-blue-500 outline-none transition">
                             </div>
                         </div>
                         <button onclick="window.submitMCPForm()" class="mt-4 w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold rounded-lg transition shadow-lg shadow-blue-900/20" data-i18n="settings.mcp.register">${window.t('settings.mcp.register')}</button>
@@ -292,7 +299,7 @@ const renderTabContent = () => {
                         <div class="space-y-3">
                             ${state.mcpServers.length === 0 ? `<div class="p-10 text-center text-gray-600 italic text-[11px] bg-black/10 border border-dashed border-gray-800 rounded-xl" data-i18n="settings.mcp.empty">${window.t('settings.mcp.empty')}</div>` : ''}
                             ${state.mcpServers.map(srv => `
-                                <div class="px-5 py-4 bg-[#161b22] border border-gray-800 rounded-xl flex items-center justify-between group hover:border-gray-700 transition">
+                                <div class="px-5 py-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl flex items-center justify-between group hover:border-gray-700 transition">
                                     <div class="flex items-center gap-4">
                                         <div class="w-2 h-2 rounded-full ${srv.enabled ? 'bg-emerald-500 animate-pulse' : 'bg-gray-600'}"></div>
                                         <div class="flex flex-col gap-0.5">
@@ -341,7 +348,7 @@ const renderTabContent = () => {
         case 'marketplace':
             const ms = state.marketplaceSources || {};
             return `
-                <div class="space-y-8 animate-fade-in">
+                <div class="space-y-8">
                     <!-- Built-in Sources -->
                     <div>
                         <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Official Sources</h4>
@@ -351,7 +358,7 @@ const renderTabContent = () => {
                     { id: 'skillssh', name: 'Skills.sh', desc: 'Libreria globale per Claude/Gemini AI Skills.' },
                     { id: 'agentshub', name: 'GX Agents Hub', desc: 'Repository ufficiale per Agenti certificati.' }
                 ].map(s => `
-                                <div class="flex items-center justify-between p-3 bg-[#161b22] border border-gray-800 rounded group transition hover:border-blue-500/30">
+                                <div class="flex items-center justify-between p-3 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded group transition hover:border-blue-500/30">
                                     <div class="flex flex-col">
                                         <span class="text-xs font-bold text-gray-200">${s.name}</span>
                                         <span class="text-[10px] text-gray-500">${s.desc}</span>
@@ -395,7 +402,7 @@ const renderTabContent = () => {
                         <div class="space-y-3">
                             ${state.repositories.length === 0 ? '<div class="p-6 text-center text-gray-600 italic text-xs border border-dashed border-gray-800 rounded">Nessuna repository personalizzata configurata.</div>' : ''}
                             ${state.repositories.map(repo => `
-                                <div class="p-4 bg-[#161b22] border border-gray-800 rounded flex items-center justify-between group hover:border-emerald-500/30 transition">
+                                <div class="p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded flex items-center justify-between group hover:border-emerald-500/30 transition">
                                     <div class="flex flex-col gap-1">
                                         <div class="flex items-center gap-2">
                                             <span class="text-xs font-bold text-gray-200">${repo.name}</span>
@@ -417,12 +424,12 @@ const renderTabContent = () => {
             `;
         case 'folders':
             return `
-                <div class="space-y-8 animate-fade-in">
+                <div class="space-y-8">
                     <div>
                         <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4" data-i18n="settings.folders.title">${window.t('settings.folders.title')}</h4>
                         <p class="text-[10px] text-gray-500 mb-6" data-i18n="settings.folders.desc">${window.t('settings.folders.desc')}</p>
                         
-                        <div class="p-6 bg-[#161b22] border border-gray-800 rounded-2xl group hover:border-blue-500/30 transition shadow-inner">
+                        <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl group hover:border-blue-500/30 transition shadow-inner">
                             <h4 class="text-[11px] font-bold text-gray-300 uppercase tracking-widest mb-2" data-i18n="settings.folders.systemDir">${window.t('settings.folders.systemDir')}</h4>
                             <p class="text-[10px] text-gray-500 mb-6 leading-relaxed" data-i18n="settings.folders.systemDirDesc">${window.t('settings.folders.systemDirDesc')}</p>
                             
@@ -430,6 +437,35 @@ const renderTabContent = () => {
                                 <span class="text-xl group-hover:scale-110 transition-transform">📂</span>
                                 <span class="text-[11px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-blue-400 transition-colors" data-i18n="settings.folders.openFolder">${window.t('settings.folders.openFolder')}</span>
                             </button>
+                        </div>
+
+                        <!-- Nuova Sezione Project Context (Linee Guida) -->
+                        <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl group hover:border-blue-500/30 transition shadow-inner mt-4">
+                            <h4 class="text-[11px] font-bold text-gray-300 uppercase tracking-widest mb-2">Project Context (Linee Guida)</h4>
+                            <p class="text-[10px] text-gray-500 mb-4 leading-relaxed">Inserisci qui le regole e i contesti del progetto. Queste informazioni verranno inserite nel file CLAUDE.md per istruire l'AI sul tuo modo di lavorare.</p>
+                            
+                            <textarea id="settings-project-guidelines" 
+                                      class="w-full h-32 bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-xl p-4 text-[11px] text-gray-300 outline-none focus:border-blue-500/50 transition-all font-mono custom-scrollbar mb-4"
+                                      placeholder="Es: Usa solo arrow functions, mantieni i componenti piccoli, segui lo schema X...">${state.projectGuidelines || ''}</textarea>
+                            
+                            <button onclick="window.saveProjectGuidelines()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-xl transition shadow-lg shadow-blue-900/20 uppercase tracking-widest">Salva Linee Guida</button>
+                        </div>
+
+                        <!-- Sezione CLAUDE.md -->
+                        <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl group hover:border-orange-500/30 transition shadow-inner mt-4">
+                            <h4 class="text-[11px] font-bold text-gray-300 uppercase tracking-widest mb-2">Accesso Rapido File Context</h4>
+                            <p class="text-[10px] text-gray-500 mb-6 leading-relaxed">Visualizza i file di istruzioni dinamiche che sincronizzano questo progetto con Claude Code.</p>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <button onclick="window.openClaudeMetadata('CLAUDE.md')" class="py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex items-center justify-center gap-3 group-hover:border-orange-400/50 shadow-md">
+                                    <span class="text-xl group-hover:scale-110 transition-transform">📝</span>
+                                    <span class="text-[11px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-orange-400 transition-colors">CLAUDE.md</span>
+                                </button>
+                                <button onclick="window.openClaudeMetadata('GX_IDENTITY.md')" class="py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex items-center justify-center gap-3 group-hover:border-blue-400/50 shadow-md">
+                                    <span class="text-xl group-hover:scale-110 transition-transform">🤖</span>
+                                    <span class="text-[11px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-blue-400 transition-colors">GX_IDENTITY</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -441,13 +477,14 @@ const renderTabContent = () => {
                 <div class="space-y-8">
                     <div>
                         <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4" data-i18n="settings.appearance.title">${window.t('settings.appearance.title')}</h4>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-2 gap-3 pb-8">
                             ${getSkins().map(s => `
-                                <div onclick="window.applySkin('${s.id}')" class="p-3 border rounded-lg cursor-pointer transition-all ${currentSkin === s.id ? 'bg-blue-600/10 border-blue-500 text-blue-400' : 'bg-[#161b22] border-gray-800 text-gray-400 hover:border-gray-600'}">
-                                    <div class="text-xs font-bold mb-1">${s.label}</div>
-                                    <div class="text-[9px] opacity-70" data-i18n="settings.appearance.skinDesc" data-i18n-args='{"skin": "${s.id}"}'>
-                                        ${window.t('settings.appearance.skinDesc').replace('{skin}', s.id)}
+                                <div onclick="window.applySkin('${s.id}')" class="p-4 border rounded-xl cursor-pointer transition-all flex flex-col gap-1 ${state.activeCgxTheme === s.id ? 'bg-blue-600/20 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'bg-[#161b22] border-gray-800 hover:border-gray-600'} group">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[11px] font-bold uppercase tracking-widest ${state.activeCgxTheme === s.id ? 'text-blue-400' : 'text-gray-300 group-hover:text-white'}">${s.label}</span>
+                                        ${state.activeCgxTheme === s.id ? '<div class="w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_10px_#3b82f6]"></div>' : ''}
                                     </div>
+                                    <div class="text-[9px] text-gray-500 font-medium uppercase tracking-tighter opacity-60">Evolution 2026 Edition</div>
                                 </div>
                             `).join('')}
                         </div>
@@ -460,7 +497,7 @@ const renderTabContent = () => {
             `;
         case 'language':
             return `
-                <div class="space-y-8 animate-fade-in">
+                <div class="space-y-8">
                     <p class="text-[11px] text-gray-500" data-i18n="settings.language.desc">${window.t('settings.language.desc')}</p>
                     <div class="grid grid-cols-2 gap-4">
                         <!-- IT -->
@@ -483,8 +520,8 @@ const renderTabContent = () => {
             `;
         case 'updates':
             return `
-                <div class="space-y-8 animate-fade-in">
-                    <div class="p-6 bg-[#161b22] border border-gray-800 rounded-xl flex items-center justify-between">
+                <div class="space-y-8">
+                    <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -528,19 +565,47 @@ const renderTabContent = () => {
 const renderSettingsModal = () => {
     const root = document.getElementById('modals-root');
     if (!state.isSettingsOpen) {
-        if (!state.isMarketplaceOpen) root.innerHTML = '';
+        const settingsEl = document.getElementById('settings-modal-overlay');
+        if (settingsEl) settingsEl.remove();
         return;
     }
 
     const groups = getSettingsTabs();
     const activeTab = groups.flatMap(g => g.tabs).find(t => t.id === state.activeSettingsTab);
 
+    // Verifica se il modal è già presente per evitare il "flash" del backdrop
+    const existingModal = document.getElementById('settings-modal-overlay');
+    
+    if (existingModal) {
+        // AGGIORNAMENTO PARZIALE: Solo contenuto e testata area destra
+        const headerIcon = existingModal.querySelector('#settings-header-icon');
+        const headerTitle = existingModal.querySelector('#settings-header-title');
+        const contentArea = existingModal.querySelector('#settings-content-body');
+        
+        if (headerIcon) headerIcon.innerHTML = activeTab?.icon || '';
+        if (headerTitle) headerTitle.innerText = activeTab?.label || '';
+        if (contentArea) contentArea.innerHTML = renderTabContent();
+
+        // AGGIORNAMENTO SIDEBAR: Sincronizziamo i tasti attivi
+        const allTabBtns = existingModal.querySelectorAll('[data-settings-tab]');
+        allTabBtns.forEach(btn => {
+            const tabId = btn.getAttribute('data-settings-tab');
+            if (tabId === state.activeSettingsTab) {
+                btn.className = "px-3 py-2 flex items-center gap-3 rounded-lg cursor-pointer transition-all bg-blue-600/15 text-blue-400 border border-blue-500/20 shadow-lg shadow-blue-900/10";
+            } else {
+                btn.className = "px-3 py-2 flex items-center gap-3 rounded-lg cursor-pointer transition-all text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent";
+            }
+        });
+        return;
+    }
+
+    // RENDERING INIZIALE (Solo alla prima apertura)
     root.innerHTML = `
-        <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-6 pointer-events-auto animate-fade-in">
-            <div class="bg-[#0d1117] w-full max-w-4xl h-[640px] rounded-2xl border border-gray-700/50 shadow-2xl flex overflow-hidden">
+        <div id="settings-modal-overlay" class="fixed inset-0 bg-[#06080a] flex items-center justify-center z-[9999] p-6 pointer-events-auto animate-fade-in">
+            <div class="bg-[var(--bg-main)] w-full max-w-4xl h-[640px] rounded-2xl border border-[var(--border-subtle)] shadow-[0_40px_100px_rgba(0,0,0,0.8)] flex overflow-hidden">
                 <!-- Sidebar -->
-                <div class="w-64 border-r border-gray-800 bg-[#161b22] flex flex-col">
-                    <div class="h-14 flex items-center px-6 border-b border-gray-800 bg-black/20">
+                <div class="w-64 border-r border-[var(--border-dim)] bg-[var(--bg-side)] flex flex-col">
+                    <div class="h-14 flex items-center px-6 border-b border-[var(--border-dim)] bg-[var(--bg-ghost)]">
                         <h2 class="text-sm font-black text-white uppercase tracking-widest" data-i18n="settings.title">${window.t('settings.title')}</h2>
                     </div>
                     <div class="flex-1 py-4 overflow-y-auto no-scrollbar">
@@ -550,6 +615,7 @@ const renderSettingsModal = () => {
                                 <div class="space-y-1">
                                     ${group.tabs.map(tab => `
                                         <div onclick="window.switchSettingsTab('${tab.id}')" 
+                                             data-settings-tab="${tab.id}"
                                              class="px-3 py-2 flex items-center gap-3 rounded-lg cursor-pointer transition-all 
                                              ${state.activeSettingsTab === tab.id 
                                                  ? 'bg-blue-600/15 text-blue-400 border border-blue-500/20 shadow-lg shadow-blue-900/10' 
@@ -568,14 +634,14 @@ const renderSettingsModal = () => {
                 </div>
 
                 <!-- Content Area -->
-                <div class="flex-1 flex flex-col bg-[#0d1117]">
-                    <div class="h-14 border-b border-gray-800 flex items-center px-8 bg-[#0d1117] relative z-10 shadow-sm">
+                <div class="flex-1 flex flex-col bg-[var(--bg-main)]">
+                    <div class="h-14 border-b border-[var(--border-dim)] flex items-center px-8 bg-[var(--bg-main)] relative z-10 shadow-sm">
                         <div class="flex items-center gap-3">
-                           <span class="text-lg">${activeTab?.icon || ''}</span>
-                           <h3 class="font-black text-white text-sm uppercase tracking-wide">${activeTab?.label || ''}</h3>
+                           <span id="settings-header-icon" class="text-lg">${activeTab?.icon || ''}</span>
+                           <h3 id="settings-header-title" class="font-black text-white text-sm uppercase tracking-wide">${activeTab?.label || ''}</h3>
                         </div>
                     </div>
-                    <div class="flex-1 overflow-y-auto p-10 custom-scrollbar bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/5 via-transparent to-transparent">
+                    <div id="settings-content-body" class="flex-1 overflow-y-auto p-10 custom-scrollbar bg-[var(--bg-main)]">
                         ${renderTabContent()}
                     </div>
                 </div>
@@ -596,6 +662,14 @@ const renderSettingsModal = () => {
 // Global Actions
 window.closeSettings = () => setState({ isSettingsOpen: false });
 
+window.saveProjectGuidelines = () => {
+    const el = document.getElementById('settings-project-guidelines');
+    if (el) {
+        setState({ projectGuidelines: el.value.trim() });
+        window.gxToast("Linee guida salvate con successo!", 'success');
+    }
+};
+
 window.switchSettingsTab = (tabId) => {
     setState({ activeSettingsTab: tabId });
 };
@@ -604,6 +678,30 @@ window.applySkin = (skinId) => {
     localStorage.setItem('cgx-skin', skinId);
     applyGlobalSkinEffects();
     setState({ isSettingsOpen: true }); // Re-render logic
+};
+
+window.openClaudeMetadata = async (fileName = 'CLAUDE.md') => {
+    const workspacePath = state.activeTerminalFolder || state.workspaceData?.path;
+    if (!workspacePath) {
+        window.gxToast("Nessun progetto aperto nel workspace.", 'error');
+        return;
+    }
+    
+    const separator = workspacePath.includes('\\') ? '\\' : '/';
+    let targetFile = "";
+    
+    if (fileName === 'CLAUDE.md') {
+        targetFile = workspacePath.endsWith(separator) ? `${workspacePath}CLAUDE.md` : `${workspacePath}${separator}CLAUDE.md`;
+    } else {
+        // Altrimenti è GX_IDENTITY che sta in .claudecode
+        targetFile = workspacePath.endsWith(separator) ? `${workspacePath}.claudecode${separator}GX_IDENTITY.md` : `${workspacePath}${separator}.claudecode${separator}GX_IDENTITY.md`;
+    }
+    
+    try {
+        await window.electronAPI.shellOpenPath(targetFile);
+    } catch (err) {
+        window.gxToast(`File ${fileName} non ancora generato.`, 'warning');
+    }
 };
 
 window.setPref = (key, value) => {
@@ -930,7 +1028,11 @@ window.resetShortcuts = () => {
         'Ctrl+S': { action: 'editor:save', label: 'Salva File Attivo' },
         'Ctrl+P': { action: 'search:quick-open', label: 'Ricerca Globale Rapida' },
         'Ctrl+B': { action: 'sidebar:toggle', label: 'Mostra/Nascondi Sidebar' },
-        'Alt+F': { action: 'editor:format', label: 'Formatta Documento' }
+        'Alt+F': { action: 'editor:format', label: 'Formatta Documento' },
+        'F5': { action: 'debug:continue', label: 'Debug: Continua' },
+        'F10': { action: 'debug:step-over', label: 'Debug: Avanza (Step Over)' },
+        'F11': { action: 'debug:step-into', label: 'Debug: Entra (Step Into)' },
+        'Shift+F5': { action: 'debug:stop', label: 'Debug: Ferma Sessione' }
     };
     setState({ shortcuts: defaults });
     localStorage.setItem('gx-shortcuts', JSON.stringify(defaults));

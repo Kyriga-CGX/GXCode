@@ -27,7 +27,7 @@ export const initProblems = () => {
                     const fileName = p.path.split('/').pop();
                     
                     return `
-                        <div class="flex items-start gap-3 p-1.5 hover:bg-[#161b22] cursor-pointer rounded border border-transparent hover:border-gray-800 transition group" 
+                        <div class="flex items-start gap-3 p-1.5 hover:bg-[var(--bg-side-alt)] cursor-pointer rounded border border-transparent hover:border-[var(--border-subtle)] transition group" 
                              onclick="window.openFileFromSearch(decodeURIComponent('${encodeURIComponent(p.path)}'), '${fileName}', ${p.startLine}, '')">
                             <div class="shrink-0 mt-0.5">${icon}</div>
                             <div class="flex-1 overflow-hidden">

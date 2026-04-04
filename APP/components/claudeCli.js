@@ -79,6 +79,9 @@ export const startClaudeCli = async () => {
     const apiKey = state.anthropicApiKey;
     const workspacePath = state.activeTerminalFolder || state.workspaceData?.path;
 
+    // Iniezione Context Dinamico (CLAUDE.md)
+    await ensureClaudeMetadata(workspacePath);
+
     const res = await window.electronAPI.terminalCreate('claude-cli', 'claude', workspacePath, apiKey);
     
     if (res && res.success) {
@@ -88,6 +91,70 @@ export const startClaudeCli = async () => {
         claudeTerm.write(`\r\n\x1b[31;1mERRORE AVVIO CLAUDE CLI\x1b[0m\r\n`);
         claudeTerm.write(`\x1b[33mDettaglio: ${res.error}\x1b[0m\r\n`);
         claudeTerm.write(`\x1b[90mAssicurati che 'npx' sia installato e la chiave sia valida.\x1b[0m\r\n`);
+    }
+};
+
+/**
+ * Genera o aggiorna il file CLAUDE.md nella root del progetto per fornire contesto all'IA.
+ */
+const ensureClaudeMetadata = async (workspacePath) => {
+    if (!workspacePath) return;
+    
+    try {
+        const aiPaths = await window.electronAPI.getAiPaths();
+        const gitInfo = await window.electronAPI.getGitRemote(workspacePath);
+        const openFiles = state.openFiles || [];
+        const activeFile = state.activeFileId;
+        
+        // Identità del progetto: Priorità all'URL Git, altrimenti nome cartella
+        const projectIdentity = gitInfo.success ? gitInfo.url : workspacePath.split(/[/\\]/).filter(Boolean).pop();
+
+        // Helper per rendere i path relativi alla root del progetto (robusto per Windows/Unix)
+        const getRelative = (fullPath) => {
+            if (!fullPath) return 'None';
+            const normPath = fullPath.replace(/\\/g, '/');
+            const normRoot = workspacePath.replace(/\\/g, '/');
+            
+            let relative = normPath.replace(normRoot, '');
+            if (relative.startsWith('/')) relative = relative.substring(1);
+            return relative || '.';
+        };
+
+        // Costruiamo il contenuto in modo leggibile e portatile
+        let content = `# ${projectIdentity.toUpperCase()} - PROJECT CONTEXT\n\n`;
+        content += `This project is being managed by **GXCode IDE**.\n\n`;
+        
+        content += `## PROJECT IDENTITY\n`;
+        content += `- **Remote/ID**: \`${projectIdentity}\`\n`;
+        content += `- **Local Root**: \`.\` (Current Working Directory)\n\n`;
+
+        content += `## IDE RESOURCES (GLOBAL)\n`;
+        content += `- **Agents Location**: \`~/.GXCODE/agents\`\n`;
+        content += `- **Skills Location**: \`~/.GXCODE/skills\`\n\n`;
+        
+        if (openFiles.length > 0) {
+            content += `## CURRENT WORKSPACE CONTEXT\n`;
+            content += `- **Open Editor Tabs**:\n`;
+            openFiles.forEach(f => {
+                const relPath = getRelative(f.path);
+                content += `  - \`${relPath}\` ${f.path === activeFile ? '**[ACTIVE]**' : ''}\n`;
+            });
+            content += `\n`;
+        }
+        
+        content += `\n## INSTRUCTIONS\n`;
+        content += `1. When the user asks about agents or skills, prioritize looking into the Global locations (relative to User Home).\n`;
+        content += `2. You have full access to the project root for searching and editing code.\n`;
+        content += `3. Use the open editor tabs as your primary context for what the user is currently working on.\n`;
+
+        // Scrittura del file
+        const separator = workspacePath.includes('\\') ? '\\' : '/';
+        const targetFile = workspacePath.endsWith(separator) ? `${workspacePath}CLAUDE.md` : `${workspacePath}${separator}CLAUDE.md`;
+        
+        await window.electronAPI.fsWriteFile(targetFile, content);
+        console.log("[CLAUDE-CLI-V3] Identità Git e contesto iniettati con successo.");
+    } catch (err) {
+        console.error("[CLAUDE-CLI] Failed to inject context:", err);
     }
 };
 

@@ -37,20 +37,20 @@ const ytColorMap = {
 const renderIssueItem = (issue) => {
     const isActive = issue.id === state.activeIssueId;
     const statusClass = statusMap[issue.status] || 'bg-gray-500/10 text-gray-400 border-gray-500/30';
-    const borderClass = borderColorMap[issue.status] || 'border-l-gray-700';
+    const borderClass = borderColorMap[issue.status] || 'border-l-[var(--border-dim)]';
 
     const priorityIcon = issue.priority === 'High' || issue.priority === 'Critical' ? '<span class="text-red-500">高</span>' : 
                         issue.priority === 'Medium' || issue.priority === 'Normal' ? '<span class="text-yellow-500">中</span>' : 
                         '<span class="text-gray-600">低</span>';
 
     const tagsHtml = (issue.tags || []).map(t => `
-        <span class="text-[8px] px-1 rounded border border-white/10" style="background: ${ytColorMap[t.color] || '#333'}22; color: ${ytColorMap[t.color] || '#ccc'}">
+        <span class="text-[8px] px-1 rounded border border-[var(--border-ghost)]" style="background: ${ytColorMap[t.color] || '#333'}22; color: ${ytColorMap[t.color] || '#ccc'}">
             ${t.name}
         </span>
     `).join('');
 
     return `
-        <div data-id="${issue.id}" class="issue-item flex flex-col p-3 rounded-lg border transition-all hover:shadow-lg group border-l-[3px] ${borderClass} relative overflow-hidden ${isActive ? 'border-blue-500/50 bg-blue-500/5' : 'border-gray-800 bg-black/10'}" style="min-height: 80px; cursor: pointer;">
+        <div data-id="${issue.id}" class="issue-item flex flex-col p-3 rounded-lg border transition-all hover:shadow-lg group border-l-[3px] ${borderClass} relative overflow-hidden ${isActive ? 'border-[var(--accent)] bg-[var(--accent-glow)]' : 'border-[var(--border-dim)] bg-[var(--border-ghost)]'}" style="min-height: 80px; cursor: pointer;">
             <div class="relative z-10 flex flex-col h-full pointer-events-none">
                 <div class="flex justify-between items-center mb-1">
                     <div class="flex items-center gap-1.5 overflow-hidden">
@@ -62,14 +62,14 @@ const renderIssueItem = (issue) => {
                 
                 <h4 class="text-[11px] font-bold ${isActive ? 'text-white' : 'text-gray-200'} leading-tight mb-2 group-hover:text-blue-400 transition-colors truncate">${issue.name}</h4>
                 
-                <div class="flex justify-between items-center mt-auto pt-2 border-t border-gray-800/20">
+                <div class="flex justify-between items-center mt-auto pt-2 border-t gx-border-theme">
                     <div class="flex items-center gap-1.5 grayscale group-hover:grayscale-0 transition">
-                        <div class="w-4 h-4 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-[8px] text-gray-300 shadow-sm font-bold">
+                        <div class="w-4 h-4 rounded-full bg-[var(--bg-side)] border border-[var(--border-dim)] flex items-center justify-center text-[8px] text-gray-300 shadow-sm font-bold">
                             ${issue.assignee ? issue.assignee.charAt(0).toUpperCase() : '?'}
                         </div>
                         <span class="text-[9px] text-gray-500 font-medium truncate max-w-[80px]">${issue.assignee || window.t('issues.noAssignee')}</span>
                     </div>
-                    <div class="flex items-center gap-1 px-1 py-0.5 rounded bg-black/10">
+                    <div class="flex items-center gap-1 px-1 py-0.5 rounded bg-[var(--bg-main)]">
                         <span class="text-[9px] text-gray-600 uppercase tracking-widest font-bold">${issue.priority}</span>
                         <div class="text-[10px] opacity-70">${priorityIcon}</div>
                     </div>
@@ -96,10 +96,10 @@ const renderFilterBar = () => {
     const sprints = ['Tutti', ...new Set(state.issues.filter(t => t.sprint).map(t => t.sprint))];
 
     return `
-        <div class="flex flex-col gap-2 px-3 py-3 border-b border-gray-800 bg-black/10 backdrop-blur-md">
+        <div class="flex flex-col gap-2 px-3 py-3 border-b gx-border-theme bg-black/10 backdrop-blur-md">
             <div class="flex flex-wrap items-center gap-1.5">
                 ${filters.map(f => `
-                    <button onclick="window.filterIssues('${f.id}')" class="px-2 py-0.5 rounded text-[8px] uppercase font-bold tracking-tighter transition-all border ${activeFilter === f.id ? 'bg-blue-600/20 border-blue-500 text-blue-400' : 'bg-black/20 border-gray-800 text-gray-500 hover:text-gray-300'}">
+                    <button onclick="window.filterIssues('${f.id}')" class="px-2 py-0.5 rounded text-[8px] uppercase font-bold tracking-tighter transition-all border ${activeFilter === f.id ? 'bg-[var(--accent-glow)] border-[var(--accent)] text-[var(--accent)]' : 'bg-[var(--bg-main)] gx-border-theme text-gray-500 hover:text-gray-300'}">
                         ${f.label}
                     </button>
                 `).join('')}
@@ -108,7 +108,7 @@ const renderFilterBar = () => {
             ${sprints.length > 1 ? `
             <div class="flex items-center gap-2">
                 <span class="text-[8px] uppercase font-bold text-gray-600 tracking-widest">${window.t('issues.sprint')}:</span>
-                <select onchange="window.filterIssuesBySprint(this.value)" class="flex-1 bg-black/20 border border-gray-800 rounded px-2 py-1 text-[9px] text-gray-300 focus:outline-none focus:border-blue-500 transition cursor-pointer">
+                <select onchange="window.filterIssuesBySprint(this.value)" class="flex-1 bg-[var(--bg-main)] border gx-border-theme rounded px-2 py-1 text-[9px] text-gray-300 focus:outline-none focus:border-[var(--accent)] transition cursor-pointer">
                     ${sprints.map(s => `<option value="${s}" ${activeSprint === s ? 'selected' : ''}>${s}</option>`).join('')}
                 </select>
             </div>
@@ -125,7 +125,7 @@ window.openIssuePopup = (issueId) => {
     modal.className = "fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-[2000000] animate-fade-in pointer-events-auto p-10";
     
     const tagsHtml = (issue.tags || []).map(t => `
-        <span class="text-[10px] px-2 py-0.5 rounded border border-white/10" style="background: ${ytColorMap[t.color] || '#333'}44; color: ${ytColorMap[t.color] || '#ccc'}">
+        <span class="text-[10px] px-2 py-0.5 rounded border gx-border-theme" style="background: ${ytColorMap[t.color] || '#333'}44; color: ${ytColorMap[t.color] || '#ccc'}">
             ${t.name}
         </span>
     `).join('');
@@ -139,7 +139,7 @@ window.openIssuePopup = (issueId) => {
     `).join('');
 
     modal.innerHTML = `
-        <div class="w-full max-w-2xl bg-[#0d1117] border border-gray-800 rounded-xl shadow-2xl overflow-hidden flex flex-col animate-scale-up max-h-[80vh]">
+        <div class="w-full max-w-2xl bg-[var(--bg-main)] border border-[var(--border-dim)] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-scale-up max-h-[80vh]">
             <!-- Header -->
             <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-start bg-black/20">
                 <div class="flex flex-col gap-1">
@@ -219,7 +219,7 @@ export const initIssues = async () => {
     if (!pane) return;
 
     pane.innerHTML = `
-        <div class="h-10 px-4 flex items-center border-b border-gray-800 bg-black/30">
+        <div class="h-10 px-4 flex items-center border-b gx-border-theme bg-[var(--bg-side)]">
              <span class="text-[10px] uppercase font-bold text-gray-400 tracking-widest">YouTrack Issues</span>
         </div>
         <div id="issues-filter-root"></div>

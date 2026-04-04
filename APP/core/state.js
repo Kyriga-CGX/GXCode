@@ -26,11 +26,15 @@ export const state = {
         'Ctrl+S': { action: 'editor:save', label: 'Salva File Attivo' },
         'Ctrl+P': { action: 'search:quick-open', label: 'Ricerca Globale Rapida' },
         'Ctrl+B': { action: 'sidebar:toggle', label: 'Mostra/Nascondi Sidebar' },
-        'Alt+F': { action: 'editor:format', label: 'Formatta Documento' }
+        'Alt+F': { action: 'editor:format', label: 'Formatta Documento' },
+        'F5': { action: 'debug:continue', label: 'Debug: Continua' },
+        'F10': { action: 'debug:step-over', label: 'Debug: Avanza (Step Over)' },
+        'F11': { action: 'debug:step-into', label: 'Debug: Entra (Step Into)' },
+        'Shift+F5': { action: 'debug:stop', label: 'Debug: Ferma Sessione' }
     })),
 
     // UI State (Persistiti su localStorage)
-    activeSidebarTab: localStorage.getItem('gx-active-sidebar-tab') || 'agents',
+    activeRightTab: localStorage.getItem('gx-active-right-tab') || 'agents',
     activeActivity: localStorage.getItem('gx-active-activity') || 'explorer',
     isMarketplaceOpen: false,
     activeMarketplaceTab: 'agents',
@@ -45,7 +49,8 @@ export const state = {
     issues: [],
     activeIssueId: null,
     activeAgentId: localStorage.getItem('gx-active-agent-id'),
-    workspaceData: null,
+    workspaceData: JSON.parse(localStorage.getItem('gx-workspace-data') || 'null'),
+    files: JSON.parse(localStorage.getItem('gx-workspace-files') || '[]'),
     openFiles: JSON.parse(localStorage.getItem('gx-open-files') || '[]'),
     activeFileId: localStorage.getItem('gx-active-file-id'),
     problems: [],
@@ -94,9 +99,23 @@ export const state = {
     testFilesCache: [],
     isPlaywrightInstalled: true,
     isTestingInProgress: false,
+    testTarget: null, // 'run' o 'debug'
     
     // Multi-Project Terminal Support (v1.3.8)
-    activeTerminalFolder: localStorage.getItem('gx-active-terminal-folder') || ''
+    activeTerminalFolder: localStorage.getItem('gx-active-terminal-folder') || '',
+
+    // Context & AI (v1.4.5)
+    projectGuidelines: localStorage.getItem('gx-project-guidelines') || '',
+
+    // Vision 2026 Theme State
+    activeCgxTheme: localStorage.getItem('gx-active-skin') || 'dark',
+
+    // Skill Filter State
+    activeSkillCategory: localStorage.getItem('gx-active-skill-category') || 'all',
+
+    // Explorer Selection State (v1.3.8)
+    activeExplorerItem: null,
+    activeExplorerItemIsDir: false
 };
 
 const listeners = new Set();
@@ -121,22 +140,27 @@ export const setState = (newState) => {
     if (!hasChanges) return;
     
     // Persistenza Automatica dei flag UI
-    if (newState.activeSidebarTab) localStorage.setItem('gx-active-sidebar-tab', state.activeSidebarTab);
+    if (newState.activeRightTab) localStorage.setItem('gx-active-right-tab', state.activeRightTab);
     if (newState.activeActivity) localStorage.setItem('gx-active-activity', state.activeActivity);
     if (newState.activeLeftTab) localStorage.setItem('gx-active-left-tab', state.activeLeftTab);
     if (newState.hasOwnProperty('isLeftSidebarOpen')) localStorage.setItem('gx-is-left-open', state.isLeftSidebarOpen);
     if (newState.hasOwnProperty('isRightSidebarOpen')) localStorage.setItem('gx-is-right-open', state.isRightSidebarOpen);
     if (newState.hasOwnProperty('isTerminalMinimized')) localStorage.setItem('gx-is-terminal-minimized', state.isTerminalMinimized);
-    if (newState.openFiles) localStorage.setItem('gx-open-files', JSON.stringify(state.openFiles));
-    if (newState.activeFileId) localStorage.setItem('gx-active-file-id', state.activeFileId);
+    if (newState.hasOwnProperty('openFiles')) localStorage.setItem('gx-open-files', JSON.stringify(state.openFiles));
+    if (newState.hasOwnProperty('activeFileId')) localStorage.setItem('gx-active-file-id', state.activeFileId || '');
     if (newState.hasOwnProperty('geminiApiKey')) localStorage.setItem('gx-gemini-api-key', state.geminiApiKey);
     if (newState.hasOwnProperty('anthropicApiKey')) localStorage.setItem('gx-anthropic-api-key', state.anthropicApiKey);
-    if (newState.customAiConfig) localStorage.setItem('gx-custom-ai-config', JSON.stringify(state.customAiConfig));
-    if (newState.geminiConfig) localStorage.setItem('gx-gemini-config', JSON.stringify(state.geminiConfig));
-    if (newState.claudeCliConfig) localStorage.setItem('gx-claude-cli-config', JSON.stringify(state.claudeCliConfig));
-    if (newState.mcpServers) localStorage.setItem('gx-mcp-servers', JSON.stringify(state.mcpServers));
-    if (newState.youtrackConfig) localStorage.setItem('gx-youtrack-config', JSON.stringify(state.youtrackConfig));
+    if (newState.hasOwnProperty('customAiConfig')) localStorage.setItem('gx-custom-ai-config', JSON.stringify(state.customAiConfig));
+    if (newState.hasOwnProperty('geminiConfig')) localStorage.setItem('gx-gemini-config', JSON.stringify(state.geminiConfig));
+    if (newState.hasOwnProperty('claudeCliConfig')) localStorage.setItem('gx-claude-cli-config', JSON.stringify(state.claudeCliConfig));
+    if (newState.hasOwnProperty('mcpServers')) localStorage.setItem('gx-mcp-servers', JSON.stringify(state.mcpServers));
+    if (newState.hasOwnProperty('youtrackConfig')) localStorage.setItem('gx-youtrack-config', JSON.stringify(state.youtrackConfig));
     if (newState.hasOwnProperty('activeTerminalFolder')) localStorage.setItem('gx-active-terminal-folder', state.activeTerminalFolder);
+    if (newState.hasOwnProperty('workspaceData')) localStorage.setItem('gx-workspace-data', JSON.stringify(state.workspaceData));
+    if (newState.hasOwnProperty('files')) localStorage.setItem('gx-workspace-files', JSON.stringify(state.files));
+    if (newState.hasOwnProperty('activeCgxTheme')) localStorage.setItem('gx-active-skin', state.activeCgxTheme);
+    if (newState.hasOwnProperty('projectGuidelines')) localStorage.setItem('gx-project-guidelines', state.projectGuidelines);
+    if (newState.hasOwnProperty('activeSkillCategory')) localStorage.setItem('gx-active-skill-category', state.activeSkillCategory);
 
     for (const listener of listeners) {
         listener(state, prevState);

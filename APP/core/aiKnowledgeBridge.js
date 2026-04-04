@@ -12,10 +12,11 @@ let lastSkillsHash = "";
 export const initAiKnowledgeBridge = () => {
     console.log("[GX-BRIDGE] Knowledge Bridge Inizializzato.");
 
-    // Monitora i cambiamenti nelle skill e negli agenti
+    // Monitora i cambiamenti nelle skill, negli agenti e nelle linee guida
     subscribe((newState) => {
         const skills = newState.skills || [];
-        const currentHash = JSON.stringify(skills.map(s => s.id));
+        const guidelines = newState.projectGuidelines || "";
+        const currentHash = JSON.stringify(skills.map(s => s.id)) + guidelines;
 
         if (currentHash !== lastSkillsHash) {
             lastSkillsHash = currentHash;
@@ -36,39 +37,61 @@ const updateClaudeIdentity = async (currentState) => {
     try {
         const skills = currentState.skills || [];
         const agents = currentState.agents || [];
+        const guidelines = currentState.projectGuidelines || "";
 
-        let content = `# GXCODE PROJECT IDENTITY\n\n`;
-        content += `Questo file è autogenerato da GXCode per informare l'AI sugli strumenti disponibili nel sistema.\n\n`;
-
-        content += `## DISPONIBILI GX-SKILLS\n`;
-        content += `Puoi richiamare queste skill usando il comando terminale: \`gx-skill run "<nome_skill>"\`\n\n`;
-
+        // --- CONTENUTO PER CLAUDE.md (Root) ---
+        let claudeMd = `# PROJECT GUIDELINES & TOOLS (GXCode)\n\n`;
+        if (guidelines) {
+            claudeMd += `## PROJECT CONTEXT\n${guidelines}\n\n`;
+        }
+        
+        claudeMd += `## STANDARDS & COMMANDS\n`;
+        claudeMd += `- **Skills**: Invocabili via terminale con \`gx-skill run "<nome>"\`\n`;
+        claudeMd += `- **Agenti**: Info dettagliate in \`.claudecode/GX_IDENTITY.md\`\n\n`;
+        
+        claudeMd += `### AVAILABLE SKILLS\n`;
         if (skills.length === 0) {
-            content += `*Nessuna skill installata.*\n`;
+            claudeMd += `*Nessuna skill installata.*\n`;
         } else {
             skills.forEach(s => {
-                content += `### ${s.name}\n`;
-                content += `- **Descrizione**: ${s.description || 'Nessuna descrizione.'}\n`;
-                content += `- **Comando**: \`gx-skill run "${s.name}"\`\n\n`;
+                claudeMd += `- \`${s.name}\`: ${s.description || 'Strumento GXCode.'}\n`;
             });
         }
 
-        content += `\n## AGENTI SUGGERITI\n`;
-        agents.forEach(a => {
-            content += `- **${a.name}**: ${a.role || 'General Assistant'}\n`;
+        // --- CONTENUTO PER GX_IDENTITY.md (.claudecode) ---
+        let identityMd = `# GXCODE SYSTEM IDENTITY\n\n`;
+        identityMd += `Questo file aiuta l'AI a capire i limiti e i poteri del sistema GXCode.\n\n`;
+
+        if (guidelines) {
+            identityMd += `## PROJECT GUIDELINES\n${guidelines}\n\n`;
+        }
+
+        identityMd += `## GX-SKILLS (TOOLING)\n`;
+        skills.forEach(s => {
+            identityMd += `### ${s.name}\n`;
+            identityMd += `- **Descrizione**: ${s.description}\n`;
+            identityMd += `- **Invocazione**: \`gx-skill run "${s.name}"\`\n\n`;
         });
 
-        // Scriviamo il file nella cartella .claudecode per Claude
-        const dotClaudePath = `${workspacePath}/.claudecode`;
-        const fileName = `${dotClaudePath}/GX_IDENTITY.md`;
+        identityMd += `\n## ACTIVE AGENTS\n`;
+        agents.forEach(a => {
+            identityMd += `- **${a.name}**: ${a.role || 'Assistant'}\n`;
+        });
 
-        // Assicuriamoci che la cartella esista (tramite Electron FS)
-        // Nota: window.electronAPI.fsWriteFile crea le directory se non esistono? 
-        // Solitamente sì se implementato correttamente nel main.js
-        await window.electronAPI.fsWriteFile(fileName, content);
+        const separator = workspacePath.includes('\\') ? '\\' : '/';
         
-        console.log(`[GX-BRIDGE] Identità AI aggiornata in: ${fileName}`);
+        // 1. Scrittura CLAUDE.md (Root)
+        const claudeRootPath = workspacePath.endsWith(separator) ? `${workspacePath}CLAUDE.md` : `${workspacePath}${separator}CLAUDE.md`;
+        await window.electronAPI.fsWriteFile(claudeRootPath, claudeMd);
+
+        // 2. Scrittura GX_IDENTITY.md (.claudecode)
+        const dotClaudeDir = workspacePath.endsWith(separator) ? `${workspacePath}.claudecode` : `${workspacePath}${separator}.claudecode`;
+        const identityPath = `${dotClaudeDir}${separator}GX_IDENTITY.md`;
+        
+        await window.electronAPI.fsWriteFile(identityPath, identityMd);
+        
+        console.log(`[GX-BRIDGE] Knowledge synced: CLAUDE.md & GX_IDENTITY.md updated.`);
     } catch (err) {
-        console.error("[GX-BRIDGE] Errore aggiornamento identità:", err);
+        console.error("[GX-BRIDGE] Errore sync identità:", err);
     }
 };

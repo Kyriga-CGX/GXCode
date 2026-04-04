@@ -49,7 +49,7 @@ export const initBottomPanel = () => {
             Object.entries(buttons).forEach(([id, btn]) => {
                 if (btn) {
                     if (id === tabId) {
-                        btn.className = "h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-blue-500 text-gray-200 hover:text-white bg-[#161b22]/50";
+                        btn.className = "h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-[var(--accent)] text-gray-200 hover:text-white bg-[var(--bg-side-alt)]";
                     } else {
                         btn.className = "h-full px-4 text-[10px] uppercase font-bold tracking-widest transition border-b-2 border-transparent text-gray-500 hover:text-gray-300";
                     }

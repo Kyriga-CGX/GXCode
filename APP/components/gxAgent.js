@@ -40,7 +40,7 @@ export const renderGxAgentChat = (targetId = 'pane-agent') => {
     const config = (currentState && currentState.geminiConfig) || { isAuthenticated: false };
 
     container.innerHTML = `
-        <div class="flex flex-col h-full bg-[#0d1117] shadow-xl text-sans">
+        <div class="flex flex-col h-full bg-[var(--bg-main)] shadow-xl text-sans">
             <!-- User Profile Header (OAuth) -->
             ${config.isAuthenticated ? `
                 <div class="px-4 py-2.5 bg-purple-600/5 border-b border-purple-500/10 flex items-center justify-between gap-2 overflow-hidden">
@@ -57,7 +57,7 @@ export const renderGxAgentChat = (targetId = 'pane-agent') => {
                         <select onchange="window.handleGeminiModelChange(this.value)" class="bg-[#21262d] border border-purple-500/30 text-[8px] text-purple-300 font-bold px-1 py-0.5 rounded-md outline-none cursor-pointer hover:border-purple-500 transition-all uppercase max-w-[65px] truncate">
                             ${(config.models || ['gemini-1.5-pro']).map(m => `
                                 <option value="${m}" ${m === config.activeModel ? 'selected' : ''}>
-                                    ${m.replace('gemini-', '').toUpperCase()}
+                                    ${(m || 'unknown').replace('gemini-', '').toUpperCase()}
                                 </option>
                             `).join('')}
                         </select>
@@ -82,7 +82,7 @@ export const renderGxAgentChat = (targetId = 'pane-agent') => {
             `}
 
             <!-- Chat History -->
-            <div id="gx-chat-messages" class="flex-1 overflow-y-auto p-1 py-1 space-y-[1px] custom-scrollbar bg-[#0d1117]">
+            <div id="gx-chat-messages" class="flex-1 overflow-y-auto p-1 py-1 space-y-[1px] custom-scrollbar bg-[var(--bg-main)]">
                 ${chatHistory.length === 0 ? `
                     <div class="flex flex-col items-center justify-center h-40 opacity-40 text-center">
                         <div class="w-12 h-12 rounded-full border border-blue-500/30 flex items-center justify-center text-blue-400 mb-3 bg-blue-500/10">🤖</div>
@@ -94,8 +94,8 @@ export const renderGxAgentChat = (targetId = 'pane-agent') => {
             </div>
 
             <!-- Input Area -->
-            <div class="p-3 border-t border-gray-800 bg-[#161b22]/50">
-                <div class="relative flex items-center bg-black/40 border border-gray-700 rounded-xl focus-within:border-blue-500/50 transition-all px-2 pr-1">
+            <div class="p-3 border-t border-[var(--border-dim)] bg-[var(--bg-side)]">
+                <div class="relative flex items-center bg-[var(--bg-ghost)] border border-[var(--border-subtle)] focus-within:border-[var(--accent)] transition-all px-2 pr-1">
                     <textarea id="gx-agent-input" 
                         rows="1"
                         data-i18n="[placeholder]gxAgent.placeholder"
@@ -118,7 +118,7 @@ const renderMessage = (msg) => {
     const label = isUser ? 'IO' : 'AGENT';
 
     return `
-        <div class="px-2 py-0 hover:bg-white/5 transition-colors terminal-line text-[12px] leading-[1.2] font-sans group">
+        <div class="px-2 py-0 hover:bg-[var(--bg-side-alt)] transition-colors terminal-line text-[12px] leading-[1.2] font-sans group">
             <span class="font-mono text-[9px] font-bold ${prefixColor} opacity-80 mr-1.5 inline-block">[${label}] &gt;</span>
             <span class="text-gray-300 whitespace-pre-wrap">${msg.text}</span>
         </div>

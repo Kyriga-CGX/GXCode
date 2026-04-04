@@ -34,7 +34,7 @@ export const renderGit = async () => {
             <div class="p-6 text-center text-red-500/60 mt-10">
                 <p class="text-[10px] uppercase font-bold mb-2" data-i18n="git.error">${window.t('git.error')}</p>
                 <p class="text-[9px] font-mono whitespace-normal overflow-hidden">${res.error}</p>
-                <button onclick="renderGit()" class="mt-4 px-3 py-1 bg-gray-800 rounded text-[9px] text-gray-400 hover:text-white transition" data-i18n="git.retry">${window.t('git.retry')}</button>
+                <button onclick="renderGit()" class="mt-4 px-3 py-1 bg-[var(--bg-side-alt)] rounded text-[9px] text-gray-400 hover:text-white transition" data-i18n="git.retry">${window.t('git.retry')}</button>
             </div>
         `;
         return;
@@ -62,7 +62,7 @@ export const renderGit = async () => {
     const filesHtml = files.length > 0 ? files.map(file => {
         const info = getStatusInfo(file.status);
         return `
-            <div class="group flex items-center justify-between p-1.5 hover:bg-white/5 rounded transition border border-transparent hover:border-white/5 cursor-pointer">
+            <div class="group flex items-center justify-between p-1.5 hover:bg-[var(--bg-side-alt)] rounded transition border border-transparent hover:border-[var(--border-ghost)] cursor-pointer">
                 <div class="flex items-center gap-2 overflow-hidden">
                     <span class="${info.color} text-[9px] font-bold shrink-0 w-3 text-center" title="${info.title}">${info.label}</span>
                     <span class="text-[11px] text-gray-300 truncate font-mono">${file.path}</span>
@@ -79,7 +79,7 @@ export const renderGit = async () => {
     container.innerHTML = `
         <div class="flex flex-col h-full">
             <!-- Sync Bar -->
-            <div class="px-3 py-2 border-b border-gray-800/50 flex items-center justify-between bg-[#161b22]/30">
+            <div class="px-3 py-2 border-b border-[var(--border-dim)] flex items-center justify-between bg-[var(--bg-side)]">
                 <div class="flex gap-1">
                     <button onclick="window.handleGitAction('pull')" class="p-1 mr-1 text-gray-400 hover:text-blue-400 transition" data-i18n="[title]git.pull">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/></svg>
@@ -104,10 +104,10 @@ export const renderGit = async () => {
                     ${filesHtml}
                 </div>
 
-                <div class="pt-4 border-t border-gray-800/50 mt-auto">
+                <div class="pt-4 border-t border-[var(--border-dim)] mt-auto">
                     <div class="flex flex-col gap-2">
                         <textarea id="git-commit-msg-input" data-i18n="[placeholder]git.commitPlaceholder" placeholder="${window.t('git.commitPlaceholder')}" 
-                            class="w-full bg-[#161b22]/50 border border-gray-800 rounded p-2 text-[11px] text-gray-300 outline-none focus:border-blue-500/30 transition min-h-[60px] resize-none custom-scrollbar"
+                            class="w-full bg-[var(--bg-side)] border border-[var(--border-dim)] rounded p-2 text-[11px] text-gray-300 outline-none focus:border-[var(--accent)] transition min-h-[60px] resize-none custom-scrollbar"
                         ></textarea>
                         <button onclick="window.handleGitAction('commit')" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold uppercase tracking-widest transition shadow-lg flex items-center justify-center gap-2">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 5 5L20 7"/></svg>
@@ -117,7 +117,7 @@ export const renderGit = async () => {
                 </div>
             </div>
 
-            <div class="p-3 border-t border-gray-800/50 bg-[#0d1117]/80 flex items-center justify-center">
+            <div class="p-3 border-t border-[var(--border-dim)] bg-[var(--bg-side)] flex items-center justify-center">
                  <button onclick="renderGit()" class="text-[10px] text-gray-600 hover:text-gray-400 flex items-center gap-1 transition uppercase tracking-widest font-bold" data-i18n="git.refresh">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><path d="M22 2v6h-6"/></svg>
                     ${window.t('git.refresh')}

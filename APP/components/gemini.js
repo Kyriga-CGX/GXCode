@@ -19,7 +19,7 @@ export const initGemini = () => {
     const renderAuthenticatingView = () => {
         const error = state._geminiAuthError;
         pane.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; background-color: #0d1117; color: white; padding: 20px; text-align: center;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; background-color: var(--bg-main); color: white; padding: 20px; text-align: center;">
                 ${error ? `
                     <div style="color: #f87171; margin-bottom: 20px;">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom: 15px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -42,7 +42,7 @@ export const initGemini = () => {
     const renderAuthView = () => {
         pane.style.position = 'relative';
         pane.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; padding: 40px; background-color: #0d1117; position: relative; overflow: hidden;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; padding: 40px; background-color: var(--bg-main); position: relative; overflow: hidden;">
                 <!-- Decorazione Background -->
                 <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 50% 50%, rgba(66, 133, 244, 0.05) 0%, transparent 70%); pointer-events: none;"></div>
                 
@@ -116,9 +116,9 @@ export const initGemini = () => {
         const messages = state.geminiConfig.messages || [];
         
         pane.innerHTML = `
-            <div style="display: flex; flex-direction: column; height: 100%; width: 100%; background-color: #0d1117; position: relative; overflow: hidden;" class="animate-fade-in">
+            <div style="display: flex; flex-direction: column; height: 100%; width: 100%; background-color: var(--bg-main); position: relative; overflow: hidden;" class="animate-fade-in">
                 <!-- Header Chat -->
-                <div style="padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; background: rgba(22,27,34,0.5);">
+                <div style="padding: 12px 20px; border-bottom: 1px solid var(--border-dim); display: flex; align-items: center; justify-content: space-between; background: var(--bg-side);">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <svg width="16" height="16" viewBox="0 0 100 100">
                              <path d="M50 5 Q57 43 95 50 Q57 57 50 95 Q43 57 5 50 Q43 43 50 5" fill="#4285F4" />
@@ -168,7 +168,7 @@ export const initGemini = () => {
 
                 <!-- Bottom UI: Chat Input Bubble (Compact) -->
                 <div style="padding: 10px; position: relative;">
-                    <div style="background: rgba(22, 27, 34, 0.95); border: 1px solid rgba(167, 139, 250, 0.08); border-radius: 14px; padding: 10px 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); backdrop-blur: 16px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="background: var(--bg-side); border: 1px solid var(--border-dim); border-radius: 14px; padding: 10px 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); backdrop-blur: 16px; display: flex; flex-direction: column; gap: 8px;">
                         
                         <div style="display: flex; gap: 10px; align-items: flex-end;">
                             <textarea id="gemini-input" placeholder="Chiedi a Gemini..." style="flex: 1; background: transparent; border: none; outline: none; color: white; font-size: 12px; line-height: 1.4; resize: none; max-height: 80px; padding: 2px 0;" rows="1"></textarea>
@@ -179,7 +179,7 @@ export const initGemini = () => {
                         </div>
 
                         <!-- Pill Box -->
-                        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-dim); padding-top: 8px;">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <button id="gemini-context-btn" style="width: 24px; height: 24px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: #8b949e; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
