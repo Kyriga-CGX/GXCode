@@ -43,6 +43,12 @@ const getSettingsTabs = () => [
         tabs: [
             { id: 'marketplace', label: window.t('settings.tabs.marketplace'), icon: '🛒' }
         ]
+    },
+    {
+        title: "Sviluppo & Moduli",
+        tabs: [
+            { id: 'modules', label: window.t('settings.tabs.modules'), icon: '📦' }
+        ]
     }
 ];
 
@@ -545,50 +551,239 @@ const renderTabContent = () => {
                 </div>
             `;
         case 'updates':
-            return `
-                <div class="space-y-8">
-                    <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl flex items-center justify-between">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            </div>
-                            <div>
-                                <h4 class="text-sm font-bold text-gray-200" data-i18n="settings.updates.softwareUpdate">${window.t('settings.updates.softwareUpdate')}</h4>
-                                <p class="text-[11px] text-gray-500" data-i18n="settings.updates.description">${window.t('settings.updates.description')}</p>
-                            </div>
-                        </div>
-                        <div class="flex flex-col items-end gap-2">
-                            <button id="btn-do-update" onclick="window.startAppUpdate()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-blue-900/40" data-i18n="settings.updates.updateNow">${window.t('settings.updates.updateNow')}</button>
-                            <div id="update-progress-container" class="hidden w-40 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                                <div id="update-progress-bar" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
-                            </div>
-                            <span id="update-progress-text" class="hidden text-[9px] text-gray-500 font-mono uppercase" data-i18n="settings.updates.downloading" data-i18n-args='{"percent": "0"}'>
-                                ${window.t('settings.updates.downloading').replace('{percent}', '0')}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest" data-i18n="settings.updates.systemInfo">${window.t('settings.updates.systemInfo')}</h5>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="p-4 bg-black/20 border border-gray-800 rounded-lg">
-                                <div class="text-[9px] text-gray-600 uppercase font-bold" data-i18n="settings.updates.currentVersion">${window.t('settings.updates.currentVersion')}</div>
-                                <div class="text-xs text-gray-300 font-mono mt-1">${state.appVersion}</div>
-                            </div>
-                            <div class="p-4 bg-black/20 border border-gray-800 rounded-lg">
-                                <div class="text-[9px] text-gray-600 uppercase font-bold" data-i18n="settings.updates.channel">${window.t('settings.updates.channel')}</div>
-                                <div class="text-xs text-emerald-500 font-bold mt-1" data-i18n="settings.updates.officialChannel">${window.t('settings.updates.officialChannel')}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+            return renderUpdatesTab();
+        case 'modules':
+            return renderModulesTab();
         default:
             return '';
     }
 };
 
-const renderSettingsModal = () => {
+const renderUpdatesTab = () => {
+    return `
+        <div class="space-y-8">
+            <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-gray-200" data-i18n="settings.updates.softwareUpdate">${window.t('settings.updates.softwareUpdate')}</h4>
+                        <p class="text-[11px] text-gray-500" data-i18n="settings.updates.description">${window.t('settings.updates.description')}</p>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end gap-2">
+                    <button id="btn-do-update" onclick="window.startAppUpdate()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-blue-900/40" data-i18n="settings.updates.updateNow">${window.t('settings.updates.updateNow')}</button>
+                    <div id="update-progress-container" class="hidden w-40 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                        <div id="update-progress-bar" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <span id="update-progress-text" class="hidden text-[9px] text-gray-500 font-mono uppercase" data-i18n="settings.updates.downloading" data-i18n-args='{"percent": "0"}'>
+                        ${window.t('settings.updates.downloading').replace('{percent}', '0')}
+                    </span>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest" data-i18n="settings.updates.systemInfo">${window.t('settings.updates.systemInfo')}</h5>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 bg-black/20 border border-gray-800 rounded-lg">
+                        <div class="text-[9px] text-gray-600 uppercase font-bold" data-i18n="settings.updates.currentVersion">${window.t('settings.updates.currentVersion')}</div>
+                        <div class="text-xs text-gray-300 font-mono mt-1">${state.appVersion}</div>
+                    </div>
+                    <div class="p-4 bg-black/20 border border-gray-800 rounded-lg">
+                        <div class="text-[9px] text-gray-600 uppercase font-bold" data-i18n="settings.updates.channel">${window.t('settings.updates.channel')}</div>
+                        <div class="text-xs text-emerald-500 font-bold mt-1" data-i18n="settings.updates.officialChannel">${window.t('settings.updates.officialChannel')}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+const renderModulesTab = () => {
+    const modules = state.detectedModules || [];
+    const activeId = state.activeModuleId;
+    const activeModule = modules.find(m => m.id === activeId);
+
+    if (modules.length === 0) {
+        return `
+            <div class="flex flex-col items-center justify-center h-full py-12 px-6 text-center animate-fade-in">
+                <div class="relative mb-10">
+                    <div class="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full animate-pulse-slow"></div>
+                    <div class="w-24 h-24 bg-[var(--bg-side)] border border-blue-500/20 rounded-3xl flex items-center justify-center text-blue-500 shadow-2xl relative z-10">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" class="animate-spin-slow">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                            <circle cx="12" cy="12" r="3" class="fill-blue-500/20"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="max-w-md space-y-4">
+                    <h4 class="text-xs font-black text-white uppercase tracking-[0.4em] italic">Discovery System <span class="text-blue-500">Offline</span></h4>
+                    <p class="text-[10px] text-gray-500 leading-relaxed font-medium uppercase tracking-tight opacity-70">
+                        GXCode non ha rilevato infrastrutture backend attive nel workspace attuale. 
+                        Inizializza una connessione manuale o riesegui la scansione neurale.
+                    </p>
+                    <div class="flex items-center gap-4 pt-6 justify-center">
+                        <button onclick="window.scanForModules()" class="px-6 py-3 bg-[var(--bg-side)] border border-[var(--border-dim)] hover:border-blue-500/50 text-gray-400 hover:text-blue-400 text-[10px] font-black rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl active:scale-95">
+                            Riesegui Scan
+                        </button>
+                        <button onclick="window.createManualTomcatModule()" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black rounded-xl transition-all uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(37,99,235,0.3)] active:scale-95">
+                            Configura Manualmente
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="space-y-8 animate-fade-in">
+            <!-- Module Selector - Elite Rail Style -->
+            <div class="flex items-center gap-4 overflow-x-auto no-scrollbar pb-4 px-1">
+                ${modules.map(m => `
+                    <div onclick="window.setActiveModule('${m.id}')" 
+                         class="group px-5 py-3 rounded-2xl border flex items-center gap-4 cursor-pointer transition-all shrink-0 min-w-[160px] 
+                         ${activeId === m.id 
+                            ? 'bg-blue-500/5 border-blue-500/40 shadow-[0_0_25px_rgba(59,130,246,0.1)]' 
+                            : 'bg-black/20 border-white/5 hover:border-white/10 hover:bg-white/[0.02]'}">
+                        
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-all 
+                             ${activeId === m.id ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-800/50 text-gray-600 group-hover:text-gray-400'}">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-[11px] font-black uppercase tracking-wider ${activeId === m.id ? 'text-white' : 'text-gray-500'}">${m.name}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full ${activeId === m.id ? 'bg-blue-500 animate-pulse' : 'bg-gray-700'}"></span>
+                                <span class="text-[8px] font-bold uppercase tracking-tighter text-gray-600">${m.type}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            ${activeModule ? renderModuleTomcatSettings(activeModule) : `<div class="text-center py-20 text-gray-700 text-[10px] font-black uppercase tracking-[0.3em] opacity-30 italic">Seleziona un'infrastruttura per visualizzare il Cockpit</div>`}
+        </div>
+    `;
+};
+
+const renderModuleTomcatSettings = (module) => {
+    const cfg = state.activeModuleConfig || {};
+    
+    return `
+        <div class="space-y-10 animate-fade-in-up">
+            <!-- COCKPIT CONTROL HEADER -->
+            <div class="bg-black/20 border border-white/5 rounded-3xl p-6 backdrop-blur-md">
+                <div class="flex items-center justify-between mb-8">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-3">
+                            <h4 class="text-lg font-black text-white uppercase tracking-tighter italic">${module.name}</h4>
+                            <span class="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-[8px] font-black text-blue-400 uppercase tracking-widest">Infrastruttura Attiva</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-500">
+                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                             <code class="text-[9px] font-bold tracking-tight opacity-50 font-mono">${module.path}</code>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 p-1.5 bg-black/40 border border-white/5 rounded-2xl shadow-inner">
+                        <button onclick="window.runTomcatAction('build')" class="group flex items-center gap-2 px-4 py-2 hover:bg-white/5 rounded-xl transition-all" title="Build Module">
+                            <span class="text-[9px] font-black text-gray-400 group-hover:text-white uppercase tracking-widest">Build</span>
+                            <div class="w-2 h-2 rounded-full bg-gray-700 group-hover:bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0)] group-hover:shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
+                        </button>
+                        <div class="w-[1px] h-4 bg-white/5"></div>
+                        <button onclick="window.runTomcatAction('start')" class="group flex items-center gap-2 px-4 py-2 hover:bg-emerald-500/10 rounded-xl transition-all" title="Start Tomcat Server">
+                            <span class="text-[9px] font-black text-gray-400 group-hover:text-emerald-400 uppercase tracking-widest">Start</span>
+                            <div class="w-2 h-2 rounded-full bg-gray-700 group-hover:bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0)] group-hover:shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse-slow"></div>
+                        </button>
+                        <div class="w-[1px] h-4 bg-white/5"></div>
+                        <button onclick="window.runTomcatAction('stop')" class="group flex items-center gap-2 px-4 py-2 hover:bg-red-500/10 rounded-xl transition-all" title="Stop Tomcat Server">
+                            <span class="text-[9px] font-black text-gray-400 group-hover:text-red-400 uppercase tracking-widest">Stop</span>
+                            <div class="w-2 h-2 rounded-full bg-gray-700 group-hover:bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0)] group-hover:shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONFIGURATION GRID - INDUSTRIAL STYLE -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <!-- Tomcat Home -->
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-2 px-1">
+                            <div class="w-1 h-3 bg-blue-500 rounded-full"></div>
+                            <label class="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">${window.t('settings.modules.tomcat.home')}</label>
+                        </div>
+                        <div class="relative group">
+                             <input id="tm-home" type="text" value="${cfg.tomcatHome || ''}" placeholder="C:/apache-tomcat-9.0" 
+                                    class="w-full pl-4 pr-12 py-3 bg-black/40 border border-white/[0.03] group-hover:border-blue-500/30 rounded-2xl text-[11px] text-blue-100 font-mono focus:border-blue-500 focus:bg-blue-500/[0.02] transition-all outline-none shadow-inner">
+                             <button onclick="window.pickTomcatHome()" class="absolute right-2 top-1.5 p-2 bg-white/5 hover:bg-blue-600 rounded-xl text-gray-500 hover:text-white transition-all">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Port & Context Path Cluster -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-3">
+                            <label class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">${window.t('settings.modules.tomcat.port')}</label>
+                            <input id="tm-port" type="number" value="${cfg.httpPort || 8080}" 
+                                   class="w-full px-4 py-3 bg-black/40 border border-white/[0.03] rounded-2xl text-[11px] text-blue-400 font-mono focus:border-blue-500 transition-all outline-none shadow-inner">
+                        </div>
+                        <div class="space-y-3">
+                            <label class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">${window.t('settings.modules.tomcat.contextPath')}</label>
+                            <input id="tm-context" type="text" value="${cfg.contextPath || ''}" placeholder="/api" 
+                                   class="w-full px-4 py-3 bg-black/40 border border-white/[0.03] rounded-2xl text-[11px] text-yellow-500 font-mono focus:border-blue-500 transition-all outline-none shadow-inner">
+                        </div>
+                    </div>
+
+                    <!-- Build & Artifact - Dark Mode Console Style -->
+                    <div class="space-y-3 md:col-span-2">
+                        <label class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">${window.t('settings.modules.tomcat.build')}</label>
+                        <div class="relative">
+                            <div class="absolute left-4 top-3.5 text-emerald-500 opacity-50 text-[10px]">$</div>
+                            <input id="tm-build" type="text" value="${cfg.buildCommand || 'mvn clean package'}" 
+                                   class="w-full pl-8 pr-4 py-3 bg-[#0a0c10] border border-white/[0.03] rounded-2xl text-[11px] text-emerald-400 font-mono focus:border-emerald-500/50 transition-all outline-none shadow-2xl">
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 md:col-span-2">
+                        <label class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] px-1">${window.t('settings.modules.tomcat.artifactPath')}</label>
+                        <input id="tm-artifact" type="text" value="${cfg.artifactPath || 'target/*.war'}" 
+                               class="w-full px-4 py-3 bg-[#0a0c10] border border-white/[0.03] rounded-2xl text-[11px] text-orange-400 font-mono focus:border-orange-500/50 transition-all outline-none shadow-2xl">
+                    </div>
+                </div>
+
+                <div class="mt-10">
+                    <button onclick="window.saveCurrentModuleConfig()" class="w-full group relative py-4 bg-blue-600 hover:bg-blue-500 rounded-2xl overflow-hidden transition-all shadow-[0_20px_40px_rgba(37,99,235,0.2)] active:scale-[0.98]">
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                        <span class="relative text-[11px] font-black text-white uppercase tracking-[0.4em] italic">${window.t('settings.modules.tomcat.save')}</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- SYSTEM NOTIFICATION LOG -->
+            <div class="mx-2 p-5 bg-blue-500/[0.03] border border-blue-500/10 rounded-3xl relative overflow-hidden group">
+                 <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+                 </div>
+                 <div class="flex items-start gap-4">
+                    <div class="p-2.5 bg-blue-500/10 rounded-2xl text-blue-500 shadow-lg">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] italic">Analisi Sensore <span class="text-white opacity-40">/ Active</span></div>
+                        <p class="text-[10px] text-gray-500 leading-relaxed font-bold uppercase tracking-tight">
+                            GXCode ha rilevato un framework <span class="text-white">${module.type.toUpperCase()}</span>. 
+                            La variabile <code class="bg-blue-500/10 text-blue-300 px-1.5 py-0.5 rounded font-mono">CATALINA_HOME</code> è richiesta per l'interazione diretta con il bridge Tomcat.
+                        </p>
+                    </div>
+                 </div>
+            </div>
+        </div>
+    `;
+};
+
+const renderSettingsModal = (newSt, prevSt) => {
     const root = document.getElementById('modals-root');
     if (!state.isSettingsOpen) {
         const settingsEl = document.getElementById('settings-modal-overlay');
@@ -603,10 +798,39 @@ const renderSettingsModal = () => {
     const existingModal = document.getElementById('settings-modal-overlay');
     
     if (existingModal) {
-        // PREVENZIONE FLICKERING: Se l'utente sta scrivendo in un input dell'area AI, non ridisegnamo il contenuto
         const activeEl = document.activeElement;
-        const isEditingInAi = activeEl && activeEl.closest('.ai-settings-grid') && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
         
+        // GUARD 1: Tab cambiata?
+        const tabChanged = prevSt?.activeSettingsTab !== state.activeSettingsTab;
+
+        // GUARD 2: L'utente sta scrivendo in un campo (AI o Modules)?
+        const isEditingInAi = activeEl && activeEl.closest('.ai-settings-grid') && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+        const isEditingInModules = activeEl && state.activeSettingsTab === 'modules' && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+        const isEditing = isEditingInAi || isEditingInModules;
+
+        // GUARD 3: Solo activeModuleConfig cambiata mentre siamo nella tab Modules?
+        //          → patch chirurgica sui form fields, NO full re-render
+        if (
+            !tabChanged &&
+            state.activeSettingsTab === 'modules' &&
+            prevSt?.activeModuleConfig !== state.activeModuleConfig &&
+            prevSt?.activeModuleId === state.activeModuleId &&
+            prevSt?.detectedModules === state.detectedModules
+        ) {
+            const cfg = state.activeModuleConfig || {};
+            const tmHome = existingModal.querySelector('#tm-home');
+            const tmPort = existingModal.querySelector('#tm-port');
+            const tmCtx  = existingModal.querySelector('#tm-context');
+            const tmBld  = existingModal.querySelector('#tm-build');
+            const tmArt  = existingModal.querySelector('#tm-artifact');
+            if (tmHome) tmHome.value = cfg.tomcatHome || '';
+            if (tmPort) tmPort.value = cfg.httpPort || 8080;
+            if (tmCtx)  tmCtx.value  = cfg.contextPath || '';
+            if (tmBld)  tmBld.value  = cfg.buildCommand || 'mvn clean package';
+            if (tmArt)  tmArt.value  = cfg.artifactPath || 'target/*.war';
+            return;
+        }
+
         // AGGIORNAMENTO SIDEBAR: Sincronizziamo i tasti attivi senza resettarli
         const allTabBtns = existingModal.querySelectorAll('[data-settings-tab]');
         allTabBtns.forEach(btn => {
@@ -618,8 +842,8 @@ const renderSettingsModal = () => {
             }
         });
 
-        // Se non stiamo editando nell'area AI, o se abbiamo cambiato TAB, aggiorniamo il contenuto
-        if (!isEditingInAi || prevState?.activeSettingsTab !== state.activeSettingsTab) {
+        // Aggiorna contenuto solo se: tab cambiata, o non stiamo editando
+        if (tabChanged || !isEditing) {
             const headerIcon = existingModal.querySelector('#settings-header-icon');
             const headerTitle = existingModal.querySelector('#settings-header-title');
             const contentArea = existingModal.querySelector('#settings-content-body');
@@ -630,6 +854,7 @@ const renderSettingsModal = () => {
         }
         return;
     }
+
 
     // RENDERING INIZIALE (Solo alla prima apertura)
     root.innerHTML = `
@@ -1009,6 +1234,74 @@ window.startAppUpdate = async () => {
             btn.innerHTML = window.t('settings.updates.retry');
         }
     }
+};
+
+// --- Tomcat Assistant Helpers ---
+window.scanForModules = () => {
+    import('./tomcatAssistant.js').then(m => m.tomcatAssistant.scanWorkspace());
+};
+
+window.createManualTomcatModule = () => {
+    import('./tomcatAssistant.js').then(async m => {
+        const module = await m.tomcatAssistant.createManualModule();
+        if (module) {
+            window.setActiveModule(module.id);
+        }
+    });
+};
+
+window.setActiveModule = async (id) => {
+    const modules = state.detectedModules || [];
+    const module = modules.find(m => m.id === id);
+    if (module) {
+        setState({ activeModuleId: id });
+        const { tomcatAssistant } = await import('../components/tomcatAssistant.js');
+        const config = await tomcatAssistant.getModuleConfig(module.path);
+        setState({ activeModuleConfig: config });
+    }
+};
+
+window.saveCurrentModuleConfig = async () => {
+    const modules = state.detectedModules || [];
+    const module = modules.find(m => m.id === state.activeModuleId);
+    if (!module) return;
+
+    const config = {
+        tomcatHome: document.getElementById('tm-home').value,
+        httpPort: parseInt(document.getElementById('tm-port').value),
+        contextPath: document.getElementById('tm-context').value,
+        buildCommand: document.getElementById('tm-build').value,
+        artifactPath: document.getElementById('tm-artifact').value,
+        enabled: true
+    };
+
+    const { tomcatAssistant } = await import('../components/tomcatAssistant.js');
+    await tomcatAssistant.saveModuleConfig(module.path, config);
+    setState({ activeModuleConfig: config });
+};
+
+window.pickTomcatHome = async () => {
+    if (window.electronAPI && window.electronAPI.selectFolder) {
+        const path = await window.electronAPI.selectFolder();
+        if (path) {
+            const input = document.getElementById('tm-home');
+            if (input) input.value = path;
+        }
+    } else {
+        window.gxToast("Seleziona manualmente il percorso della cartella Tomcat.", 'info');
+    }
+};
+
+window.runTomcatAction = async (action) => {
+    const modules = state.detectedModules || [];
+    const module = modules.find(m => m.id === state.activeModuleId);
+    if (!module) {
+        window.gxToast("Seleziona un modulo prima di eseguire azioni.", 'warning');
+        return;
+    }
+
+    const { tomcatAssistant } = await import('../components/tomcatAssistant.js');
+    await tomcatAssistant.runAction(module, action);
 };
 
 export const initSettings = async () => {

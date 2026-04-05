@@ -20,6 +20,7 @@ import { initAiKnowledgeBridge } from '../core/aiKnowledgeBridge.js';
 import { initDebugToolbar } from '../components/debugToolbar.js';
 import { initSidebar } from '../components/sidebar.js';
 import { initGlobalEvents } from '../core/events.js';
+import { tomcatAssistant } from '../components/tomcatAssistant.js';
 import '../components/dialogs.js';
 
 // 1. ESPOSIZIONE GLOBALE IMMEDIATA (Anti-Regressione)
@@ -149,6 +150,7 @@ const bootstrap = async () => {
             { name: 'DebugToolbar', fn: initDebugToolbar },
             { name: 'GxAgent', fn: initGxAgent },
             { name: 'AiBridge', fn: initAiKnowledgeBridge },
+            { name: 'TomcatAssistant', fn: tomcatAssistant.init },
             { name: 'Updater', fn: initUpdater }
         ];
 

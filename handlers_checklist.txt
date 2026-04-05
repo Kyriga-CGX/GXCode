@@ -1,0 +1,213 @@
+﻿
+main_recovery_utf8.js:1450:
+  ipcMain.handle('window-co
+ntrol', (event, action) => 
+{
+main_recovery_utf8.js:1478:
+  ipcMain.handle('open-proj
+ect-folder', async () => {
+main_recovery_utf8.js:1508:
+  ipcMain.handle('open-proj
+ect-file', async () => {
+main_recovery_utf8.js:1524:
+  ipcMain.handle('open-proj
+ect-workspace', async () 
+=> {
+main_recovery_utf8.js:1587:
+  ipcMain.handle('open-spec
+ific-folder', async 
+(event, folderPath) => {
+main_recovery_utf8.js:1656:
+  ipcMain.handle('read-file
+', async (event, filePath) 
+=> {
+main_recovery_utf8.js:1670:
+  ipcMain.handle('shell-ope
+n-path', async (event, 
+targetPath) => {
+main_recovery_utf8.js:1675:
+  ipcMain.handle('shell-ope
+n-external', async (event, 
+url) => {
+main_recovery_utf8.js:1680:
+  ipcMain.handle('open-gxco
+de-folder', async () => {
+main_recovery_utf8.js:1687:
+  ipcMain.handle('fs-write-
+file', async (event, 
+filePath, content) => {
+main_recovery_utf8.js:1700:
+  ipcMain.handle('get-ai-pa
+ths', async () => {
+main_recovery_utf8.js:1708:
+  ipcMain.handle('debug-sta
+rt', async (event, 
+filePath, breakpoints) => {
+main_recovery_utf8.js:1714:
+  ipcMain.handle('debug-sto
+p', async () => {
+main_recovery_utf8.js:1719:
+  ipcMain.handle('debug-ste
+p', async () => {
+main_recovery_utf8.js:1724:
+  ipcMain.handle('debug-con
+tinue', async () => {
+main_recovery_utf8.js:1729:
+  ipcMain.handle('set-break
+point', async (event, { 
+path: filePath, line }) => 
+{
+main_recovery_utf8.js:1734:
+  ipcMain.handle('fs-create
+-file', async (event, 
+dirPath, name) => {
+main_recovery_utf8.js:1747:
+  ipcMain.handle('fs-create
+-folder-v2', async (event, 
+dirPath, name) => {
+main_recovery_utf8.js:1758:
+  ipcMain.handle('fs-delete
+', async (event, 
+targetPath) => {
+main_recovery_utf8.js:1773:
+  ipcMain.handle('fs-rename
+', async (event, oldPath, 
+newPath) => {
+main_recovery_utf8.js:1786:
+  ipcMain.handle('gemini:lo
+gin', async () => {
+main_recovery_utf8.js:1807:
+  ipcMain.handle('search-fi
+les', async (event, 
+folderPath, query, options 
+= {}) => {
+main_recovery_utf8.js:1925:
+  ipcMain.handle('scan-test
+s', async (event, 
+folderPath) => {
+main_recovery_utf8.js:2047:
+  
+ipcMain.handle('run-test', 
+async (event, 
+workspacePath, filePath, 
+testName) => {
+main_recovery_utf8.js:2107:
+  ipcMain.handle('run-file-
+tests', async (event, 
+workspacePath, filePath) 
+=> {
+main_recovery_utf8.js:2132:
+  ipcMain.handle('debug-tes
+t', async (event, 
+workspacePath, filePath, 
+testName) => {
+main_recovery_utf8.js:2192:
+  ipcMain.handle('run-all-t
+ests', async (event, 
+workspacePath) => {
+main_recovery_utf8.js:2248:
+  ipcMain.handle('check-pla
+ywright', async (event, 
+workspacePath) => {
+main_recovery_utf8.js:2287:
+  ipcMain.handle("execute-c
+ommand", async (event, 
+cmd, customCwd) => {
+main_recovery_utf8.js:2311:
+  ipcMain.handle('get-app-v
+ersion', () => 
+app.getVersion());
+main_recovery_utf8.js:2316:
+  ipcMain.handle('check-for
+-updates', async () => {
+main_recovery_utf8.js:2335:
+  ipcMain.handle('perform-u
+pdate', async () => {
+main_recovery_utf8.js:2407:
+  ipcMain.handle('git-statu
+s', async (event, 
+workspacePath) => {
+main_recovery_utf8.js:2427:
+  ipcMain.handle('git-remot
+e-url', async (event, 
+workspacePath) => {
+main_recovery_utf8.js:2438:
+  ipcMain.handle('git-stage
+', async (event, 
+workspacePath, filePath) 
+=> {
+main_recovery_utf8.js:2448:
+  ipcMain.handle('git-commi
+t', async (event, 
+workspacePath, message) => 
+{
+main_recovery_utf8.js:2458:
+  
+ipcMain.handle('git-pull', 
+async (event, 
+workspacePath) => {
+main_recovery_utf8.js:2468:
+  
+ipcMain.handle('git-push', 
+async (event, 
+workspacePath) => {
+main_recovery_utf8.js:2478:
+  ipcMain.handle('clipboard
+-read', () => {
+main_recovery_utf8.js:2482:
+  ipcMain.handle('clipboard
+-write', (event, text) => {
+main_recovery_utf8.js:2487:
+  ipcMain.handle('save-gemi
+ni-session', async (event, 
+data) => {
+main_recovery_utf8.js:2508:
+  
+ipcMain.handle('git-diff', 
+async (event, 
+workspacePath, filePath) 
+=> {
+main_recovery_utf8.js:2528:
+  ipcMain.handle('git-show-
+head', async (event, 
+workspacePath, filePath) 
+=> {
+main_recovery_utf8.js:2542:
+  ipcMain.handle('terminal-
+create', (event, id, 
+shellType, workspacePath, 
+apiKey) => {
+main_recovery_utf8.js:2649:
+  ipcMain.handle('terminal-
+write', (event, id, data) 
+=> {
+main_recovery_utf8.js:2653:
+  ipcMain.handle('terminal-
+resize', (event, id, cols, 
+rows) => {
+main_recovery_utf8.js:2719:
+  ipcMain.handle('debug:sta
+rt', async (event, 
+filePath, breakpoints) => {
+main_recovery_utf8.js:2740:
+  ipcMain.handle('debug:ste
+p', () => {
+main_recovery_utf8.js:2744:
+  ipcMain.handle('debug:con
+tinue', () => {
+main_recovery_utf8.js:2748:
+  ipcMain.handle('debug:sto
+p', () => {
+main_recovery_utf8.js:2752:
+  ipcMain.handle('file-lint
+', async (event, filePath) 
+=> {
+main_recovery_utf8.js:2779:
+  ipcMain.handle('get-activ
+e-ports', async () => {
+main_recovery_utf8.js:2827:
+  ipcMain.handle('kill-proc
+ess', async (event, pid) 
+=> {
+
+

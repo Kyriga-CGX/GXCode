@@ -163,7 +163,32 @@
             "appearance": "Appearance",
             "folders": "System Folders",
             "language": "Language",
-            "updates": "Updates"
+            "updates": "Updates",
+            "modules": "Modules"
+        },
+        "modules": {
+            "title": "Backend Modules Management",
+            "desc": "Configure and manage specific runtimes for submodules of the current project.",
+            "empty": "No backend modules detected in the workspace.",
+            "select": "Select a module to configure",
+            "tomcat": {
+                "title": "Tomcat Runtime",
+                "enable": "Enable Tomcat Runtime",
+                "home": "Tomcat Home Directory",
+                "port": "HTTP Port",
+                "contextPath": "Context Path",
+                "artifactType": "Artifact Type",
+                "artifactPath": "Artifact Path (WAR/Exploded)",
+                "build": "Build Command",
+                "start": "Start Command",
+                "stop": "Stop Command",
+                "logs": "Log Path",
+                "health": "Health Check URL",
+                "save": "Save Module Configuration",
+                "setup": "Wizard Setup Assistant",
+                "actions": "Quick Actions",
+                "status": "Status: {status}"
+            }
         },
         "preferences": {
             "title": "Editor Preferences",

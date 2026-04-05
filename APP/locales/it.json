@@ -164,7 +164,32 @@
             "folders": "Sistema & Cartelle",
             "language": "Lingua",
             "updates": "Aggiornamenti",
-            "ai": "AI"
+            "ai": "AI",
+            "modules": "Moduli"
+        },
+        "modules": {
+            "title": "Gestione Moduli Backend",
+            "desc": "Configura e gestisci i runtime specifici per i sottomoduli del progetto corrente.",
+            "empty": "Nessun modulo backend rilevato nel workspace.",
+            "select": "Seleziona un modulo per configurarlo",
+            "tomcat": {
+                "title": "Tomcat Runtime",
+                "enable": "Abilita Runtime Tomcat",
+                "home": "Tomcat Home Directory",
+                "port": "Porta HTTP",
+                "contextPath": "Context Path",
+                "artifactType": "Tipo di Artifact",
+                "artifactPath": "Percorso Artifact (WAR/Exploded)",
+                "build": "Comando di Build",
+                "start": "Comando di Avvio",
+                "stop": "Comando di Arresto",
+                "logs": "Percorso Log",
+                "health": "Health Check URL",
+                "save": "Salva Configurazione Modulo",
+                "setup": "Setup Iniziale Assistito",
+                "actions": "Azioni Rapide",
+                "status": "Stato: {status}"
+            }
         },
         "preferences": {
             "title": "Preferenze Editor",

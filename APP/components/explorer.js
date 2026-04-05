@@ -57,13 +57,25 @@ const delBtn = (p) => `<button class="gx-del-btn opacity-0 group-hover:opacity-1
 
 export const renderFileTree = (files, depth = 0) => {
     if (!files || !Array.isArray(files) || files.length === 0) return '';
+
+    const checkIsDir = (file) => {
+        return file.type === 'directory' || 
+               file.isDirectory === true || 
+               Array.isArray(file.children) || 
+               Array.isArray(file.files) ||
+               (file.path && !file.path.split(/[\\/]/).pop().includes('.') && !file.name.includes('.'));
+    };
+
+    // --- SORTING LOGIC: Folders First, then Alphabetical ---
+    const sortedFiles = [...files].sort((a, b) => {
+        const aDir = checkIsDir(a);
+        const bDir = checkIsDir(b);
+        if (aDir !== bDir) return aDir ? -1 : 1;
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
+    });
     
-    return files.map(file => {
-        const isDirectory = file.type === 'directory' || 
-                            file.isDirectory === true || 
-                            Array.isArray(file.children) || 
-                            Array.isArray(file.files) ||
-                            (file.path && !file.path.split(/[\\/]/).pop().includes('.') && !file.name.includes('.'));
+    return sortedFiles.map(file => {
+        const isDirectory = checkIsDir(file);
                              
         const normItem = normalizePath(file.path);
         const isExpanded = state.expandedFolders.some(p => normalizePath(p) === normItem);

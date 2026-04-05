@@ -137,7 +137,11 @@ export const state = {
 
     // Explorer Selection State (v1.3.8)
     activeExplorerItem: null,
-    activeExplorerItemIsDir: false
+    activeExplorerItemIsDir: false,
+
+    // Tomcat Backend Setup Assistant (v1.4.6)
+    detectedModules: [],
+    activeModuleId: localStorage.getItem('gx-active-module-id') || null
 };
 
 const listeners = new Set();
@@ -184,6 +188,7 @@ export const setState = (newState) => {
     if (newState.hasOwnProperty('activeCgxTheme')) localStorage.setItem('gx-active-skin', state.activeCgxTheme);
     if (newState.hasOwnProperty('projectGuidelines')) localStorage.setItem('gx-project-guidelines', state.projectGuidelines);
     if (newState.hasOwnProperty('activeSkillCategory')) localStorage.setItem('gx-active-skill-category', state.activeSkillCategory);
+    if (newState.hasOwnProperty('activeModuleId')) localStorage.setItem('gx-active-module-id', state.activeModuleId || '');
     
     // Persistenza Dimensioni Pannelli
     if (newState.hasOwnProperty('leftSidebarWidth')) localStorage.setItem('gx-left-sidebar-width', state.leftSidebarWidth);

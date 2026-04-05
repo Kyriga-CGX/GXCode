@@ -11,6 +11,7 @@ This project is being managed by **GXCode IDE**.
 - **Skills Location**: `~/.GXCODE/skills`
 
 ## CURRENT WORKSPACE CONTEXT
+- **Root Path**: C:\Users\Kyrig\OneDrive\Desktop\GXCODE\APP
 - **Open Editor Tabs**:
   - `C:/Users/Kyrig/OneDrive/Desktop/GXCODE/regex2.json` 
   - `C:/Users/Kyrig/OneDrive/Desktop/GXCODE/regex.json` 

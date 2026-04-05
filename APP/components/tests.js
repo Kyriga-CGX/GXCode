@@ -236,14 +236,40 @@ export const initTests = () => {
         const decodedName = decodeURIComponent(testName);
         console.log(`[GX-TESTS] Debugging test: ${decodedName} in ${decodedPath}`);
         
-        setState({ isTestingInProgress: true, testTarget: 'debug' });
+        setState({ isTestingInProgress: true, testTarget: 'debug', isDebugModeActive: true });
         try {
-            await window.electronAPI.debugTest(state.workspaceData.path, decodedPath, decodedName);
-        } catch (err) {
-            console.error("[GX-TESTS] Debug Error:", err);
+            const normDecoded = decodedPath.toLowerCase().replace(/\\/g, '/');
+            const fileBreakpoints = state.breakpoints
+                .filter(bp => bp.path.toLowerCase().replace(/\\/g, '/') === normDecoded)
+                .map(bp => bp.line);
+            
+            await window.electronAPI.debugTest(state.workspaceData.path, decodedPath, decodedName, fileBreakpoints);
         } finally {
-            setState({ isTestingInProgress: false });
+            setState({ isTestingInProgress: false, isDebugModeActive: false });
         }
+    };
+
+    // FUNZIONI DI CONTROLLO GLOBALI PER IL DEBUGGER (v1.4.7)
+    window.debugContinue = async () => {
+        console.log("[GX-TESTS] UI Debug Continue");
+        if (window.electronAPI && window.electronAPI.debugContinue) {
+            await window.electronAPI.debugContinue();
+        }
+    };
+
+    window.debugStep = async () => {
+        console.log("[GX-TESTS] UI Debug Step");
+        if (window.electronAPI && window.electronAPI.debugStep) {
+            await window.electronAPI.debugStep();
+        }
+    };
+
+    window.debugStop = async () => {
+        console.log("[GX-TESTS] UI Debug Stop");
+        if (window.electronAPI && window.electronAPI.debugStop) {
+            await window.electronAPI.debugStop();
+        }
+        setState({ isTestingInProgress: false, isDebugModeActive: false });
     };
 
     window.runFileTests = async (filePath) => {
@@ -289,21 +315,30 @@ export const initTests = () => {
 
     if (btnScan) btnScan.onclick = () => scanWorkspaceForTests();
 
+    let isScanning = false;
     subscribe((newState, oldState) => {
-        if (
-            newState.activeActivity === 'testing' ||
-            newState.testFilesCache !== oldState?.testFilesCache || 
-            newState.isPlaywrightInstalled !== oldState?.isPlaywrightInstalled ||
-            newState.isTestingInProgress !== oldState?.isTestingInProgress
-        ) {
-            if (newState.activeActivity === 'testing' && (!newState.testFilesCache || newState.testFilesCache.length === 0)) {
-                scanWorkspaceForTests();
-            } else {
+        const activityChanged = newState.activeActivity !== oldState?.activeActivity;
+        const workspaceChanged = newState.workspaceData?.path !== oldState?.workspaceData?.path;
+        const cacheChanged = newState.testFilesCache !== oldState?.testFilesCache;
+        const statusChanged = newState.isTestingInProgress !== oldState?.isTestingInProgress || 
+                             newState.isPlaywrightInstalled !== oldState?.isPlaywrightInstalled;
+
+        if (newState.activeActivity === 'testing') {
+            // Trigger scan only if entering the tab or workspace changed, and we have no cache
+            if ((activityChanged || workspaceChanged) && (!newState.testFilesCache || newState.testFilesCache.length === 0)) {
+                if (!isScanning) {
+                    isScanning = true;
+                    scanWorkspaceForTests().finally(() => {
+                        isScanning = false;
+                    });
+                }
+            } else if (activityChanged || cacheChanged || statusChanged) {
                 renderTestTree();
             }
         }
     });
 
+    // Initial render
     renderTestTree();
     console.log("[GX-TESTS] Module initialized.");
 };

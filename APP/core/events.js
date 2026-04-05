@@ -27,6 +27,40 @@ export const initGlobalEvents = () => {
         if (window.editor) window.editor.layout();
         if (window.editorRight) window.editorRight.layout();
     });
+
+    // Debugger paused listener (Playwright & Node)
+    if (window.electronAPI?.onDebugPaused) {
+        window.electronAPI.onDebugPaused((data) => {
+            const { file, line } = data;
+            console.log(`[GX-DEBUG] Paused at ${file}:${line}`);
+            
+            // Se il file non è quello attivo, lo apriamo
+            if (state.activeFileId !== file) {
+                if (window.openFileInIDE) {
+                    window.openFileInIDE(file);
+                }
+            }
+            
+            setState({ debugActiveLine: line });
+        });
+    }
+
+    if (window.electronAPI?.onDebugResumed) {
+        window.electronAPI.onDebugResumed(() => {
+            setState({ debugActiveLine: null });
+        });
+    }
+
+    if (window.electronAPI?.onDebugFinished) {
+        window.electronAPI.onDebugFinished(() => {
+            console.log(`[GX-DEBUG] Session finished.`);
+            setState({ 
+                debugActiveLine: null, 
+                isDebugModeActive: false, 
+                isTestingInProgress: false 
+            });
+        });
+    }
 };
 
 const handleShortcutAction = (action) => {
