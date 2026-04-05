@@ -47,7 +47,6 @@
       "package.json"
     ],
     "win": {
-      "icon": "APP/assets/logo.png",
       "target": [
         "nsis"
       ],
@@ -58,8 +57,6 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerHeader": "APP/assets/installer_header.bmp",
-      "installerSidebar": "APP/assets/installer_sidebar.bmp",
       "allowElevation": true,
       "perMachine": true,
       "deleteAppDataOnUninstall": false,
@@ -69,6 +66,8 @@
       "provider": "github",
       "owner": "Kyriga-CGX",
       "repo": "GXCode"
-    }
+    },
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false
   }
 }
