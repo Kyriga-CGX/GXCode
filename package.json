@@ -1,6 +1,6 @@
 {
   "name": "gxcode",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "main": "main.js",
   "description": "L'IDE AI-Nativo professionale per lo sviluppo software moderno. Powered by Cloud-GX.",
   "author": "Giovanni Faggiano (Cloud-GX)",
@@ -11,6 +11,7 @@
   },
   "scripts": {
     "start": "electron .",
+    "gemini": "node APP/scripts/gemini-cli.js",
     "build": "electron-builder",
     "publish": "electron-builder --publish always"
   },

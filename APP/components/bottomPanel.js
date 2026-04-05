@@ -5,6 +5,7 @@ import { initPorts } from './ports.js';
 import { initGxAgent, renderGxAgentChat } from './gxAgent.js';
 import { initOllama } from './ollama.js';
 import { initClaudeCli, startClaudeCli, focusClaudeCli } from './claudeCli.js';
+import { initGeminiCli, startGeminiCli, focusGeminiCli } from './geminiCli.js';
 
 export const initBottomPanel = () => {
     const btnTerminal = document.getElementById('tab-terminal-btn');
@@ -66,7 +67,10 @@ export const initBottomPanel = () => {
 
             // Trigger Render Agente se selezionato
             if (tabId === 'ai-gemini') {
-                if (typeof renderGxAgentChat === 'function') renderGxAgentChat();
+                if (typeof startGeminiCli === 'function') {
+                    startGeminiCli();
+                    focusGeminiCli();
+                }
             } else if (tabId === 'ai-claude') {
                 if (typeof startClaudeCli === 'function') {
                     startClaudeCli();
@@ -74,15 +78,6 @@ export const initBottomPanel = () => {
                 }
             } else if (tabId === 'ai-ollama') {
                 if (window.scrollOllamaToBottom) window.scrollOllamaToBottom();
-            }
-
-            // Auto-espansione: se il pannello è troppo basso, lo alziamo al 70% dell'altezza disponibile
-            const currentHeight = bottomPanel.offsetHeight;
-            const targetHeight = Math.max(300, Math.floor(window.innerHeight * 0.3));
-            
-            if (currentHeight < targetHeight) {
-                bottomPanel.style.height = `${targetHeight}px`;
-                bottomPanel.style.minHeight = `${targetHeight}px`;
             }
 
             // Se il pannello era minimizzato, lo espandiamo quando si cambia tab
@@ -104,12 +99,17 @@ export const initBottomPanel = () => {
         };
     }
 
-    // Drag bar per ridimensionamento manuale
+    // Drag bar per ridimensionamento manuale (Horizontal)
     const dragBar = document.getElementById('terminal-drag-bar');
     if (dragBar && bottomPanel) {
         let isResizing = false;
+        
+        // Applica altezza iniziale dallo stato
+        bottomPanel.style.height = `${state.bottomPanelHeight}px`;
+
         dragBar.addEventListener('mousedown', (e) => {
             isResizing = true;
+            document.body.classList.add('resizing');
             document.body.style.cursor = 'row-resize';
             document.body.style.userSelect = 'none';
         });
@@ -119,9 +119,9 @@ export const initBottomPanel = () => {
             const windowHeight = window.innerHeight;
             const newHeight = windowHeight - e.clientY;
             
-            if (newHeight > 36 && newHeight < (windowHeight * 0.8)) {
-                bottomPanel.style.height = `${newHeight}px`;
-                bottomPanel.style.minHeight = `${newHeight}px`;
+            // Vincoli: 36px - 80% altezza schermo
+            if (newHeight >= 36 && newHeight < (windowHeight * 0.8)) {
+                setState({ bottomPanelHeight: Math.round(newHeight) });
                 
                 // Se superiamo una certa soglia, consideriamo non più minimizzato
                 if (newHeight > 50 && state.isTerminalMinimized) {
@@ -133,10 +133,18 @@ export const initBottomPanel = () => {
         window.addEventListener('mouseup', () => {
             if (isResizing) {
                 isResizing = false;
+                document.body.classList.remove('resizing');
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
-                // Trigger resize event per xterm.js
+                // Trigger resize event per xterm.js e Monaco
                 window.dispatchEvent(new Event('resize'));
+            }
+        });
+
+        // Reattività allo stato
+        subscribe((newState) => {
+            if (bottomPanel) {
+                bottomPanel.style.height = `${newState.bottomPanelHeight}px`;
             }
         });
     }
@@ -146,6 +154,7 @@ export const initBottomPanel = () => {
     initOllama();
     initGemini();
     initPorts();
-    // Claude CLI viene inizializzato qui ma startato al click
+    // Claude CLI e Gemini CLI
     initClaudeCli();
+    initGeminiCli();
 };

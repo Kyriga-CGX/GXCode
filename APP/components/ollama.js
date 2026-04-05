@@ -1,4 +1,5 @@
 import { state, setState, subscribe } from '../core/state.js';
+import { triggerGlowOnMention } from '../core/uiUtils.js';
 
 export const initOllama = () => {
     const pane = document.getElementById('pane-ollama');
@@ -547,28 +548,6 @@ export const initOllama = () => {
         renderHistoryView();
     };
 
-    const triggerGlowOnMention = (text, glowedItems) => {
-        const items = [...(state.skills || []), ...(state.agents || [])];
-        const normalizedText = text.toLowerCase();
-        
-        items.forEach(item => {
-            if (glowedItems.has(item.id)) return;
-            
-            // Cerca il nome con o senza @, gestendo confini di parola e punteggiatura
-            const name = item.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape regex chars
-            const regex = new RegExp(`(?:@|\\b)${name}\\b`, 'gi');
-            
-            if (regex.test(text)) {
-                glowedItems.add(item.id);
-                const el = document.querySelector(`[data-id="${item.slug || item.id}"]`);
-                if (el) {
-                    el.classList.add('premium-glow-active');
-                    // Scroll into view if not visible? Or just glow.
-                    setTimeout(() => el.classList.remove('premium-glow-active'), 5000);
-                }
-            }
-        });
-    };
 
     const stopGeneration = () => {
         if (currentAbortController) {
@@ -845,7 +824,7 @@ ${toolInstructions}`
                         }
                              
                         area.scrollTop = area.scrollHeight;
-                            triggerGlowOnMention(fullText, glowedInThisSession);
+                            triggerGlowOnMention(fullText, state, glowedInThisSession);
                             
                             if (isFirstRequest) {
                                 isFirstRequest = false;

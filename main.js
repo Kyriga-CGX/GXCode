@@ -138,9 +138,9 @@ class NodeDebugger {
   }
 }
 
-let nodeDebugger = null;
-let activeLineWatcher = null;
 let activeTestProcess = null; // Traccia il processo di test corrente (Playwright/Node)
+let mainWindow = null; // Riferimento globale alla finestra principale
+let activeWatchers = new Map(); // Gestione watcher attivi per cartella
 
 // ================== GESTIONE CONTESTO AI E DISCO Locale ==================
 let currentAiContext = '.GXCODE'; // Di base usa una cartella universale
@@ -248,6 +248,80 @@ function deletePersistedData(type, id) {
   } catch (e) { }
   console.warn(`[GX-DISK] Impossibile trovare file per ${type} con ID/Slug: ${id}`);
   return false;
+}
+
+// ================== FILE SYSTEM WATCHER (v1.4.6) ==================
+/**
+ * Monitora una cartella in tempo reale e notifica il renderer dei cambiamenti.
+ */
+function setupWatcher(rootPath) {
+  console.log(`[GX-WATCH] Tentativo setup per: ${rootPath}`);
+  if (!rootPath) {
+    console.warn("[GX-WATCH] rootPath mancante.");
+    return;
+  }
+  if (!mainWindow) {
+    console.warn("[GX-WATCH] mainWindow non ancora pronto. Riprovo tra 1s...");
+    setTimeout(() => setupWatcher(rootPath), 1000);
+    return;
+  }
+
+  // Se è un file di workspace, monitoriamo la sua directory
+  const actualPath = rootPath.endsWith('.code-workspace') ? path.dirname(rootPath) : rootPath;
+  
+  if (activeWatchers.has(actualPath)) {
+    console.log(`[GX-WATCH] Watcher già attivo per: ${actualPath}`);
+    return;
+  }
+
+  console.log(`[GX-WATCH] Configurazione watcher ricorsivo per: ${actualPath}`);
+  
+  let debounceTimer = null;
+  try {
+    const watcher = fs.watch(actualPath, { recursive: true }, (eventType, filename) => {
+      console.log(`[GX-WATCH] Evento grezzo captato: ${eventType} per ${filename}`);
+      // Filtriamo file/cartelle irrilevanti o pesanti per evitare spam
+      if (filename && (
+        filename.includes('node_modules') || 
+        filename.includes('.git') ||
+        filename.includes('.claudecode') ||
+        filename.includes('.gxcode')
+      )) return;
+
+      console.log(`[GX-WATCH] Cambiamento rilevato in ${actualPath}: [${eventType}] ${filename}`);
+
+      // Debounce: Aspettiamo che l'attività si calmi prima di notificare l'IDE
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (mainWindow) {
+            const absoluteChangedPath = filename ? path.join(actualPath, filename).replace(/\\/g, '/') : actualPath;
+            console.log(`[GX-WATCH] Sincronizzazione richiesta per: ${absoluteChangedPath}`);
+            mainWindow.webContents.send('workspace-updated', { root: actualPath, changedPath: absoluteChangedPath });
+        }
+      }, 500);
+    });
+
+    activeWatchers.set(actualPath, watcher);
+
+    watcher.on('error', (err) => {
+      console.error(`[GX-WATCH] Errore critico watcher per ${actualPath}:`, err);
+      activeWatchers.delete(actualPath);
+    });
+
+  } catch (err) {
+    console.error(`[GX-WATCH] Impossibile avviare il watcher per ${actualPath}:`, err);
+  }
+}
+
+/**
+ * Chiude tutti i watcher attivi (es. al cambio workspace)
+ */
+function clearAllWatchers() {
+  activeWatchers.forEach((watcher, path) => {
+    try { watcher.close(); } catch(e) {}
+  });
+  activeWatchers.clear();
+  console.log("[GX-WATCH] Tutti i watcher disattivati.");
 }
 
 // ================== BACKEND HTTP LOCALE (API IDE) ==================
@@ -1370,7 +1444,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  const mainWindow = createWindow();
+  mainWindow = createWindow();
 
   // ── Controlli Finestra Personalizzati ─────────────────────────────
   ipcMain.handle('window-control', (event, action) => {
@@ -1407,8 +1481,10 @@ app.whenReady().then(() => {
     });
 
     if (result.canceled || result.filePaths.length === 0) return null;
-
+    
+    clearAllWatchers(); // Reset al cambio cartella
     const folderPath = result.filePaths[0];
+    setupWatcher(folderPath);
     updateClaudeContext(folderPath);
     try {
       const files = fs.readdirSync(folderPath, { withFileTypes: true }).map(f => ({
@@ -1464,14 +1540,17 @@ app.whenReady().then(() => {
       const config = JSON.parse(content);
       const folders = [];
 
-      if (config.folders && Array.isArray(config.folders)) {
-        for (const item of config.folders) {
-          let folderPath = item.path;
-          if (!path.isAbsolute(folderPath)) {
-            folderPath = path.resolve(path.dirname(wsPath), folderPath);
-          }
-
-          if (fs.existsSync(folderPath) && fs.statSync(folderPath).isDirectory()) {
+        if (config.folders && Array.isArray(config.folders)) {
+          clearAllWatchers(); 
+          for (const item of config.folders) {
+            let folderPath = item.path;
+            if (!path.isAbsolute(folderPath)) {
+              folderPath = path.resolve(path.dirname(wsPath), folderPath);
+            }
+            
+            setupWatcher(folderPath); // Monitoriamo ogni root
+            
+            if (fs.existsSync(folderPath) && fs.statSync(folderPath).isDirectory()) {
             const files = fs.readdirSync(folderPath, { withFileTypes: true }).map(f => ({
               name: f.name,
               isDirectory: f.isDirectory(),
@@ -1508,6 +1587,7 @@ app.whenReady().then(() => {
   ipcMain.handle('open-specific-folder', async (event, folderPath) => {
     console.log(`[GX FS] Richiesta apertura path specifico: ${folderPath}`);
     updateClaudeContext(folderPath);
+    setupWatcher(folderPath); 
     try {
       if (!fs.existsSync(folderPath)) {
         console.warn(`[GX FS] Path non trovato: ${folderPath}`);
@@ -2401,8 +2481,28 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('clipboard-write', (event, text) => {
     const { clipboard } = require('electron');
-    clipboard.writeText(text);
+    if (text) clipboard.writeText(text);
     return true;
+  });
+  ipcMain.handle('save-gemini-session', async (event, data) => {
+    try {
+      const sessionDir = path.join(__dirname, '.gxcode');
+      if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
+      const sessionPath = path.join(sessionDir, 'gemini-session.json');
+      
+      let existing = {};
+      if (fs.existsSync(sessionPath)) {
+        existing = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+      }
+      
+      const updated = { ...existing, ...data, date: new Date().toISOString() };
+      fs.writeFileSync(sessionPath, JSON.stringify(updated, null, 2));
+      console.log(`[SESSION] Gemini session updated at ${sessionPath}`);
+      return { success: true };
+    } catch (err) {
+      console.error(`[SESSION] Error saving gemini session:`, err);
+      return { success: false, error: err.message };
+    }
   });
 
   ipcMain.handle('git-diff', async (event, workspacePath, filePath) => {
@@ -2487,6 +2587,15 @@ app.whenReady().then(() => {
     if (shellType === 'claude') {
       shell = process.platform === 'win32' ? 'npx.cmd' : 'npx';
       args = ['@anthropic-ai/claude-code'];
+    } else if (shellType === 'gemini' || shellType === 'npm run gemini') {
+      const scriptPath = path.join(__dirname, 'APP', 'scripts', 'gemini-cli.js');
+      if (process.platform === 'win32') {
+        shell = 'cmd.exe';
+        args = ['/c', 'node', scriptPath];
+      } else {
+        shell = 'node';
+        args = [scriptPath];
+      }
     } else if (shellType === 'cmd' && process.platform === 'win32') {
       shell = 'cmd.exe';
     } else if (shellType === 'bash' && process.platform === 'win32') {

@@ -603,16 +603,11 @@ const renderSettingsModal = () => {
     const existingModal = document.getElementById('settings-modal-overlay');
     
     if (existingModal) {
-        // AGGIORNAMENTO PARZIALE: Solo contenuto e testata area destra
-        const headerIcon = existingModal.querySelector('#settings-header-icon');
-        const headerTitle = existingModal.querySelector('#settings-header-title');
-        const contentArea = existingModal.querySelector('#settings-content-body');
+        // PREVENZIONE FLICKERING: Se l'utente sta scrivendo in un input dell'area AI, non ridisegnamo il contenuto
+        const activeEl = document.activeElement;
+        const isEditingInAi = activeEl && activeEl.closest('.ai-settings-grid') && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
         
-        if (headerIcon) headerIcon.innerHTML = activeTab?.icon || '';
-        if (headerTitle) headerTitle.innerText = activeTab?.label || '';
-        if (contentArea) contentArea.innerHTML = renderTabContent();
-
-        // AGGIORNAMENTO SIDEBAR: Sincronizziamo i tasti attivi
+        // AGGIORNAMENTO SIDEBAR: Sincronizziamo i tasti attivi senza resettarli
         const allTabBtns = existingModal.querySelectorAll('[data-settings-tab]');
         allTabBtns.forEach(btn => {
             const tabId = btn.getAttribute('data-settings-tab');
@@ -622,6 +617,17 @@ const renderSettingsModal = () => {
                 btn.className = "px-3 py-2 flex items-center gap-3 rounded-lg cursor-pointer transition-all text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent";
             }
         });
+
+        // Se non stiamo editando nell'area AI, o se abbiamo cambiato TAB, aggiorniamo il contenuto
+        if (!isEditingInAi || prevState?.activeSettingsTab !== state.activeSettingsTab) {
+            const headerIcon = existingModal.querySelector('#settings-header-icon');
+            const headerTitle = existingModal.querySelector('#settings-header-title');
+            const contentArea = existingModal.querySelector('#settings-content-body');
+            
+            if (headerIcon) headerIcon.innerHTML = activeTab?.icon || '';
+            if (headerTitle) headerTitle.innerText = activeTab?.label || '';
+            if (contentArea) contentArea.innerHTML = renderTabContent();
+        }
         return;
     }
 
@@ -855,10 +861,16 @@ window.toggleAddRepoForm = (show) => {
     setState({ isAddingRepo: show });
 };
 
-window.saveGeminiKey = () => {
+window.saveGeminiKey = async () => {
     const key = document.getElementById('ai-gemini-key').value.trim();
     setState({ geminiApiKey: key });
-    window.gxToast(window.t('settings.ai.success'), 'info');
+    
+    // SINCRONIZZA CON IL CLI SESSION FILE
+    if (window.electronAPI && window.electronAPI.saveGeminiSession) {
+        await window.electronAPI.saveGeminiSession({ token: key });
+    }
+    
+    window.gxToast(window.t('settings.ai.success'), 'success');
 };
 
 window.saveAnthropicKey = () => {

@@ -10,6 +10,7 @@
     
     <!-- Nostro Engine di Skin Ereditato -->
     <link href="patch.css" rel="stylesheet">
+    <link href="styles/claudeMentions.css" rel="stylesheet">
     <link href="lib/xterm/xterm.css" rel="stylesheet">
     <!-- Monaco Editor Loader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs/loader.js"></script>
@@ -190,11 +191,10 @@
                             <span class="text-[7px] text-gray-600 font-black uppercase tracking-[0.3em] mb-0.5">Workspace</span>
                             <h3 class="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">Test <span class="text-blue-500">Explorer</span></h3>
                         </div>
-                        <div class="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+                        <div class="flex items-center gap-1">
                             <button id="btn-scan-tests" class="p-2 rounded-lg hover:bg-white/5 text-gray-500 hover:text-blue-400 transition-all active:scale-90" title="Scansiona Workspace">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.05 6.63 2.9L21 8"/><path d="M21 3v5h-5"/></svg>
                             </button>
-                            <div class="w-[1px] h-3 bg-white/10 mx-0.5"></div>
                             <button id="btn-run-all-tests" class="p-2 rounded-lg hover:bg-white/5 text-gray-500 hover:text-emerald-400 transition-all active:scale-90" title="Esegui Tutti i Test">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 3 14 9-14 9V3z"/></svg>
                             </button>
@@ -204,6 +204,9 @@
                 </div>
             </div>
         </aside>
+        
+        <!-- RESIZER SINISTRO -->
+        <div id="left-resizer" class="resizer resizer-v bg-transparent hover:bg-blue-500/20 z-50 transition-all shrink-0"></div>
 
         <!-- CENTER WORKSPACE -->
         <main class="flex-1 flex flex-col bg-[var(--bg-main)] relative min-w-0">
@@ -259,8 +262,9 @@
             </div>
 
             <!-- BOTTOM PANEL -->
-            <div id="terminal-drag-bar" class="h-[1.5px] gx-divide-theme hover:bg-blue-500 cursor-row-resize shrink-0 transition"></div>
-            <div id="bottom-panel" class="h-[40%] min-h-[36px] bg-[var(--bg-main)] shrink-0 flex flex-col transition-all duration-300 border-t gx-border-theme relative z-10 overflow-hidden">
+            <!-- BOTTOM PANEL RESIZER -->
+            <div id="terminal-drag-bar" class="resizer resizer-h bg-transparent hover:bg-blue-500/30 z-50 shrink-0 transition-all"></div>
+            <div id="bottom-panel" class="bg-[var(--bg-main)] shrink-0 flex flex-col border-t gx-border-theme relative z-10 overflow-hidden" style="min-height: 36px;">
                 <div id="bottom-panel-header" class="unified-header flex justify-between items-center shrink-0">
                     <div class="flex items-center h-full gap-1 p-1">
                         <button id="tab-terminal-btn" class="evolution-tab-btn h-full px-4 active">Terminale</button>
@@ -282,13 +286,16 @@
                     <div id="pane-output" class="absolute inset-0 hidden flex flex-col p-4 font-mono text-xs text-gray-400 overflow-y-auto custom-scrollbar"></div>
                     <div id="pane-debug-console" class="absolute inset-0 hidden flex flex-col p-4 font-mono text-xs text-gray-400 overflow-y-auto custom-scrollbar"></div>
                     <div id="pane-ports" class="absolute inset-0 hidden flex flex-col p-4"></div>
-                    <div id="pane-agent" class="absolute inset-0 hidden flex flex-col"></div>
+                    <div id="pane-agent" class="absolute inset-0 hidden flex flex-col overflow-hidden bg-[#06080a]"><div id="pane-gemini-cli" class="flex-1 w-full p-2"></div></div>
                     <div id="pane-ollama" class="absolute inset-0 hidden flex flex-col"></div>
                     <div id="pane-ai-claude" class="absolute inset-0 hidden flex flex-col overflow-hidden"><div id="pane-claude-cli" class="flex-1 w-full p-2"></div></div>
                     <div id="pane-ai-custom" class="absolute inset-0 hidden flex flex-col"></div>
                 </div>
             </div>
         </main>
+
+        <!-- RESIZER DESTRO -->
+        <div id="right-resizer" class="resizer resizer-v bg-transparent hover:bg-blue-500/20 z-50 transition-all shrink-0"></div>
 
         <aside id="right-sidebar" class="w-80 bg-[var(--bg-side)] border-l gx-border-theme flex flex-col shrink-0 transition-all z-10 overflow-hidden relative">
             <!-- Sidebar Tabs -->
@@ -334,6 +341,9 @@
     <div id="modals-root" class="fixed inset-0 pointer-events-none" style="z-index: 1001000;"></div>
     <div id="crud-root" class="fixed inset-0 pointer-events-none" style="z-index: 1002000;"></div>
     <div id="dialogs-root" class="fixed inset-0 pointer-events-none" style="z-index: 2000000;"></div>
+    
+    <!-- Claude @Mentions Popup -->
+    <div id="claude-mentions-popup" class="hidden"></div>
     
     <script type="module" src="scripts/app.js"></script>
 </body>

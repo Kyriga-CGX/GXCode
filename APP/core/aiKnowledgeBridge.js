@@ -57,6 +57,12 @@ const updateClaudeIdentity = async (currentState) => {
                 claudeMd += `- \`${s.name}\`: ${s.description || 'Strumento GXCode.'}\n`;
             });
         }
+        
+        claudeMd += `\n## MODEL SELECTION STRATEGY\n`;
+        claudeMd += `Per ottimizzare costi e prestazioni, Claude deve seguire queste linee guida nella scelta del modello:\n`;
+        claudeMd += `- **Claude 3 Haiku**: Analisi di file esistenti, analisi del brief di progetto (es: \`Brief Analyzer\`) e compiti di sola lettura.\n`;
+        claudeMd += `- **Claude 3.5 Sonnet**: Generazione di nuovo codice, creazione di layout e documenti (es: \`UI Copy Generator\`, \`Layout Architect\`), applicazione di modifiche e refactoring.\n`;
+        claudeMd += `- **Claude 3 Opus**: Gestione di agenti complessi, delega di compiti a skill esterne e creazione/orchestrazione di sotto-agenti specializzati.\n`;
 
         // --- CONTENUTO PER GX_IDENTITY.md (.claudecode) ---
         let identityMd = `# GXCODE SYSTEM IDENTITY\n\n`;
@@ -72,6 +78,12 @@ const updateClaudeIdentity = async (currentState) => {
             identityMd += `- **Descrizione**: ${s.description}\n`;
             identityMd += `- **Invocazione**: \`gx-skill run "${s.name}"\`\n\n`;
         });
+
+        identityMd += `### MODEL SELECTION STRATEGIES\n`;
+        identityMd += `Per massimizzare l'efficienza architettonica:\n`;
+        identityMd += `- **Analisi (Haiku)**: Utilizzato per \`Brief Analyzer\` e scansione iniziale dei file.\n`;
+        identityMd += `- **Generazione & Editing (Sonnet)**: Utilizzato per tutte le altre skill di progettazione e per la scrittura di codice/documentazione.\n`;
+        identityMd += `- **Orchestrazione (Opus)**: Utilizzato per il coordinamento tra agenti, la delega di skill a entità esterne e la generazione dinamica di nuovi sotto-agenti se necessario.\n`;
 
         identityMd += `\n## ACTIVE AGENTS\n`;
         agents.forEach(a => {

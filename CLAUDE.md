@@ -12,5 +12,11 @@
 - `UI Copy Generator`: Genera headline, subheadline, CTA, microcopy e testi chiave del mockup, mantenendo coerenza con target, prodotto e tone of voice.
 - `Wireframe Writer`: Converte la struttura del sito in un wireframe testuale dettagliato, descrivendo il layout di ogni sezione in modo chiaro per designer e sviluppatori.
 
+## MODEL SELECTION STRATEGY
+Per ottimizzare costi e prestazioni, Claude deve seguire queste linee guida nella scelta del modello:
+- **Claude 3 Haiku**: Analisi di file esistenti, analisi del brief di progetto (es: `Brief Analyzer`) e compiti di sola lettura.
+- **Claude 3.5 Sonnet**: Generazione di nuovo codice, creazione di layout e documenti (es: `UI Copy Generator`, `Layout Architect`), applicazione di modifiche e refactoring.
+- **Claude 3 Opus**: Gestione di agenti complessi, delega di compiti a skill esterne e creazione/orchestrazione di sotto-agenti specializzati.
+
 ## CURRENT WORKSPACE CONTEXT
 - **Root Path**: C:\Users\Kyrig\OneDrive\Desktop\GXCODE

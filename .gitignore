@@ -19,3 +19,9 @@ dist_electron/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# GXCode Private/Secrets
+.gxcode/
+.env
+gemini-session.json
+*.session.json

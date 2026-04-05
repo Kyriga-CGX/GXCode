@@ -728,6 +728,44 @@
     right: 0;
 }
 
+/* --- PANEL RESIZERS (PRO-GRADE) --- */
+.resizer {
+    position: relative;
+    z-index: 1000;
+    transition: background-color 0.2s ease;
+}
+
+.resizer-v {
+    width: 4px;
+    height: 100%;
+    cursor: col-resize;
+    margin: 0 -2px; /* Sovrapposizione minima per facilitare la cattura */
+}
+
+.resizer-h {
+    width: 100%;
+    height: 4px;
+    cursor: row-resize;
+    margin: -2px 0;
+}
+
+.resizer:hover, .resizing {
+    background-color: rgba(59, 130, 246, 0.4) !important;
+}
+
+.resizing {
+    transition: none !important; /* Disabilita transizioni durante il drag per fluidità */
+}
+
+/* --- SIDEBAR WIDTH OVERRIDES --- */
+#left-sidebar, #right-sidebar, #bottom-panel {
+    transition: none; /* Disabilita transizioni di default per permettere il resize fluido */
+}
+
+#left-sidebar.hidden, #right-sidebar.hidden, #bottom-panel.hidden {
+    display: none !important;
+}
+
 /* Neon Active Bar Glow Effect */
 .activity-bar-btn.active svg {
     filter: drop-shadow(0 0 8px var(--accent));

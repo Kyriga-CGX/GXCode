@@ -77,10 +77,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAiPaths: () => ipcRenderer.invoke('get-ai-paths'),
   getGitRemote: (workspacePath) => ipcRenderer.invoke('git-remote-url', workspacePath),
 
-  // Gemini OAuth
+  // Gemini OAuth & Session
   geminiLogin: () => ipcRenderer.invoke('gemini:login'),
+  saveGeminiSession: (data) => ipcRenderer.invoke('save-gemini-session', data),
   onGeminiAuthSuccess: (callback) => ipcRenderer.on('gemini:auth-success', (event, data) => callback(data)),
   
   // Test Runner Output
   onTestOutput: (callback) => ipcRenderer.on('test-output', (event, data) => callback(data)),
+  
+  // Real-time File System Watcher
+  onWorkspaceUpdated: (callback) => ipcRenderer.on('workspace-updated', (event, data) => callback(data)),
 });

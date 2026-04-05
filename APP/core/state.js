@@ -46,6 +46,11 @@ export const state = {
     isRightSidebarOpen: localStorage.getItem('gx-is-right-open') !== 'false', // Default true
     isTerminalMinimized: localStorage.getItem('gx-is-terminal-minimized') === 'true',
     
+    // Panel Dimensions (Persistite)
+    leftSidebarWidth: parseInt(localStorage.getItem('gx-left-sidebar-width') || '260'),
+    rightSidebarWidth: parseInt(localStorage.getItem('gx-right-sidebar-width') || '320'),
+    bottomPanelHeight: parseInt(localStorage.getItem('gx-bottom-panel-height') || '300'),
+    
     issues: [],
     activeIssueId: null,
     activeAgentId: localStorage.getItem('gx-active-agent-id'),
@@ -179,6 +184,11 @@ export const setState = (newState) => {
     if (newState.hasOwnProperty('activeCgxTheme')) localStorage.setItem('gx-active-skin', state.activeCgxTheme);
     if (newState.hasOwnProperty('projectGuidelines')) localStorage.setItem('gx-project-guidelines', state.projectGuidelines);
     if (newState.hasOwnProperty('activeSkillCategory')) localStorage.setItem('gx-active-skill-category', state.activeSkillCategory);
+    
+    // Persistenza Dimensioni Pannelli
+    if (newState.hasOwnProperty('leftSidebarWidth')) localStorage.setItem('gx-left-sidebar-width', state.leftSidebarWidth);
+    if (newState.hasOwnProperty('rightSidebarWidth')) localStorage.setItem('gx-right-sidebar-width', state.rightSidebarWidth);
+    if (newState.hasOwnProperty('bottomPanelHeight')) localStorage.setItem('gx-bottom-panel-height', state.bottomPanelHeight);
 
     for (const listener of listeners) {
         listener(state, prevState);

@@ -227,6 +227,8 @@ function initSidebarResizer() {
 
     let isDragging = false;
 
+    if (!dragBar || !primary || !secondary || !container) return;
+
     dragBar.addEventListener('mousedown', (e) => {
         isDragging = true;
         document.body.style.cursor = 'row-resize';
@@ -255,6 +257,59 @@ function initSidebarResizer() {
             dragBar.classList.remove('bg-blue-500');
         }
     });
+}
+
+function initPanelResizers() {
+    const leftResizer = document.getElementById('left-resizer');
+    const rightResizer = document.getElementById('right-resizer');
+    const leftSidebar = document.getElementById('left-sidebar');
+    const rightSidebar = document.getElementById('right-sidebar');
+
+    const setupResizer = (resizer, target, side) => {
+        if (!resizer || !target) return;
+        
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            let newWidth;
+            if (side === 'left') {
+                newWidth = e.clientX - target.getBoundingClientRect().left;
+            } else {
+                newWidth = target.getBoundingClientRect().right - e.clientX;
+            }
+
+            // Vincoli: 150px - 600px
+            if (newWidth >= 150 && newWidth <= 600) {
+                if (side === 'left') {
+                    setState({ leftSidebarWidth: Math.round(newWidth) });
+                } else {
+                    setState({ rightSidebarWidth: Math.round(newWidth) });
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.classList.remove('resizing');
+                document.body.style.cursor = '';
+                // Trigger layout refresh
+                window.dispatchEvent(new Event('resize'));
+            }
+        });
+    };
+
+    setupResizer(leftResizer, leftSidebar, 'left');
+    setupResizer(rightResizer, rightSidebar, 'right');
 }
 
 export const renderSidebar = () => {
@@ -445,8 +500,14 @@ export const initSidebar = () => {
         setState({ activeLeftTab: 'issues' });
     });
 
-    // SIDEBAR RESIZER INITIALIZATION
     initSidebarResizer();
+    initPanelResizers();
+
+    // Applicazione iniziale dimensioni
+    const startLeft = document.getElementById('left-sidebar');
+    const startRight = document.getElementById('right-sidebar');
+    if (startLeft) startLeft.style.width = `${state.leftSidebarWidth}px`;
+    if (startRight) startRight.style.width = `${state.rightSidebarWidth}px`;
 
     // ESPOSIZIONE GLOBALE (Per app.js subscriber)
     window.updateActivityBar = updateActivityBar;
@@ -465,6 +526,12 @@ export const initSidebar = () => {
         if (needsResSidebar) {
             renderSidebar();
         }
+
+        // Applicazione Dimensioni Pannelli Dinamiche
+        const leftSidebar = document.getElementById('left-sidebar');
+        const rightSidebar = document.getElementById('right-sidebar');
+        if (leftSidebar) leftSidebar.style.width = `${newState.leftSidebarWidth}px`;
+        if (rightSidebar) rightSidebar.style.width = `${newState.rightSidebarWidth}px`;
     });
     renderSidebar();
 };

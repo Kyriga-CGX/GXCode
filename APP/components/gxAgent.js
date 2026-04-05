@@ -1,31 +1,48 @@
 import { state, subscribe, setState } from '../core/state.js';
 import { callGeminiAgent, listAvailableModels } from '../core/geminiApi.js';
+import { triggerGlowOnMention } from '../core/uiUtils.js';
+
+const glowedInThisSession = new Set();
 
 /**
  * GX-Agent Sidebar Component
  */
 
 let chatHistory = []; // Local history for the session
+let autoItems = [];
+let activeIndex = 0;
+let isShowingAuto = false;
 
 export const initGxAgent = () => {
     // Carica i modelli reali all'avvio
     listAvailableModels();
     window.renderGxAgentChat = renderGxAgentChat;
 
-    // Sottoscrizione reattiva allo stato (Ottimizzata per evitare flickering)
+    // Sottoscrizione reattiva allo stato (Ottimizzata per evitare flickering e perdita focus)
     subscribe((newState, oldState) => {
-        const needsResAgentChat = 
-            newState.geminiConfig !== oldState?.geminiConfig || 
-            newState.activeAgentId !== oldState?.activeAgentId ||
-            newState.agents !== oldState?.agents;
-
-        if (!needsResAgentChat) return;
+        // Rileva se il cambiamento è strutturale o solo di dati
+        const configChanged = newState.geminiConfig !== oldState?.geminiConfig;
+        const agentsChanged = newState.agents !== oldState?.agents;
+        const activeAgentChanged = newState.activeAgentId !== oldState?.activeAgentId;
+        
+        // Se non è cambiato nulla di rilevante per la struttura, evita il re-render distruttivo
+        if (!configChanged && !agentsChanged && !activeAgentChanged) return;
 
         const paneContainer = document.getElementById('pane-agent');
+        const sidebarContainer = document.getElementById('sidebar-ai-companion-container');
+        
+        // Se l'utente sta scrivendo, non interrompere il flusso a meno che non fosse cambiato qualcosa di critico (config)
+        const activeEl = document.activeElement;
+        const isUserTyping = activeEl && (activeEl.id === 'gx-agent-input' || activeEl.id === 'ollama-input');
+        
+        if (isUserTyping && !configChanged) {
+            // Aggiorna solo eventuali parti non distruttive se necessario
+            return;
+        }
+
         if (paneContainer && !paneContainer.classList.contains('hidden')) {
             renderGxAgentChat('pane-agent');
         }
-        const sidebarContainer = document.getElementById('sidebar-ai-companion-container');
         if (sidebarContainer) {
             renderGxAgentChat('sidebar-ai-companion-container');
         }
@@ -38,7 +55,7 @@ export const initGxAgent = () => {
     }
 };
 
-export const renderGxAgentChat = (targetId = 'pane-agent') => {
+export const renderGxAgentChat = (targetId = 'pane-agent', shouldFocus = false) => {
     const container = document.getElementById(targetId);
     if (!container) return;
 
@@ -88,8 +105,8 @@ export const renderGxAgentChat = (targetId = 'pane-agent') => {
                 </div>
             `}
 
-            <!-- Chat History -->
-            <div id="gx-chat-messages" class="flex-1 overflow-y-auto p-1 py-1 space-y-[1px] custom-scrollbar bg-[var(--bg-main)]">
+            <!-- Chat History (Vision 2026 Elite: Selectable Text) -->
+            <div id="gx-chat-messages" class="flex-1 overflow-y-auto p-1 py-1 space-y-[1px] custom-scrollbar bg-[var(--bg-main)] select-text">
                 ${chatHistory.length === 0 ? `
                     <div class="flex flex-col items-center justify-center h-40 opacity-40 text-center">
                         <div class="w-12 h-12 rounded-full border border-blue-500/30 flex items-center justify-center text-blue-400 mb-3 bg-blue-500/10">🤖</div>
@@ -108,6 +125,10 @@ export const renderGxAgentChat = (targetId = 'pane-agent') => {
                         data-i18n="[placeholder]gxAgent.placeholder"
                         placeholder="Chiedi al GX-Agent..." 
                         class="flex-1 bg-transparent border-none text-[11px] text-gray-200 p-2.5 outline-none resize-none max-h-32 custom-scrollbar"></textarea>
+                    
+                    <!-- AUTOCOMPLETE POPUP (Vision 2026 Elite) -->
+                    <div id="gx-agent-autocomplete" class="gx-ai-autocomplete !bottom-full !top-auto !mb-2 hidden"></div>
+
                     <button id="gx-agent-send" class="p-2 text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-30" disabled>
                         <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     </button>
@@ -117,19 +138,126 @@ export const renderGxAgentChat = (targetId = 'pane-agent') => {
     `;
 
     setupListeners();
+    if (shouldFocus) {
+        setTimeout(() => document.getElementById('gx-agent-input')?.focus(), 10);
+    }
+    scrollGxAgentToBottom();
+};
+
+export const scrollGxAgentToBottom = () => {
+    const area = document.getElementById('gx-chat-messages');
+    if (!area) return;
+    requestAnimationFrame(() => {
+        area.scrollTop = area.scrollHeight;
+        // Secondo tentativo per messaggi lunghi
+        setTimeout(() => { area.scrollTop = area.scrollHeight; }, 50);
+    });
 };
 
 const renderMessage = (msg) => {
     const isUser = msg.role === 'user';
-    const prefixColor = isUser ? 'text-blue-500' : 'text-purple-500';
-    const label = isUser ? 'IO' : 'AGENT';
+    const prefixColor = isUser ? 'text-blue-500' : (msg.isError ? 'text-red-500' : 'text-purple-500');
+    const label = isUser ? 'IO' : (msg.isError ? 'ERROR' : 'AGENT');
+
+    if (msg.isQuota) {
+        return `
+            <div class="mx-2 my-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-[11px] animate-pulse">
+                <div class="flex items-center gap-2 mb-1 text-yellow-500 font-bold uppercase tracking-tighter">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Limite Quota Superato
+                </div>
+                <div class="text-gray-300 leading-relaxed">${msg.text}</div>
+            </div>
+        `;
+    }
 
     return `
-        <div class="px-2 py-0 hover:bg-[var(--bg-side-alt)] transition-colors terminal-line text-[12px] leading-[1.2] font-sans group">
-            <span class="font-mono text-[9px] font-bold ${prefixColor} opacity-80 mr-1.5 inline-block">[${label}] &gt;</span>
-            <span class="text-gray-300 whitespace-pre-wrap">${msg.text}</span>
+        <div class="px-2 py-0 hover:bg-[var(--bg-side-alt)] transition-colors terminal-line text-[12px] leading-[1.2] font-sans group select-text">
+            <span class="font-mono text-[9px] font-bold ${prefixColor} opacity-80 mr-1.5 inline-block select-none">[${label}] &gt;</span>
+            <span class="text-gray-300 whitespace-pre-wrap select-text selection:bg-blue-500/30">${msg.text}</span>
         </div>
     `;
+};
+
+// --- MENTIONS SYSTEM (Ported from Ollama for Consistency) ---
+
+const getMentionCandidates = () => {
+    const agents = (state.agents || []).map(a => ({ id: a.slug || a.id, name: a.name, type: 'agent', desc: 'Agent' }));
+    const skills = (state.skills || []).map(s => ({ id: s.slug || s.id, name: s.name, type: 'skill', desc: 'Skill' }));
+    
+    // Helper per estrarre file/cartelle dallo stato
+    const extractItems = (nodes) => {
+        let folders = [];
+        let files = [];
+        const walk = (list) => {
+            list.forEach(node => {
+                if (node.isDirectory) {
+                    folders.push({ id: node.path, name: node.name, type: 'folder', desc: 'Folder' });
+                    if (node.children) walk(node.children);
+                } else {
+                    files.push({ id: node.path, name: node.name, type: 'file', desc: 'File' });
+                }
+            });
+        };
+        if (nodes && Array.isArray(nodes)) walk(nodes);
+        return { folders, files };
+    };
+
+    const { folders, files } = extractItems(state.files || []);
+    return [...agents, ...skills, ...folders, ...files];
+};
+
+const renderAutocomplete = (query = '') => {
+    const auto = document.getElementById('gx-agent-autocomplete');
+    if (!auto) return;
+
+    const candidates = getMentionCandidates();
+    autoItems = candidates.filter(c => c.name.toLowerCase().includes(query.toLowerCase())).slice(0, 50);
+
+    if (autoItems.length === 0) {
+        auto.classList.add('hidden');
+        isShowingAuto = false;
+        return;
+    }
+
+    auto.innerHTML = autoItems.map((item, idx) => `
+        <div class="gx-ai-autocomplete-item ${idx === activeIndex ? 'active' : ''}" data-idx="${idx}">
+            <div class="gx-ai-autocomplete-icon">
+                ${item.type === 'agent' ? '🤖' : item.type === 'skill' ? '⚡' : item.type === 'folder' ? '📁' : '📄'}
+            </div>
+            <div class="gx-ai-autocomplete-name">${item.name}</div>
+            <div class="gx-ai-autocomplete-desc">${item.desc}</div>
+        </div>
+    `).join('');
+
+    auto.classList.remove('hidden');
+    isShowingAuto = true;
+
+    auto.querySelectorAll('.gx-ai-autocomplete-item').forEach(el => {
+        el.onclick = () => {
+            activeIndex = parseInt(el.dataset.idx);
+            insertMention();
+        };
+    });
+};
+
+const insertMention = () => {
+    const input = document.getElementById('gx-agent-input');
+    const item = autoItems[activeIndex];
+    if (!input || !item) return;
+
+    const val = input.value;
+    const pos = input.selectionStart;
+    const lastAt = val.lastIndexOf('@', pos - 1);
+    
+    const newValue = val.substring(0, lastAt) + '@' + item.name + ' ' + val.substring(pos);
+    input.value = newValue;
+    input.focus();
+    
+    const auto = document.getElementById('gx-agent-autocomplete');
+    auto.classList.add('hidden');
+    isShowingAuto = false;
+    activeIndex = 0;
 };
 
 const setupListeners = () => {
@@ -139,12 +267,52 @@ const setupListeners = () => {
 
     input.oninput = () => {
         btn.disabled = !input.value.trim();
+        
+        // --- GESTIONE AUTOCOMPLETE ---
+        const val = input.value;
+        const pos = input.selectionStart;
+        const lastAt = val.lastIndexOf('@', pos - 1);
+        
+        if (lastAt !== -1 && !val.substring(lastAt, pos).includes(' ')) {
+            const query = val.substring(lastAt + 1, pos);
+            renderAutocomplete(query);
+        } else {
+            const auto = document.getElementById('gx-agent-autocomplete');
+            if (auto) auto.classList.add('hidden');
+            isShowingAuto = false;
+        }
+
         // Auto-resize
         input.style.height = 'auto';
         input.style.height = input.scrollHeight + 'px';
     };
 
     input.onkeydown = (e) => {
+        if (isShowingAuto) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeIndex = (activeIndex + 1) % autoItems.length;
+                renderAutocomplete(document.getElementById('gx-agent-input').value.split('@').pop());
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeIndex = (activeIndex - 1 + autoItems.length) % autoItems.length;
+                renderAutocomplete(document.getElementById('gx-agent-input').value.split('@').pop());
+                return;
+            }
+            if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                insertMention();
+                return;
+            }
+            if (e.key === 'Escape') {
+                document.getElementById('gx-agent-autocomplete').classList.add('hidden');
+                isShowingAuto = false;
+                return;
+            }
+        }
+
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
@@ -192,7 +360,7 @@ const handleSend = async () => {
     
     // 1. Aggiungi alla storia locale
     chatHistory.push({ role: 'user', text });
-    renderGxAgentChat();
+    renderGxAgentChat('pane-agent', true); // Mantieni il focus dopo l'invio
 
     // 2. Prepara messaggi per l'API (Inclusione Persona Agente se presente)
     let apiMessages = chatHistory.map(m => ({
@@ -200,39 +368,74 @@ const handleSend = async () => {
         parts: [{ text: m.text }]
     }));
 
-    // Iniezione "Persona" (Role/Prompt) se un agente è attivo
+    // Iniezione "Persona" (Role/Prompt) & CONTESTO ELITE
+    let personaPrompt = "Stai operando come un Assistente AI d'Elite. Sii proattivo, preciso e tecnico.";
+    
     if (state.activeAgentId) {
         const activeAgent = state.agents.find(a => String(a.id) === String(state.activeAgentId));
         if (activeAgent) {
-            const personaPrompt = `Stai operando come: "${activeAgent.name}". Il tuo ruolo è: ${activeAgent.role}. Istruzioni: ${activeAgent.prompt || 'Sii utile.'}`;
-            // Mettiamo il prompt di persona all'inizio come istruzione di sistema per Gemini
-            apiMessages.unshift({
-                role: "user",
-                parts: [{ text: `[GX-SYSTEM-PROMPT] ${personaPrompt}` }]
-            });
+            personaPrompt = `Stai operando come: "${activeAgent.name}". Il tuo ruolo è: ${activeAgent.role}. Istruzioni: ${activeAgent.prompt || 'Sii utile.'}`;
         }
     }
+
+    // --- ELITE CONTEXT INJECTION (Snapshot del Progetto) ---
+    const activeDoc = state.activeDocumentPath;
+    const fileTree = (state.files || []).map(f => `- ${f.name}${f.isDirectory ? '/' : ''}`).join('\n');
+    personaPrompt += `\n\n[CONTESTO PROGETTO ATTUALE]:
+Albero File principale:
+${fileTree}
+${activeDoc ? `Documento Attivo: ${activeDoc}` : 'Nessun documento attivo.'}
+
+[REGOLE ELITE]:
+1. Hai pieno accesso al filesystem tramite i tuoi tool (write_file, list_files, read_file, etc).
+2. Se l'utente ti chiede di creare file o cartelle, USA I TUOI TOOL immediatamente.
+3. Se l'utente menziona @Skills o @Agents, interagisci con loro o suggeriscine l'uso.
+4. Ogni tua azione tecnica deve essere accompagnata da una spiegazione professionale nel terminale.
+PRO-TIP: Se non conosci il contenuto di un file rilevante, usa 'read_file' prima di rispondere.`;
+
+    // Mettiamo il prompt di persona all'inizio come istruzione di sistema per Gemini
+    apiMessages.unshift({
+        role: "user",
+        parts: [{ text: `[GX-SYSTEM-PROMPT] ${personaPrompt}` }]
+    });
 
     try {
         // Mostra indicatore di caricamento
         const statusIdx = chatHistory.push({ role: 'model', text: 'Sto pensando...', isLoading: true }) - 1;
-        renderGxAgentChat();
+        renderGxAgentChat('pane-agent', true);
         
         // Passiamo una callback per aggiornare lo stato durante i tool calls
         const response = await callGeminiAgent(apiMessages, (statusMsg) => {
             chatHistory[statusIdx].text = statusMsg;
-            renderGxAgentChat();
+            renderGxAgentChat('pane-agent', true);
+            // Analizza status per glow
+            triggerGlowOnMention(statusMsg, state, glowedInThisSession);
         });
         
         // Sostituisci il caricamento con la risposta vera
         chatHistory[statusIdx].text = response;
         chatHistory[statusIdx].isLoading = false;
-        renderGxAgentChat();
+        renderGxAgentChat('pane-agent', true);
+        // Analizza risposta finale
+        triggerGlowOnMention(response, state, glowedInThisSession);
 
     } catch (err) {
-        chatHistory.pop();
-        chatHistory.push({ role: 'model', text: `Errore: ${err.message}` });
-        renderGxAgentChat();
+        chatHistory.pop(); // Rimuovi il "pensando"
+        
+        let errorMsg = err.message;
+        let isQuota = errorMsg.toLowerCase().includes('quota') || errorMsg.includes('429');
+        
+        if (isQuota) {
+            errorMsg = `⚠️ QUOTA RAGGIUNTA: Hai esaurito i messaggi gratuiti per questo minuto/giorno. Attendi qualche istante o passa a un piano superiore su Google AI Studio.`;
+        }
+
+        chatHistory.push({ 
+            role: 'model', 
+            text: errorMsg,
+            isError: true,
+            isQuota: isQuota
+        });
+        renderGxAgentChat('pane-agent', true);
     }
 };
 

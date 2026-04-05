@@ -28,5 +28,11 @@ Questo file aiuta l'AI a capire i limiti e i poteri del sistema GXCode.
 - **Invocazione**: `gx-skill run "Wireframe Writer"`
 
 
+### MODEL SELECTION STRATEGIES
+Per massimizzare l'efficienza architettonica:
+- **Analisi (Haiku)**: Utilizzato per `Brief Analyzer` e scansione iniziale dei file.
+- **Generazione & Editing (Sonnet)**: Utilizzato per tutte le altre skill di progettazione e per la scrittura di codice/documentazione.
+- **Orchestrazione (Opus)**: Utilizzato per il coordinamento tra agenti, la delega di skill a entità esterne e la generazione dinamica di nuovi sotto-agenti se necessario.
+
 ## ACTIVE AGENTS
 - **Mockup Master Architect**: general

@@ -566,6 +566,38 @@ export const initWorkspace = () => {
         }
     });
 
+    // Sottoscrizione al Watcher del Filesystem (v1.4.6)
+    if (window.electronAPI?.onWorkspaceUpdated) {
+        window.electronAPI.onWorkspaceUpdated((event, data) => {
+            if (!data) return;
+
+            const rootPath = data.root?.replace(/\\/g, '/');
+            const changedPath = data.changedPath?.replace(/\\/g, '/');
+            
+            // Se mancano i dati nuovi (es. se sta girando una vecchia versione del main), 
+            // facciamo un refresh totale invece di schiantarci.
+            if (!changedPath || !rootPath) {
+                console.warn("[GX-WORKSPACE] Dati watcher incompleti o vecchia versione main, eseguo refresh totale.");
+                if (window.refreshWorkspace) window.refreshWorkspace();
+                return;
+            }
+
+            console.log(`[GX-WORKSPACE] Watcher update: ${changedPath}`);
+
+            // Determina la directory genitrice per fare un refresh mirato
+            const parentPath = changedPath.substring(0, changedPath.lastIndexOf('/'));
+            const isRootChange = parentPath === rootPath || parentPath === rootPath.replace(/\/$/, '');
+
+            if (isRootChange) {
+                console.log("[GX-WORKSPACE] Root refresh required.");
+                if (window.refreshWorkspace) window.refreshWorkspace();
+            } else {
+                console.log(`[GX-WORKSPACE] Surgical subfolder refresh: ${parentPath}`);
+                if (window.fetchFolderContents) window.fetchFolderContents(parentPath);
+            }
+        });
+    }
+
     console.log("[GX-WORKSPACE] Orchestrator initialized.");
 };
 
