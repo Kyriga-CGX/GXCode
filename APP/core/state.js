@@ -22,16 +22,20 @@ export const state = {
     },
 
     // Shortcuts (Dinamiche e Persistenti)
-    shortcuts: JSON.parse(localStorage.getItem('gx-shortcuts') || JSON.stringify({
-        'Ctrl+S': { action: 'editor:save', label: 'Salva File Attivo' },
-        'Ctrl+P': { action: 'search:quick-open', label: 'Ricerca Globale Rapida' },
-        'Ctrl+B': { action: 'sidebar:toggle', label: 'Mostra/Nascondi Sidebar' },
-        'Alt+F': { action: 'editor:format', label: 'Formatta Documento' },
-        'F5': { action: 'debug:continue', label: 'Debug: Continua' },
-        'F10': { action: 'debug:step-over', label: 'Debug: Avanza (Step Over)' },
-        'F11': { action: 'debug:step-into', label: 'Debug: Entra (Step Into)' },
-        'Shift+F5': { action: 'debug:stop', label: 'Debug: Ferma Sessione' }
-    })),
+    shortcuts: (() => {
+        const defaults = {
+            'Ctrl+S': { action: 'editor:save', label: 'Salva File Attivo' },
+            'Ctrl+P': { action: 'search:quick-open', label: 'Ricerca Globale Rapida' },
+            'Ctrl+B': { action: 'sidebar:toggle', label: 'Mostra/Nascondi Sidebar' },
+            'Alt+F': { action: 'editor:format', label: 'Formatta Documento' },
+            'F5': { action: 'debug:continue', label: 'Debug: Prossimo Breakpoint' },
+            'F8': { action: 'debug:continue-ignore', label: 'Debug: Ignora Breakpoint' },
+            'F10': { action: 'debug:step-over', label: 'Debug: Prossima Azione' },
+            'Shift+F5': { action: 'debug:stop', label: 'Debug: Ferma Tutto' }
+        };
+        const saved = JSON.parse(localStorage.getItem('gx-shortcuts') || '{}');
+        return { ...defaults, ...saved }; // Merge (defaults priority if missing)
+    })(),
 
     // UI State (Persistiti su localStorage)
     activeRightTab: localStorage.getItem('gx-active-right-tab') || 'agents',

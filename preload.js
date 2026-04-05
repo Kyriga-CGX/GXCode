@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   runTest: (workspacePath, filePath, testName) => ipcRenderer.invoke('run-test', workspacePath, filePath, testName),
   debugTest: (workspacePath, filePath, testName, breakpoints) => ipcRenderer.invoke('debug-test', workspacePath, filePath, testName, breakpoints),
   runAllTests: (workspacePath) => ipcRenderer.invoke('run-all-tests', workspacePath),
+  installPlaywright: (workspacePath) => ipcRenderer.invoke('install-playwright', workspacePath),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   performUpdate: () => ipcRenderer.invoke('perform-update'),
   
@@ -49,11 +50,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Phase 5: Debugging
   debugStart: (filePath, breakpoints) => ipcRenderer.invoke('debug:start', filePath, breakpoints),
-  debugTest: (workspacePath, filePath, testName, breakpoints) => ipcRenderer.invoke('debug-test', workspacePath, filePath, testName, breakpoints),
-  debugStop: () => ipcRenderer.invoke('gx:debug:stop'),
-  debugStep: () => ipcRenderer.invoke('gx:debug:step'),
-  debugContinue: () => ipcRenderer.invoke('gx:debug:continue'),
+  debugStop: () => ipcRenderer.send('debug-stop'),
+  debugStep: () => ipcRenderer.send('debug-step'),
+  debugContinue: () => ipcRenderer.send('debug-continue'),
   onDebugPaused: (callback) => ipcRenderer.on('debug:paused', (event, data) => callback(data)),
+  onTestDebugPaused: (callback) => ipcRenderer.on('test-debug-paused', (event, line) => callback(line)),
   onDebugVariables: (callback) => ipcRenderer.on('debug:variables', (event, data) => callback(data)),
   onDebugResumed: (callback) => ipcRenderer.on('debug:resumed', () => callback()),
   onDebugFinished: (callback) => ipcRenderer.on('debug-finished', () => callback()),

@@ -22,6 +22,8 @@ let breakpointDecorations = [];
 let breakpointDecorationsRight = [];
 let debugActiveLineDecoration = [];
 let debugActiveLineDecorationRight = [];
+let ghostDecoration = [];
+let ghostDecorationRight = [];
 
 const normalizePath = (p) => {
     if (!p) return "";
@@ -119,8 +121,36 @@ export const initEditor = () => {
         setupEditorListeners(editorRight, 'right');
     }
 
-    if (editor) editor.addCommand(window.monaco.KeyMod.CtrlCmd | window.monaco.KeyCode.KeyS, () => handleSave(editor));
-    if (editorRight) editorRight.addCommand(window.monaco.KeyMod.CtrlCmd | window.monaco.KeyCode.KeyS, () => handleSave(editorRight));
+    // Funzione per intercettare i tasti in Monaco e inoltrarli al sistema globale
+    const handleEditorKeyDown = (e) => {
+        const key = e.browserEvent.key.toUpperCase();
+        const ctrl = e.ctrlKey || e.metaKey;
+        const shift = e.shiftKey;
+        const alt = e.altKey;
+        
+        let shortcutStr = '';
+        if (ctrl) shortcutStr += 'Ctrl+';
+        if (alt) shortcutStr += 'Alt+';
+        if (shift) shortcutStr += 'Shift+';
+        shortcutStr += key;
+
+        // Se il tasto è registrato come scorciatoia, lo gestiamo tramite il dispatcher globale
+        const binding = state.shortcuts[shortcutStr] || state.shortcuts[shortcutStr.replace('Ctrl+', 'CTRL+')];
+        if (binding) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log(`[GX-MONACO-SHORTCUT] Dispatching: ${binding.action}`);
+            // Usiamo il dispatcher definito in events.js (dovrebbe essere esportato o accessibile)
+            if (window.handleShortcutAction) window.handleShortcutAction(binding.action);
+        }
+    };
+
+    if (editor) {
+        editor.onKeyDown(handleEditorKeyDown);
+    }
+    if (editorRight) {
+        editorRight.onKeyDown(handleEditorKeyDown);
+    }
 
     // Click su un pannello → lo rende attivo
     const leftEl = document.getElementById('monaco-editor-container');
@@ -150,18 +180,33 @@ const setupEditorListeners = (ed, side = 'left') => {
         ignoreStateUpdate = false;
     });
 
-    let ghostDecoration = [];
     ed.onMouseMove((e) => {
         if (!window.monaco) return;
         const isGutter = e.target.type === window.monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN;
+        const isRight = ed === editorRight;
+        
         if (isGutter && e.target.range) {
             const line = e.target.range.startLineNumber;
-            ghostDecoration = ed.deltaDecorations(ghostDecoration, [{
+            const activePath = normalizePath(state.activeFileId);
+            const isPlaywrightFile = activePath.match(/\.(spec|test)\.(js|ts|jsx|tsx)$/i);
+            
+            // AltGr logic: Ctrl + Alt is standard for AltGr on many systems
+            const isAltGr = (e.event.altKey && e.event.ctrlKey) || (e.event.browserEvent && e.event.browserEvent.key === 'AltGraph');
+            const useYellow = isAltGr && isPlaywrightFile;
+
+            const decorations = [{
                 range: new window.monaco.Range(line, 1, line, 1),
-                options: { glyphMarginClassName: 'gx-breakpoint-hover' }
-            }]);
+                options: { glyphMarginClassName: useYellow ? 'gx-playwright-breakpoint-hover' : 'gx-breakpoint-hover' }
+            }];
+
+            if (isRight) {
+                ghostDecorationRight = ed.deltaDecorations(ghostDecorationRight, decorations);
+            } else {
+                ghostDecoration = ed.deltaDecorations(ghostDecoration, decorations);
+            }
         } else {
-            ghostDecoration = ed.deltaDecorations(ghostDecoration, []);
+            if (isRight) ghostDecorationRight = ed.deltaDecorations(ghostDecorationRight, []);
+            else ghostDecoration = ed.deltaDecorations(ghostDecoration, []);
         }
     });
 
@@ -169,7 +214,19 @@ const setupEditorListeners = (ed, side = 'left') => {
         if (!window.monaco) return;
         const isGutter = e.target.type === window.monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN;
         if (isGutter && e.target.range) {
-            toggleBreakpoint(e.target.range.startLineNumber);
+            const activePath = normalizePath(state.activeFileId);
+            const isPlaywrightFile = activePath.match(/\.(spec|test)\.(js|ts|jsx|tsx)$/i);
+            const isAltGr = (e.event.altKey && e.event.ctrlKey) || (e.event.browserEvent && e.event.browserEvent.key === 'AltGraph');
+            
+            if (isAltGr) {
+                if (isPlaywrightFile) {
+                    toggleBreakpoint(e.target.range.startLineNumber, 'playwright');
+                } else {
+                    if (window.gxToast) window.gxToast("I breakpoint gialli funzionano solo nei file .spec o .test!", "warning");
+                }
+            } else {
+                toggleBreakpoint(e.target.range.startLineNumber, 'standard');
+            }
         }
     });
 };
@@ -186,7 +243,7 @@ export const handleSave = async (ed) => {
     }
 };
 
-export const toggleBreakpoint = (line) => {
+export const toggleBreakpoint = (line, type = 'standard') => {
     const activeFileId = state.activeFileId;
     if (!activeFileId) return;
     
@@ -194,8 +251,19 @@ export const toggleBreakpoint = (line) => {
     let newBreakpoints = [...state.breakpoints];
     const idx = newBreakpoints.findIndex(bp => normalizePath(bp.path) === normActive && bp.line === line);
 
-    if (idx !== -1) newBreakpoints.splice(idx, 1);
-    else newBreakpoints.push({ path: activeFileId, line: line });
+    if (idx !== -1) {
+        const existing = newBreakpoints[idx];
+        // Se è dello stesso tipo lo togliamo, se è diverso lo cambiamo?
+        // Il requisito è AltGr per Playwright, Click normale per standard.
+        // Se clicco normale su uno giallo, lo tolgo o diventa rosso? 
+        // Solitamente si toglie.
+        newBreakpoints.splice(idx, 1);
+        if (existing.type !== type) {
+             newBreakpoints.push({ path: activeFileId, line, type });
+        }
+    } else {
+        newBreakpoints.push({ path: activeFileId, line, type });
+    }
     
     setState({ breakpoints: newBreakpoints });
     updateBreakpointDecorations();
@@ -209,14 +277,18 @@ export const updateBreakpointDecorations = () => {
     const normItem = normalizePath(activeFileId);
     const activeBreakpoints = state.breakpoints.filter(bp => normalizePath(bp.path) === normItem);
     
-    const newDecorations = activeBreakpoints.map(bp => ({
-        range: new window.monaco.Range(bp.line, 1, bp.line, 1),
-        options: {
-            glyphMarginClassName: 'gx-breakpoint-real',
-            glyphMarginHoverMessage: { value: 'Breakpoint' },
-            stickiness: window.monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
-        }
-    }));
+    const newDecorations = activeBreakpoints.map(bp => {
+        const isPlaywright = bp.type === 'playwright';
+        return {
+            range: new window.monaco.Range(bp.line, 1, bp.line, 1),
+            options: {
+                glyphMarginClassName: isPlaywright ? 'gx-playwright-breakpoint-real' : 'gx-breakpoint-real',
+                className: isPlaywright ? 'gx-playwright-breakpoint-line' : '',
+                glyphMarginHoverMessage: { value: isPlaywright ? 'Playwright Breakpoint' : 'Breakpoint' },
+                stickiness: window.monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+            }
+        };
+    });
 
     if (editor) breakpointDecorations = editor.deltaDecorations(breakpointDecorations, newDecorations);
     if (editorRight) breakpointDecorationsRight = editorRight.deltaDecorations(breakpointDecorationsRight, newDecorations);

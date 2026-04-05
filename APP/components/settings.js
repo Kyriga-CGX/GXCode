@@ -243,43 +243,74 @@ const renderTabContent = () => {
         case 'keybinds': {
             const currentShortcuts = state.shortcuts || {};
             
+            const groups = {
+                'debug': { label: 'Playwright & Debugging', actions: [], icon: '🧪' },
+                'editor': { label: 'Code Editor', actions: [], icon: '📝' },
+                'search': { label: 'Navigation & Search', actions: [], icon: '🔍' },
+                'interfaccia': { label: 'UI & Layout', actions: [], icon: '🖥️' },
+                'generale': { label: 'General Commands', actions: [], icon: '⚙️' }
+            };
+
+            Object.entries(currentShortcuts).forEach(([key, binding]) => {
+                const action = binding.action || '';
+                if (action.startsWith('debug:')) groups.debug.actions.push([key, binding]);
+                else if (action.startsWith('editor:')) groups.editor.actions.push([key, binding]);
+                else if (action.startsWith('search:')) groups.search.actions.push([key, binding]);
+                else if (action.startsWith('sidebar:')) groups.interfaccia.actions.push([key, binding]);
+                else groups.generale.actions.push([key, binding]);
+            });
+
             return `
-                <div class="space-y-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h4 class="text-xs font-bold text-gray-200 uppercase tracking-widest leading-none">${window.t('settings.tabs.keybinds')}</h4>
-                            <p class="text-[9px] text-gray-500 mt-1 uppercase tracking-tighter">Personalizza i comandi rapidi dell'IDE</p>
+                <div class="h-[60vh] overflow-y-scroll pr-2" id="shortcuts-scroll-container" style="scrollbar-width: thin; scrollbar-color: rgba(59,130,246,0.3) transparent;">
+                    <!-- Minimalist Header -->
+                    <div class="flex items-center justify-between sticky top-0 bg-[var(--bg-main)] z-40 py-6 mb-4">
+                        <div class="flex flex-col">
+                            <h4 class="text-xl font-black text-white uppercase italic tracking-tighter">Scorciatoie</h4>
+                            <p class="text-[8px] text-gray-600 uppercase tracking-[0.4em] font-bold">Integrazione Comandi Neurone</p>
                         </div>
-                        <button onclick="window.resetShortcuts()" class="px-2 py-1 bg-black/20 hover:bg-red-900/20 text-red-400 border border-red-900/30 text-[8px] font-bold rounded uppercase transition">
-                            Reset Default
+                        <button onclick="window.resetShortcuts()" class="px-5 py-2.5 bg-red-600/5 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/10 rounded-2xl text-[9px] font-black uppercase transition-all active:scale-95 shadow-lg">
+                             Ripristina Tutto
                         </button>
                     </div>
 
-                    <div class="space-y-3 pt-2">
-                        ${Object.entries(currentShortcuts).map(([key, binding]) => `
-                            <div class="flex items-center justify-between p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl group hover:border-blue-500/30 transition shadow-sm overflow-hidden relative">
-                                <div class="relative z-10">
-                                    <div class="text-[11px] font-bold text-gray-300 mb-0.5">${binding.label}</div>
-                                    <div class="text-[9px] text-gray-600 font-mono tracking-tighter">${binding.action}</div>
+                    <div class="space-y-16 pb-20">
+                        ${Object.entries(groups).filter(([_, g]) => g.actions.length > 0).map(([id, group]) => `
+                            <div class="space-y-6">
+                                <!-- Category Header - Minimal -->
+                                <div class="flex items-center gap-4 px-2">
+                                    <div class="w-2 h-2 rounded-full ${id === 'debug' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'bg-gray-700'}"></div>
+                                    <h5 class="text-[12px] font-black text-gray-300 uppercase tracking-[0.2em] italic">${group.label}</h5>
+                                    <div class="flex-1 h-[1px] bg-gradient-to-r from-gray-800 to-transparent"></div>
                                 </div>
-                                <div class="relative z-10 flex items-center gap-2">
-                                    <input type="text" 
-                                           value="${key}" 
-                                           readonly
-                                           onclick="window.recordShortcut(this, '${binding.action}')"
-                                           class="w-32 bg-black border border-gray-700 rounded-lg text-center font-mono text-[10px] text-blue-400 cursor-pointer hover:border-blue-500 transition focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                           title="Clicca per cambiare scorciatoia">
+                                
+                                <!-- Shortcut List - No Borders/Boxes -->
+                                <div class="space-y-5 px-6">
+                                    ${group.actions.map(([key, binding]) => `
+                                        <div class="flex items-center justify-between group transition-all">
+                                            <div class="flex flex-col">
+                                                <div class="text-[13px] font-bold text-gray-400 group-hover:text-blue-400 transition-colors uppercase tracking-tight">${binding.label}</div>
+                                                <div class="text-[8px] text-gray-700 font-mono tracking-tighter opacity-70 uppercase">${binding.action}</div>
+                                            </div>
+                                            <div class="relative">
+                                                <input type="text" 
+                                                       value="${key}" 
+                                                       readonly
+                                                       onclick="window.recordShortcut(this, '${binding.action}')"
+                                                       class="w-44 bg-transparent border-b border-gray-900 group-hover:border-blue-500/50 text-center font-mono text-[11px] text-gray-500 group-hover:text-white transition-all focus:outline-none py-2 tracking-[4px] font-black italic cursor-pointer"
+                                                       title="Registra sensore">
+                                            </div>
+                                        </div>
+                                    `).join('')}
                                 </div>
-                                <!-- Background accent -->
-                                <div class="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                             </div>
                         `).join('')}
                     </div>
 
-                    <!-- Extra Actions / Bonus -->
-                    <div class="p-4 border border-yellow-500/10 bg-yellow-500/5 rounded-xl opacity-60">
-                         <p class="text-[9px] text-yellow-200/60 leading-relaxed italic text-center">
-                             Pro Tip: Clicca su una scorciatoia per registrarne una nuova. La registrazione terminerà automaticamente tasto dopo tasto.
+                    <!-- Footer Intelligence -->
+                    <div class="mt-8 p-10 bg-blue-600/[0.01] border-t border-white/5 rounded-[60px] text-center space-y-4 group">
+                         <div class="text-[12px] text-blue-500/60 font-black uppercase tracking-[0.4em] group-hover:tracking-[0.6em] transition-all duration-700">Protocollo Sincronizzazione</div>
+                         <p class="text-[9px] text-gray-600 font-bold uppercase tracking-widest leading-loose max-w-md mx-auto opacity-40">
+                             Seleziona un sensore per inizializzare il download della sequenza di attivazione rapida.
                          </p>
                     </div>
                 </div>
@@ -1350,13 +1381,18 @@ export const initSettings = async () => {
 };
 
 // --- Shortcut Manager Helpers ---
+let activeShortcutListener = null;
+
 window.recordShortcut = (input, action) => {
+    // Rimuoviamo listener precedenti se attivi
+    if (activeShortcutListener) {
+        window.removeEventListener('keydown', activeShortcutListener, true);
+    }
+
     input.value = "Premi tasti...";
     input.classList.add('animate-pulse', 'border-blue-500', 'text-white');
     
-    // Mostriamo un piccolo overlay o feedback visivo? Per ora usiamo l'input.
-    
-    const onKey = (e) => {
+    activeShortcutListener = (e) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -1367,29 +1403,28 @@ window.recordShortcut = (input, action) => {
         if (e.shiftKey) keys.push('Shift');
         if (e.altKey) keys.push('Alt');
 
-        // Se è un modificatore e non abbiamo ancora un tasto finale, aggiorniamo solo l'anteprima
         if (isModifier) {
             input.value = keys.join('+') + (keys.length > 0 ? '+...' : '...');
             return;
         }
 
-        const key = e.key === ' ' ? 'Space' : e.key.charAt(0).toUpperCase() + e.key.slice(1);
+        const key = e.key === ' ' ? 'Space' : (e.key.length === 1 ? e.key.toUpperCase() : e.key);
         keys.push(key);
 
         const newShortcut = keys.join('+');
         input.value = newShortcut;
         input.classList.remove('animate-pulse', 'border-blue-500', 'text-white');
         
-        // Salva nello stato
         const newShortcuts = { ...state.shortcuts };
         
-        // Rimuovi eventuali vecchie assegnazioni per questa combinazione (evita conflitti)
+        // Rimuovi la vecchia assegnazione per questa AZIONE
         Object.keys(newShortcuts).forEach(k => {
             if (newShortcuts[k].action === action) delete newShortcuts[k];
         });
 
-        // Aggiungi la nuova
+        // Recupera la label originale o usane una di default
         const originalLabel = Object.values(state.shortcuts).find(s => s.action === action)?.label || action;
+        
         newShortcuts[newShortcut] = {
             action,
             label: originalLabel
@@ -1398,11 +1433,12 @@ window.recordShortcut = (input, action) => {
         setState({ shortcuts: newShortcuts });
         localStorage.setItem('gx-shortcuts', JSON.stringify(newShortcuts));
         
-        window.removeEventListener('keydown', onKey, true);
+        window.removeEventListener('keydown', activeShortcutListener, true);
+        activeShortcutListener = null;
         window.gxToast(`Scorciatoia aggiornata: ${newShortcut}`, 'info');
     };
 
-    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('keydown', activeShortcutListener, true);
 };
 
 window.resetShortcuts = () => {
@@ -1411,10 +1447,10 @@ window.resetShortcuts = () => {
         'Ctrl+P': { action: 'search:quick-open', label: 'Ricerca Globale Rapida' },
         'Ctrl+B': { action: 'sidebar:toggle', label: 'Mostra/Nascondi Sidebar' },
         'Alt+F': { action: 'editor:format', label: 'Formatta Documento' },
-        'F5': { action: 'debug:continue', label: 'Debug: Continua' },
-        'F10': { action: 'debug:step-over', label: 'Debug: Avanza (Step Over)' },
-        'F11': { action: 'debug:step-into', label: 'Debug: Entra (Step Into)' },
-        'Shift+F5': { action: 'debug:stop', label: 'Debug: Ferma Sessione' }
+        'F5': { action: 'debug:continue', label: 'Debug: Prossimo Breakpoint' },
+        'F8': { action: 'debug:continue-ignore', label: 'Debug: Ignora Breakpoint' },
+        'F10': { action: 'debug:step-over', label: 'Debug: Prossima Azione' },
+        'Shift+F5': { action: 'debug:stop', label: 'Debug: Ferma Tutto' }
     };
     setState({ shortcuts: defaults });
     localStorage.setItem('gx-shortcuts', JSON.stringify(defaults));

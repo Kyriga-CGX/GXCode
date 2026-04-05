@@ -147,10 +147,37 @@ export const initTests = () => {
 
 
     const renderTestTree = () => {
-        const { workspaceData, testFilesCache, isPlaywrightInstalled } = state;
+        const { workspaceData, testFilesCache, isPlaywrightInstalled, isInstalling } = state;
+        const t = (key) => {
+            try {
+                const val = key.split('.').reduce((o, i) => (o ? o[i] : undefined), window.gxTranslations);
+                return val || key;
+            } catch (e) { return key; }
+        };
 
         if (!workspaceData || !workspaceData.path) {
             treeRoot.innerHTML = `<div class="opacity-20 text-[9px] uppercase text-gray-500 font-bold text-center mt-10">${t('tests.openWorkspace')}</div>`;
+            return;
+        }
+
+        if (isInstalling) {
+            treeRoot.innerHTML = `
+                <div class="p-8 text-center space-y-6 animate-pulse">
+                    <div class="flex justify-center">
+                        <div class="relative w-12 h-12">
+                            <div class="absolute inset-0 border-4 border-blue-500/20 rounded-full"></div>
+                            <div class="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <h3 class="text-[11px] font-bold text-white uppercase tracking-widest">Installazione in corso...</h3>
+                        <p class="text-[9px] text-gray-400">Scarico Playwright e i browser richiesti.</p>
+                    </div>
+                    <div class="p-3 bg-black/40 rounded-lg border border-white/5 font-mono text-[8px] text-gray-500 text-left overflow-hidden">
+                        Controlla il terminale per i dettagli
+                    </div>
+                </div>
+            `;
             return;
         }
 
@@ -236,18 +263,40 @@ export const initTests = () => {
         const decodedName = decodeURIComponent(testName);
         console.log(`[GX-TESTS] Debugging test: ${decodedName} in ${decodedPath}`);
         
-        setState({ isTestingInProgress: true, testTarget: 'debug', isDebugModeActive: true });
+        setState({ isTestingInProgress: true, testTarget: 'debug', isDebugModeActive: true, debugActiveLine: null });
         try {
             const normDecoded = decodedPath.toLowerCase().replace(/\\/g, '/');
-            const fileBreakpoints = state.breakpoints
-                .filter(bp => bp.path.toLowerCase().replace(/\\/g, '/') === normDecoded)
+            // Get ONLY Playwright breakpoints for this file
+            const fileBreakpoints = (state.breakpoints || [])
+                .filter(bp => normalizePath(bp.path) === normDecoded && bp.type === 'playwright')
                 .map(bp => bp.line);
             
             await window.electronAPI.debugTest(state.workspaceData.path, decodedPath, decodedName, fileBreakpoints);
         } finally {
-            setState({ isTestingInProgress: false, isDebugModeActive: false });
+            setState({ isTestingInProgress: false, isDebugModeActive: false, debugActiveLine: null });
+            if (window.updateDebugActiveLine) window.updateDebugActiveLine();
         }
     };
+
+    // Helper for normalized path shared with editor.js
+    const normalizePath = (p) => {
+        if (!p) return "";
+        let path = p.toString().trim().toLowerCase().replace(/\\/g, '/');
+        if (path.startsWith('file:///')) path = path.replace('file:///', '');
+        return path;
+    };
+
+    // Listen for debug pause event
+    window.electronAPI.onTestDebugPaused((line) => {
+        console.log(`[GX-TESTS] Debugger paused at line: ${line}`);
+        setState({ debugActiveLine: line });
+        if (window.updateDebugActiveLine) window.updateDebugActiveLine();
+        
+        // Auto-scroll to line
+        if (window.editor) {
+            window.editor.revealLineInCenterIfOutsideViewport(line);
+        }
+    });
 
     // FUNZIONI DI CONTROLLO GLOBALI PER IL DEBUGGER (v1.4.7)
     window.debugContinue = async () => {
@@ -304,12 +353,27 @@ export const initTests = () => {
     window.autoInstallPlaywright = async () => {
         if (!state.workspaceData || !state.workspaceData.path) return;
         console.log("[GX-TESTS] Auto-installing Playwright...");
-        const cmd = "npm install -D @playwright/test && npx playwright install";
-        if (window.executeGlobalCommand) {
-            window.executeGlobalCommand(cmd);
-        } else {
-            // Fallback terminal
-            window.electronAPI.terminalWrite('default', `${cmd}\r`);
+        
+        setState({ isInstalling: true });
+        try {
+            if (window.electronAPI && window.electronAPI.installPlaywright) {
+                const success = await window.electronAPI.installPlaywright(state.workspaceData.path);
+                if (success) {
+                    if (window.gxToast) window.gxToast("Playwright installato con successo!", "success");
+                } else {
+                    if (window.gxToast) window.gxToast("Errore durante l'installazione.", "error");
+                }
+            } else {
+                // Fallback manuale
+                const cmd = "npm install -D @playwright/test && npx playwright install";
+                window.electronAPI.terminalWrite('default', `${cmd}\r`);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setState({ isInstalling: false });
+            // Re-trigger scan
+            scanWorkspaceForTests();
         }
     };
 

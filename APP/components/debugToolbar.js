@@ -22,24 +22,23 @@ const renderDebugToolbar = () => {
     }
 
     toolbar.innerHTML = `
-        <!-- Resume (Foto 2 - Icona 1) -->
-        <button onclick="window.debugContinue()" class="debug-btn continue" title="Riprendi (F5)">
+        <!-- Resume (F5) -->
+        <button onclick="window.debugContinue()" class="debug-btn continue" title="Prossimo Breakpoint (F5)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
-                <line x1="19" y1="5" x2="19" y2="19" stroke-width="3"/>
             </svg>
         </button>
 
-        <!-- Pause (Foto 2 - Icona 2) -->
-        <button onclick="window.debugPause()" class="debug-btn" title="Pausa (F6)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="4" width="4" height="16" rx="1"/>
-                <rect x="14" y="4" width="4" height="16" rx="1"/>
+        <!-- Continue Ignore (F8) -->
+        <button onclick="window.debugContinueIgnore()" class="debug-btn" title="Ignora Breakpoints (F8)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m13 19 6-7-6-7" />
+                <path d="m7 19 6-7-6-7" />
             </svg>
         </button>
 
-        <!-- Step Over (Foto 2 - Icona 3: Freccia sopra pallino) -->
-        <button onclick="window.debugStep()" class="debug-btn step" title="Avanza (F10)">
+        <!-- Step Over (F10) -->
+        <button onclick="window.debugStep()" class="debug-btn step" title="Prossima Azione (F10)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 12c0-4.4 3.6-8 8-8s8 3.6 8 8" />
                 <polyline points="16 12 20 16 24 12" />
@@ -50,19 +49,29 @@ const renderDebugToolbar = () => {
         <div class="w-[1px] h-4 bg-gray-700 mx-1 opacity-50"></div>
 
         <!-- Stop -->
-        <button onclick="window.electronAPI.debugStop(); setState({ isDebugModeActive: false, isTestingInProgress: false })" class="debug-btn stop" title="Ferma (Shift+F5)">
+        <button id="debug-stop-btn" class="debug-btn stop" title="Ferma Tutto (Shift+F5)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <rect x="4" y="4" width="16" height="16" rx="2"/>
             </svg>
         </button>
     `;
+
+    const stopBtn = toolbar.querySelector('#debug-stop-btn');
+    if (stopBtn) stopBtn.onclick = () => {
+        if (window.debugStop) window.debugStop();
+        else if (window.electronAPI?.debugStop) window.electronAPI.debugStop();
+        setState({ isDebugModeActive: false, isTestingInProgress: false, debugActiveLine: null });
+    };
 };
 
 export const initDebugToolbar = () => {
     subscribe(renderDebugToolbar);
     
-    // Patch per le funzioni globali se non esistono
-    window.debugContinue = window.debugContinue || (() => window.electronAPI && window.electronAPI.debugContinue());
-    window.debugStep = window.debugStep || (() => window.electronAPI && window.electronAPI.debugStep());
-    window.debugPause = window.debugPause || (() => window.gxToast("Funzione Pausa in arrivo...", "info"));
+    // Global functions mapping
+    window.debugContinue = window.debugContinue || (() => window.electronAPI?.debugContinue?.());
+    window.debugStep = window.debugStep || (() => window.electronAPI?.debugStep?.());
+    window.debugContinueIgnore = window.debugContinueIgnore || (() => {
+        window.electronAPI?.debugContinue?.();
+        setState({ debugActiveLine: null });
+    });
 };

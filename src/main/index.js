@@ -43,7 +43,7 @@ app.whenReady().then(() => {
     // 3. IPC Handlers Registration (MUST BE BEFORE LOAD OR ASAP)
     registerFsHandlers(mainWindow);
     registerGitHandlers();
-    registerTestHandlers();
+    registerTestHandlers(mainWindow);
     registerPtyHandlers();
     registerAiHandlers(GOOGLE_CONFIG);
     registerSystemHandlers();

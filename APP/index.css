@@ -143,6 +143,24 @@
     transform: scale(1.1);
 }
 
+/* --- UTILITIES 2026 --- */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.2);
+    border-radius: 10px;
+    transition: all 0.3s;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.5);
+}
+
 /* --- THEME FIXES & OVERWRITES --- */
 #activity-bar {
     border-right: 1px solid var(--border-dim) !important;

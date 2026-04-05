@@ -61,6 +61,19 @@ export const initGlobalEvents = () => {
             });
         });
     }
+
+    if (window.electronAPI?.onTestDebugPaused) {
+        window.electronAPI.onTestDebugPaused((line) => {
+            console.log(`[GX-DEBUG] Test paused at line: ${line}`);
+            setState({ debugActiveLine: line, isDebugModeActive: true });
+            
+            // Se c'è un editor attivo, andiamo a quella riga
+            if (window.editor) {
+                window.editor.revealLineInCenter(line);
+                // La decorazione verrà gestita dal sistema di decorazioni reattivo
+            }
+        });
+    }
 };
 
 const handleShortcutAction = (action) => {
@@ -68,18 +81,31 @@ const handleShortcutAction = (action) => {
         case 'editor:save': 
             if (window.saveActiveFile) window.saveActiveFile(); 
             break;
+        case 'editor:format':
+            if (window.editor) window.editor.getAction('editor.action.formatDocument').run();
+            break;
+        case 'sidebar:toggle':
+            setState({ isLeftSidebarOpen: !state.isLeftSidebarOpen });
+            break;
         case 'debug:continue':
             if (window.debugContinue) window.debugContinue();
+            break;
+        case 'debug:continue-ignore':
+            if (window.electronAPI?.debugContinue) window.electronAPI.debugContinue();
+            setState({ debugActiveLine: null }); 
             break;
         case 'debug:step-over':
             if (window.debugStep) window.debugStep();
             break;
         case 'debug:stop':
-            if (window.electronAPI?.debugStop) window.electronAPI.debugStop();
-            setState({ isTestingInProgress: false, isDebugModeActive: false });
+            if (window.debugStop) window.debugStop();
+            else if (window.electronAPI?.debugStop) window.electronAPI.debugStop();
+            setState({ isTestingInProgress: false, isDebugModeActive: false, debugActiveLine: null });
             break;
         case 'search:global':
             setState({ activeActivity: 'search', isLeftSidebarOpen: true });
             break;
     }
 };
+
+window.handleShortcutAction = handleShortcutAction;
