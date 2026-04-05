@@ -799,3 +799,40 @@ html[data-cgx-theme="light"] select {
 #gx-context-menu {
     animation: gx-zoom-in 0.1s ease-out forwards;
 }
+
+/* ========================================================
+   6. TEST EXPLORER ELITE UI (Evolution 2026)
+   ======================================================== */
+
+.test-tree-folder, .test-tree-file, .test-tree-item {
+    user-select: none;
+}
+
+.test-tree-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.test-status-running {
+    background: #60a5fa;
+    box-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+    animation: status-pulse 1.5s infinite;
+}
+
+@keyframes status-pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Joined folders styling */
+.test-tree-folder[data-path*=" /\] .truncate {
+ color: var(--text-main);
+ font-weight: 700;
+}
+
+/* Fallback for Test Explorer Hover Actions */
+.test-tree-item:hover .opacity-0,
+.test-tree-file:hover .opacity-0,
+.test-tree-folder:hover .opacity-0 {
+    opacity: 1 !important;
+}

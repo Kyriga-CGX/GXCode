@@ -289,7 +289,7 @@ export const renderSidebar = () => {
             const key = agent.slug || agent.id;
             const initial = (agent.name || 'A').charAt(0).toUpperCase();
             return `
-                <div class="sidebar-card-elite flex flex-col p-4 bg-[#0b0c10] border border-blue-500/20 rounded-md hover:border-blue-500/40 transition-all gap-3 group mb-2.5 mx-3.5 shadow-2xl relative overflow-hidden"
+                <div class="sidebar-card-elite shrink-0 flex flex-col p-4 bg-[#0b0c10] border border-blue-500/20 rounded-md hover:border-blue-500/40 transition-all gap-3 group mb-2.5 mx-3.5 shadow-2xl relative overflow-hidden"
                      data-type="agents" data-id="${key}">
                     
                     <!-- Header: Icon + Name + Status -->
@@ -366,7 +366,7 @@ export const renderSidebar = () => {
             const key = skill.slug || skill.id;
             const initial = (skill.name || 'S').charAt(0).toUpperCase();
             return `
-                <div class="sidebar-card-evolution group"
+                <div class="sidebar-card-evolution shrink-0 group"
                      data-type="skills" data-id="${key}">
                     <div class="avatar-evolution !bg-emerald-500/20 !text-emerald-400 !border-emerald-500/30 font-black shadow-[0_0_10px_rgba(16,185,129,0.2)]">${initial}</div>
                     <div class="flex flex-col min-w-0 flex-1">

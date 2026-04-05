@@ -1864,7 +1864,7 @@ app.whenReady().then(() => {
                 const content = fs.readFileSync(fullPath, 'utf8');
                 const lines = content.split('\n');
                 const testMatches = [];
-                const testRegex = /(?:test|it|describe)\s*\(['"`](.*?)['"`]/;
+                const testRegex = /(?:test|it)\s*\(['"`](.*?)['"`]/;
 
                 for (let i = 0; i < lines.length; i++) {
                   const match = lines[i].match(testRegex);

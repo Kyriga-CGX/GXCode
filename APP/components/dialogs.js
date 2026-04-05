@@ -14,9 +14,9 @@ export const gxConfirm = (title, message, onConfirm) => {
 
     root.innerHTML = `
         <div class="fixed inset-0 bg-black/90 flex items-center justify-center z-[100000] animate-fade-in p-4 backdrop-blur-md">
-            <div class="snapshot-modal scale-in !max-w-[500px] !border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.8)] overflow-hidden">
+            <div class="snapshot-modal scale-in !max-w-[640px] !border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.8)] overflow-hidden">
                 <!-- Header Snapshot Fidelity (Amber for Warning) -->
-                <div class="snapshot-header !border-white/5 bg-white/[0.02] px-14 py-8">
+                <div class="snapshot-header !border-white/5 bg-white/[0.02]" style="padding: 16px 40px !important;">
                     <div class="flex items-center text-left">
                         <div class="snapshot-header-box !bg-[#d29922] !shadow-[0_0_30px_rgba(210,153,34,0.5)] !w-14 !h-14">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -29,20 +29,22 @@ export const gxConfirm = (title, message, onConfirm) => {
                 </div>
                 
                 <!-- Corpo Industrial Style -->
-                <div class="px-16 py-14 bg-[#0b0c10] space-y-10 text-left">
+                <div class="bg-[#0b0c10] space-y-20 text-left" style="padding: 15px 25px 25px 25px !important;">
                     <div class="space-y-4">
-                        <label class="text-gray-600 text-[10px] font-black uppercase tracking-[0.4em] block opacity-50">Messaggio di Sistema</label>
-                        <p class="text-gray-200 text-[15px] font-bold leading-relaxed tracking-tight group-hover:text-white transition-colors">${message}</p>
+                        <label class="text-gray-600 text-[10px] font-black uppercase tracking-[0.3em] block opacity-50">Messaggio di Sistema</label>
+                        <p class="text-gray-200 text-[16px] font-bold leading-normal tracking-tight group-hover:text-white transition-colors">${message}</p>
                     </div>
                     
-                    <div class="flex items-center gap-4 p-5 bg-red-500/5 rounded-xl border border-red-500/10 active:border-red-500/20 transition-all">
-                        <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_15px_#ef4444]"></div>
-                        <span class="text-[10px] text-red-500/70 font-black uppercase tracking-widest leading-none">Attenzione: l'operazione è definitiva.</span>
+                    <div class="mt-4 flex items-center gap-3 active:scale-[0.98] transition-all">
+                        <div class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_15px_#ef4444]"></div>
+                        <span class="text-[10px] text-red-500/80 font-black uppercase tracking-widest leading-none">
+                            Attenzione: l'operazione è definitiva.
+                        </span>
                     </div>
                 </div>
                 
                 <!-- Footer Snap Style -->
-                <div class="snapshot-footer px-14 py-10 bg-black/40 border-t border-white/[0.03] !justify-end gap-6">
+                <div class="snapshot-footer bg-black/40 border-t border-white/[0.03] !justify-end gap-6" style="padding: 18px 40px !important;">
                     <button id="gx-confirm-cancel" class="px-8 py-3 text-[11px] font-black text-gray-500 hover:text-white hover:bg-white/5 rounded-xl transition-all uppercase tracking-[0.4em] active:scale-95 border border-transparent hover:border-white/10">
                         Ignora
                     </button>
@@ -75,7 +77,7 @@ export const gxAlert = (title, message, iconType = 'info') => {
     if (!root) return;
     root.classList.remove('pointer-events-none');
     root.style.pointerEvents = 'auto';
-    
+
     const isError = iconType === 'error';
     const accentColor = isError ? '#f85149' : '#58a6ff';
     const boxColor = isError ? '#da3633' : '#1f6feb';
@@ -87,10 +89,10 @@ export const gxAlert = (title, message, iconType = 'info') => {
                 <div class="snapshot-header ${isError ? '!border-[#f8514930]' : '!border-[#58a6ff30]'}">
                     <div class="flex items-center">
                         <div class="snapshot-header-box" style="background: ${boxColor}; box-shadow: 0 0 20px ${accentColor}40">
-                            ${isError 
-                                ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
-                                : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
-                            }
+                            ${isError
+            ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+            : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
+        }
                         </div>
                         <div class="ml-4 text-left">
                             <h3 class="text-white font-bold text-lg leading-none uppercase tracking-tighter">${title}</h3>
@@ -152,7 +154,7 @@ export const gxToast = (message, type = 'info', duration = 4000) => {
         ${type === 'error' ? 'bg-[#1c1616] border-red-500/30 text-red-400' : 'bg-[#161b22] border-blue-500/30 text-blue-400'}
     `;
 
-    const icon = type === 'error' 
+    const icon = type === 'error'
         ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
         : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
 
@@ -187,7 +189,7 @@ export const gxPrompt = (title, message, defaultValue = '', onConfirm) => {
     if (!root) return;
     root.classList.remove('pointer-events-none');
     root.style.pointerEvents = 'auto';
-    
+
     root.innerHTML = `
         <div class="fixed inset-0 bg-black/80 flex items-center justify-center z-[100000] animate-fade-in p-4 backdrop-blur-md">
             <div class="snapshot-modal scale-in !max-w-[480px] !border-[#2ea04330]">
@@ -278,8 +280,8 @@ export const gxQuickPick = (title, items, onSelect) => {
     if (!root) return;
     root.classList.remove('pointer-events-none');
     root.style.pointerEvents = 'auto';
-    
-    let selectedIndex = 0;    const render = () => {
+
+    let selectedIndex = 0; const render = () => {
         root.innerHTML = `
             <div id="gx-qp-overlay" class="fixed inset-0 bg-black/20 backdrop-blur-3xl flex items-start justify-center z-[100000] animate-fade-in pt-[10vh] p-12">
                 <div class="liquid-glass w-full max-w-3xl rounded-[6rem] flex flex-col scale-in overflow-hidden max-h-[75vh] border-white/5 shadow-[0_120px_300px_rgba(0,0,0,1)] p-6">

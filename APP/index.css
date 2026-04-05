@@ -237,6 +237,7 @@
     gap: 12px;
     position: relative;
     background: var(--bg-ghost, rgba(255, 255, 255, 0.01));
+    flex-shrink: 0;
 }
 
 .sidebar-card-evolution:hover {

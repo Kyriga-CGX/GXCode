@@ -27,28 +27,66 @@ export const initTests = () => {
         renderTestTree();
     };
 
+    window.viewTestFile = (filePath) => {
+        const decodedPath = decodeURIComponent(filePath);
+        const fileName = decodedPath.split(/[/\\]/).pop();
+        window.openFileInIDE(decodedPath, fileName);
+    };
+
+    /**
+     * Logica "Joined Folders" (VS Code Style)
+     * Se una cartella ha un unico figlio ed è anch'esso una cartella, li uniamo.
+     */
     const renderNode = (node, name, fullPath = '') => {
-        const isFolder = node.type === 'folder';
         const currentPath = fullPath ? `${fullPath}/${name}` : name;
+        const isFolder = node.type === 'folder';
         const isCollapsed = collapsedFolders.has(currentPath);
 
         if (isFolder) {
-            const children = Object.entries(node.children)
+            let displayName = name;
+            let currentNode = node;
+            let joinedPath = currentPath;
+
+            // Se la cartella ha un solo figlio ed è una cartella, la uniamo ricorsivamente
+            while (true) {
+                const childKeys = Object.keys(currentNode.children);
+                if (childKeys.length === 1) {
+                    const nextNode = currentNode.children[childKeys[0]];
+                    if (nextNode.type === 'folder') {
+                        displayName += ` / ${childKeys[0]}`;
+                        joinedPath += `/${childKeys[0]}`;
+                        currentNode = nextNode;
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            const children = Object.entries(currentNode.children)
                 .sort(([aName, aNode], [bName, bNode]) => {
                     if (aNode.type !== bNode.type) return aNode.type === 'folder' ? -1 : 1;
                     return aName.localeCompare(bName);
                 })
-                .map(([childName, childNode]) => renderNode(childNode, childName, currentPath))
+                .map(([childName, childNode]) => renderNode(childNode, childName, joinedPath))
                 .join('');
 
             return `
-                <div class="test-tree-folder">
-                    <div class="flex items-center gap-1.5 py-1 px-1.5 hover:bg-[var(--bg-side-alt)] rounded cursor-pointer group transition-colors" onclick="window.toggleTestFolder('${currentPath}')">
-                        <svg class="text-gray-500 transition-transform ${isCollapsed ? '-rotate-90' : ''}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
-                        <svg class="text-blue-400/70" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">${name}</span>
+                <div class="test-tree-folder group mb-0.5" data-path="${joinedPath}">
+                    <div class="flex items-center justify-between py-1.5 px-3 hover:bg-white/5 rounded-lg cursor-pointer transition-all duration-200" onclick="window.toggleTestFolder('${currentPath}')">
+                        <div class="flex items-center gap-2 overflow-hidden flex-1">
+                            <svg class="text-gray-500 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+                            <svg class="text-blue-500/80 shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            <span class="text-[11px] font-bold text-gray-300 truncate" title="${joinedPath}">${displayName}</span>
+                        </div>
+                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <button onclick="event.stopPropagation(); window.runFileTests('${encodeURIComponent(joinedPath)}')" class="p-1 px-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white transition-all active:scale-90" title="Esegui Tutti i Test nella Cartella">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 3 14 9-14 9V3z"/></svg>
+                             </button>
+                        </div>
                     </div>
-                    <div class="pl-3 border-l border-[var(--border-dim)] ml-2 mt-0.5 ${isCollapsed ? 'hidden' : 'flex flex-col'}">
+                    <div class="pl-4 border-l border-white/5 ml-4 mt-0.5 ${isCollapsed ? 'hidden' : 'flex flex-col'}">
                         ${children}
                     </div>
                 </div>
@@ -57,58 +95,56 @@ export const initTests = () => {
             const file = node.data;
             const fileName = name;
             const safeAbsPath = encodeURIComponent(file.fullPath);
-            const safeFileName = encodeURIComponent(fileName);
 
             const testsHtml = file.testMatches.map(test => {
                 const isFailed = test.status === 'failed';
                 const isPassed = test.status === 'passed';
                 const isRunning = test.status === 'running';
 
-                const statusColor = isRunning ? 'text-blue-400 animate-pulse' : 
-                                   isFailed ? 'text-red-500' : 
-                                   isPassed ? 'text-emerald-500' : 'text-gray-600 hover:text-blue-500';
-
-                const statusIcon = isRunning ? `<svg class="animate-spin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>` :
-                                   isFailed ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>` :
-                                   isPassed ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>` : 
-                                   `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 3 14 9-14 9V3z"/></svg>`;
+                const statusIcon = isRunning ? `<div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>` :
+                                   isFailed ? `<div class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>` :
+                                   isPassed ? `<div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>` : 
+                                   `<div class="w-1 h-1 rounded-full bg-gray-700"></div>`;
 
                 return `
-                    <div class="flex items-center justify-between py-0.5 px-2 hover:bg-[var(--bg-side)] rounded transition cursor-pointer group" onclick="window.openFileInIDE(decodeURIComponent('${safeAbsPath}'), decodeURIComponent('${safeFileName}'))">
+                    <div class="test-tree-item flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-white/5 transition-all cursor-pointer group" onclick="window.viewTestFile('${safeAbsPath}')">
                         <div class="flex items-center gap-2 overflow-hidden flex-1">
-                            <span class="text-[10px] text-gray-500 truncate group-hover:text-blue-400 transition cursor-text font-medium">${test.name}</span>
+                            <div class="shrink-0 flex items-center justify-center p-0.5">${statusIcon}</div>
+                            <span class="text-[10px] text-gray-500 font-medium truncate group-hover:text-white transition-colors tracking-tight">${test.name}</span>
                         </div>
-                        <div class="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
-                            <button onclick="event.stopPropagation(); window.runSingleTest('${safeAbsPath}', '${encodeURIComponent(test.name)}')" class="p-1 rounded bg-[var(--bg-side-alt)] text-gray-500 hover:text-emerald-500 transition" title="Esegui Test">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 3 14 9-14 9V3z"/></svg>
+                        <div class="flex gap-1.5 items-center opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                            <button onclick="event.stopPropagation(); window.runSingleTest('${safeAbsPath}', '${encodeURIComponent(test.name)}')" class="p-1 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all active:scale-95" title="Run Test">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 3 14 9-14 9V3z"/></svg>
                             </button>
-                            <button onclick="event.stopPropagation(); window.debugSingleTest('${safeAbsPath}', '${encodeURIComponent(test.name)}')" class="p-1 rounded bg-[var(--bg-side-alt)] text-gray-500 hover:text-yellow-500 transition" title="Debug Test">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>
+                            <button onclick="event.stopPropagation(); window.debugSingleTest('${safeAbsPath}', '${encodeURIComponent(test.name)}')" class="p-1 rounded-lg bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-white transition-all active:scale-95" title="Debug in Inspector">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 2a10 10 0 1 0 10 10"/><path d="m16.2 16.2 3.8 3.8"/></svg>
                             </button>
-                            <div class="p-1 ${statusColor}">${statusIcon}</div>
                         </div>
                     </div>
                 `;
             }).join('');
 
             return `
-                <div class="test-tree-file mb-1">
-                    <div class="flex items-center justify-between gap-2 p-1.5 hover:bg-[var(--bg-side-alt)] rounded cursor-pointer group transition-all" onclick="window.openFileInIDE(decodeURIComponent('${safeAbsPath}'), decodeURIComponent('${safeFileName}'))">
-                        <div class="flex items-center gap-1.5 overflow-hidden flex-1">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" class="text-emerald-500 shrink-0" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span class="text-[10px] font-bold text-gray-300 truncate">${fileName}</span>
+                <div class="test-tree-file group mb-1">
+                    <div class="flex items-center justify-between gap-2 py-1.5 px-3 hover:bg-white/5 rounded-lg cursor-pointer transition-all duration-200" onclick="window.viewTestFile('${safeAbsPath}')">
+                        <div class="flex items-center gap-2 overflow-hidden flex-1">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="text-emerald-500 shrink-0 opacity-80" stroke="currentColor" stroke-width="2.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span class="text-[11px] font-bold text-gray-200 truncate tracking-tight" title="${file.fullPath}">${fileName}</span>
                         </div>
-                        <button onclick="event.stopPropagation(); window.runFileTests('${safeAbsPath}')" class="p-1 rounded bg-blue-500/10 text-blue-400 opacity-0 group-hover:opacity-100 hover:bg-blue-500/20 transition duration-300" title="Esegui file">
-                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 3 14 9-14 9V3z"/></svg>
-                        </button>
+                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="event.stopPropagation(); window.runFileTests('${safeAbsPath}')" class="p-1 px-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all active:scale-90" title="Run All Tests in File">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 3 14 9-14 9V3z"/></svg>
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex flex-col gap-0.5 mt-0.5 ml-2 border-l border-[var(--border-ghost)] pl-2">
+                    <div class="flex flex-col gap-0.5 mt-0.5 ml-4 border-l border-white/5 pl-2">
                         ${testsHtml}
                     </div>
                 </div>
             `;
         }
     };
+
 
     const renderTestTree = () => {
         const { workspaceData, testFilesCache, isPlaywrightInstalled } = state;
@@ -136,7 +172,9 @@ export const initTests = () => {
 
         const treeStructure = {};
         testFilesCache.forEach(file => {
-            const parts = file.relativePath.replace(/\\\\/g, '/').split('/');
+            // Fix: Su Windows i path usano \, dobbiamo normalizzarli tutti in /
+            const normalizedPath = file.relativePath.replace(/\\/g, '/');
+            const parts = normalizedPath.split('/');
             let current = treeStructure;
             parts.forEach((part, index) => {
                 if (index === parts.length - 1) {
