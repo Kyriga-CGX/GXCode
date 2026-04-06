@@ -21,10 +21,22 @@ const GOOGLE_CONFIG = {
 function createWindow() {
     const win = new BrowserWindow({
         width: 1400, height: 900, frame: false,
-        icon: path.join(__dirname, "..", "..", "APP", "assets", "logo.png"),
-        webPreferences: { nodeIntegration: false, contextIsolation: true, preload: path.join(__dirname, "..", "..", "preload.js"), webviewTag: true }
+        icon: path.join(app.getAppPath(), "APP", "assets", "logo.png"),
+        webPreferences: { 
+            nodeIntegration: false, 
+            contextIsolation: true, 
+            preload: path.join(app.getAppPath(), "preload.js"), 
+            webviewTag: true 
+        }
     });
-    win.loadFile(path.join(__dirname, "..", "..", "index.html"));
+
+    win.loadFile(path.join(app.getAppPath(), "APP", "index.html")).catch(err => {
+        console.error("Failed to load index.html:", err);
+    });
+
+    win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+        console.error(`Failed to load URL: ${validatedURL} with error: ${errorDescription} (${errorCode})`);
+    });
     Menu.setApplicationMenu(null);
     return win;
 }
