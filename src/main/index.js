@@ -22,7 +22,7 @@ function createWindow() {
     const win = new BrowserWindow({
         width: 1400, height: 900, frame: false,
         icon: path.join(__dirname, "..", "..", "APP", "assets", "logo.png"),
-        webPreferences: { nodeIntegration: false, contextIsolation: true, preload: path.join(process.cwd(), "preload.js"), webviewTag: true }
+        webPreferences: { nodeIntegration: false, contextIsolation: true, preload: path.join(__dirname, "..", "..", "preload.js"), webviewTag: true }
     });
     win.loadFile(path.join(__dirname, "..", "..", "index.html"));
     Menu.setApplicationMenu(null);
