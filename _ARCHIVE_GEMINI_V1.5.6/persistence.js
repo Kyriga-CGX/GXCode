@@ -3,12 +3,6 @@ const path = require('path');
 const os = require('os');
 
 let currentAiContext = '.GXCODE';
-let basePersistenceDir = os.homedir(); 
-
-function setBaseDir(newBase) {
-    basePersistenceDir = newBase;
-    console.log(`[GX-DISK] Base persistence path set to: ${basePersistenceDir}`);
-}
 
 function setAiContext(context) {
     currentAiContext = context;
@@ -20,11 +14,19 @@ function getAiContext() {
 }
 
 function getActiveAiPath(subfolder) {
-  const baseDir = path.join(basePersistenceDir, subfolder);
-  if (!fs.existsSync(baseDir)) {
-    fs.mkdirSync(baseDir, { recursive: true });
+  try {
+    // Hardening: Use local AppData to avoid OneDrive locks
+    const localBase = path.join(os.homedir(), 'AppData', 'Local', 'GXCode', 'persistence');
+    const baseDir = path.join(localBase, subfolder);
+    if (!fs.existsSync(baseDir)) {
+      fs.mkdirSync(baseDir, { recursive: true });
+    }
+    return baseDir;
+  } catch (err) {
+    console.error(`[GX-DISK] Fatal error creating persistence path: ${err.message}`);
+    // Fallback to a temp dir if local AppData fails
+    return path.join(os.tmpdir(), 'gxcode-fallback', subfolder);
   }
-  return baseDir;
 }
 
 function loadPersistedData(type) {
@@ -71,7 +73,6 @@ function deletePersistedData(type, id) {
 }
 
 module.exports = { 
-    setBaseDir,
     setAiContext, 
     getAiContext, 
     getActiveAiPath, 

@@ -11,7 +11,7 @@ const PORT = 9999;
 const REDIRECT_URI = `http://localhost:${PORT}/callback`;
 const SCOPES = 'https://www.googleapis.com/auth/cloud-platform'; 
 
-const SESSION_FILE = path.join(process.env.GX_USER_DATA || path.join(os.homedir(), '.gxcode'), 'gemini-session.json');
+const SESSION_FILE = path.join(__dirname, '..', '..', '.gxcode', 'gemini-session.json');
 
 /**
  * Gemini Elite CLI - Unified Edition (OAuth PRO + API Key Fallback)

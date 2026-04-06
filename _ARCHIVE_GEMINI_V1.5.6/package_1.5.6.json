@@ -10,7 +10,7 @@
     "url": "https://github.com/Kyriga-CGX/GXCode.git"
   },
   "scripts": {
-    "start": "electron . --disable-gpu --no-sandbox --disable-gpu-shader-disk-cache",
+    "start": "electron . --disable-gpu --no-sandbox",
     "gemini": "node APP/scripts/gemini-cli.js",
     "build": "electron-builder",
     "publish": "electron-builder --publish always"
@@ -55,24 +55,25 @@
       "target": [
         "nsis"
       ],
-      "icon": "APP/assets/logo.png",
-      "publish": [
-        "github"
-      ]
+      "icon": "APP/assets/logo.png"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
+      "installerHeader": "APP/assets/installer_header.bmp",
+      "installerSidebar": "APP/assets/installer_sidebar.bmp",
       "allowElevation": true,
       "perMachine": true,
       "deleteAppDataOnUninstall": false,
       "shortcutName": "GXCode"
     },
-    "publish": {
-      "provider": "github",
-      "owner": "Kyriga-CGX",
-      "repo": "GXCode"
-    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Kyriga-CGX",
+        "repo": "GXCode"
+      }
+    ],
     "npmRebuild": false,
     "buildDependenciesFromSource": false
   }

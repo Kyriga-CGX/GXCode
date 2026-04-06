@@ -1,8 +1,5 @@
 import { state, setState, subscribe } from '../core/state.js';
 import { initCustomAi } from './customAi.js';
-import { initGemini } from './gemini.js';
-import { initPorts } from './ports.js';
-import { initGxAgent, renderGxAgentChat } from './gxAgent.js';
 import { initOllama } from './ollama.js';
 import { initClaudeCli, startClaudeCli, focusClaudeCli } from './claudeCli.js';
 import { initGeminiCli, startGeminiCli, focusGeminiCli } from './geminiCli.js';
@@ -150,9 +147,7 @@ export const initBottomPanel = () => {
     }
 
     // Inizializza logic Custom AI, Gemini e Ports
-    initCustomAi();
     initOllama();
-    initGemini();
     initPorts();
     // Claude CLI e Gemini CLI
     initClaudeCli();

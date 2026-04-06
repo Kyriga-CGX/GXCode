@@ -14,8 +14,6 @@ import { initBottomPanel } from '../components/bottomPanel.js';
 import { initProblems } from '../components/problems.js';
 import { initUpdater } from '../components/updater.js';
 import { initDebug } from '../components/debug.js';
-import { initGxAgent } from '../components/gxAgent.js';
-import { listAvailableModels } from '../core/geminiApi.js';
 import { initAiKnowledgeBridge } from '../core/aiKnowledgeBridge.js';
 import { initDebugToolbar } from '../components/debugToolbar.js';
 import { initSidebar } from '../components/sidebar.js';
@@ -148,7 +146,6 @@ const bootstrap = async () => {
             { name: 'Tests', fn: initTests },
             { name: 'Debug', fn: initDebug },
             { name: 'DebugToolbar', fn: initDebugToolbar },
-            { name: 'GxAgent', fn: initGxAgent },
             { name: 'AiBridge', fn: initAiKnowledgeBridge },
             { name: 'TomcatAssistant', fn: tomcatAssistant.init },
             { name: 'Updater', fn: initUpdater }

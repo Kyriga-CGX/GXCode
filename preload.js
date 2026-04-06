@@ -68,6 +68,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // File System / Shell (Context Menu)
   shellOpenPath: (targetPath) => ipcRenderer.invoke('shell-open-path', targetPath),
+  openAiMetadata: (workspacePath, fileName) => ipcRenderer.invoke('open-ai-metadata', workspacePath, fileName),
   shellOpenExternal: (url) => ipcRenderer.invoke('shell-open-external', url),
   openGxCodeFolder: () => ipcRenderer.invoke('open-gxcode-folder'),
   clipboardRead: () => ipcRenderer.invoke('clipboard-read'),

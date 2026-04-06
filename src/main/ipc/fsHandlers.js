@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { setupWatcher, clearAllWatchers } = require('../services/watcher');
-const { updateClaudeContext } = require('../services/context');
+const { updateClaudeContext, updateGeminiContext } = require('../services/context');
 const { getAiContext } = require('../services/persistence');
 
 function registerFsHandlers(mainWindow) {
@@ -42,6 +42,7 @@ function registerFsHandlers(mainWindow) {
         const folderPath = result.filePaths[0];
         setupWatcher(folderPath);
         updateClaudeContext(folderPath);
+        updateGeminiContext(folderPath);
         try {
             const dirents = await fs.promises.readdir(folderPath, { withFileTypes: true });
             const files = dirents.map(f => ({
@@ -85,6 +86,7 @@ function registerFsHandlers(mainWindow) {
         if (canceled || filePaths.length === 0) return null;
         const wsPath = filePaths[0];
         updateClaudeContext(wsPath);
+        updateGeminiContext(wsPath);
 
         try {
             const content = fs.readFileSync(wsPath, 'utf8');
@@ -193,6 +195,19 @@ function registerFsHandlers(mainWindow) {
     ipcMain.handle('shell-open-path', async (event, targetPath) => {
         await shell.openPath(targetPath);
         return true;
+    });
+
+    ipcMain.handle('open-ai-metadata', async (event, workspacePath, fileName) => {
+        if (!workspacePath || !fileName) return false;
+        try {
+            const rootDir = workspacePath.endsWith('.code-workspace') ? path.dirname(workspacePath) : workspacePath;
+            const targetFile = path.join(rootDir, fileName);
+            await shell.openPath(targetFile);
+            return true;
+        } catch (e) {
+            console.error("[FS] Open AI Metadata Error:", e);
+            return false;
+        }
     });
 
     ipcMain.handle('shell-open-external', async (event, url) => {

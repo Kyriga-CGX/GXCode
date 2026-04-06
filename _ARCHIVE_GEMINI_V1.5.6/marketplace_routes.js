@@ -165,23 +165,9 @@ function registerMarketplaceRoutes(apiApp) {
 
         finalItems = finalItems.map(item => {
             let isInstalled = false;
-            // HARDENING: Ensure we only match if ID or Slug are actually defined to avoid undefined === undefined matches
-            if (type === 'agents') {
-                isInstalled = diskAgents.some(a => 
-                    (a.id && item.id && String(a.id) === String(item.id)) || 
-                    (a.slug && item.slug && a.slug === item.slug)
-                );
-            } else if (type === 'skills') {
-                isInstalled = diskSkills.some(s => 
-                    (s.id && item.id && String(s.id) === String(item.id)) || 
-                    (s.slug && item.slug && s.slug === item.slug)
-                );
-            } else if (type === 'addons') {
-                isInstalled = diskPlugins.some(p => 
-                    (p.id && item.id && String(p.id) === String(item.id)) || 
-                    (p.slug && item.slug && p.slug === item.slug)
-                );
-            }
+            if (type === 'agents') isInstalled = diskAgents.some(a => String(a.id) === String(item.id) || a.slug === item.slug);
+            else if (type === 'skills') isInstalled = diskSkills.some(s => String(s.id) === String(item.id) || s.slug === item.slug);
+            else if (type === 'addons') isInstalled = diskPlugins.some(p => String(p.id) === String(item.id) || p.slug === item.slug);
             return { ...item, isInstalled };
         });
 
