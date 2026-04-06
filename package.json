@@ -43,6 +43,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "src/**/*",
       "APP/**/*",
       "package.json"
     ],
