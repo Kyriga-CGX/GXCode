@@ -21,10 +21,10 @@ const GOOGLE_CONFIG = {
 function createWindow() {
     const win = new BrowserWindow({
         width: 1400, height: 900, frame: false,
-        icon: path.join(process.cwd(), "APP", "assets", "logo.png"),
+        icon: path.join(__dirname, "..", "..", "APP", "assets", "logo.png"),
         webPreferences: { nodeIntegration: false, contextIsolation: true, preload: path.join(process.cwd(), "preload.js"), webviewTag: true }
     });
-    win.loadFile(path.join(process.cwd(), "APP", "index.html"));
+    win.loadFile(path.join(__dirname, "..", "..", "index.html"));
     Menu.setApplicationMenu(null);
     return win;
 }
