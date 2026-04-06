@@ -9,7 +9,11 @@ const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 /**
  * Recupera la lista dei modelli disponibili per le credenziali attuali
  */
-export const listAvailableModels = async () => {
+/**
+ * Analisi dinamica dei modelli disponibili per popolare i Tier di lavoro.
+ * Supporta versionamento automatico (Gemini 2, 3, etc) e varianti (Flash, Pro, Ultra).
+ */
+export async function listAvailableModels() {
     const config = state.geminiConfig || { isAuthenticated: false };
     const apiKey = state.geminiApiKey;
     let url = `${BASE_URL}/models`;
@@ -20,7 +24,7 @@ export const listAvailableModels = async () => {
     } else if (config.isAuthenticated && config.token) {
         headers['Authorization'] = `Bearer ${config.token}`;
     } else {
-        return; // Niente credenziali, niente modelli
+        return; 
     }
 
     try {
@@ -28,27 +32,72 @@ export const listAvailableModels = async () => {
         if (!response.ok) throw new Error("Errore recupero modelli");
         const data = await response.json();
         
-        // Filtriamo solo i modelli che supportano generateContent
         const models = data.models
             .filter(m => m.supportedGenerationMethods.includes("generateContent"))
             .map(m => m.name.replace('models/', ''));
 
-        console.log("[GEMINI] Modelli disponibili:", models);
+        // Motore Discovery: Categorizzazione per Tier (Futuristico)
+        // Regex: gemini-[versione]-[tipo]-[variante]
+        const parseModel = (name) => {
+            const match = name.match(/gemini-(\d+(?:\.\d+)?)-(flash|pro|ultra)(?:-([\w-]+))?/i);
+            if (!match) return { name, version: 0, type: 'other' };
+            return {
+                name,
+                version: parseFloat(match[1]),
+                type: match[2].toLowerCase(),
+                isHigh: name.includes('high') || name.includes('ultra')
+            };
+        };
+
+        const parsed = models.map(parseModel);
         
+        const getBestFor = (type, mode = 'any') => {
+            let candidates = parsed.filter(p => p.type === type);
+            if (candidates.length === 0) return null;
+            
+            if (mode === 'high') {
+                const highOnes = candidates.filter(p => p.isHigh);
+                if (highOnes.length > 0) candidates = highOnes;
+            } else if (mode === 'standard') {
+                const standardOnes = candidates.filter(p => !p.isHigh);
+                if (standardOnes.length > 0) candidates = standardOnes;
+            }
+            
+            // Ordiniamo per versione (DESC) per avere sempre il più recente (es. 3.1 > 1.5)
+            return candidates.sort((a, b) => b.version - a.version)[0].name;
+        };
+
+        // Assegnazione automatica dei Tier (Evoluzione Chronos 3.x)
+        const fastModel = getBestFor('flash', 'standard') || models[0];
+        const balancedModel = getBestFor('pro', 'standard') || models[0];
+        const eliteModel = getBestFor('pro', 'high') || getBestFor('ultra', 'any') || getBestFor('pro', 'standard') || models[0];
+
         setState({
             geminiConfig: {
                 ...state.geminiConfig,
                 models: models,
-                // Imposta un default se quello attuale non è nella lista
+                tiers: {
+                    fast: fastModel,
+                    balanced: balancedModel,
+                    elite: eliteModel
+                },
+                // Se il modello attivo non esiste più, passiamo al Balanced Tier
                 activeModel: models.includes(state.geminiConfig.activeModel) 
                     ? state.geminiConfig.activeModel 
-                    : (models.includes('gemini-1.5-pro') ? 'gemini-1.5-pro' : models[0])
+                    : balancedModel
             }
         });
+        
+        console.log("[GEMINI-TIERS] Tiering completato:", state.geminiConfig.tiers);
+        
+        // Generazione Automatica del file di contesto (Anti-Error Fallback)
+        if (state.workspaceData?.path) {
+            ensureGeminiMetadata(state.workspaceData.path);
+        }
     } catch (err) {
         console.error("[GEMINI] Errore listModels:", err);
     }
-};
+}
 
 // Tool Definitions for Gemini (Professional Suite + Dynamic Skills + MCP + YouTrack)
 export const getDynamicTools = async () => {
@@ -302,12 +351,38 @@ const handleMCPCall = async (toolFullName, args) => {
     }
 };
 
+/**
+ * Determina il miglior modello da usare in base alla "strategia multi-modello elite".
+ * Obiettivo: Usare Flash per pensare, Pro per scrivere, Elite per i tool.
+ */
+const getModelForPhase = (messages) => {
+    const config = state.geminiConfig || {};
+    if (!config.multiModelStrategyEnabled || !config.tiers) return config.activeModel || "gemini-1.5-pro";
+
+    const isStart = messages.length <= 1;
+    const hasToolContext = messages.some(m => m.role === "function") || messages.some(m => m.content?.parts?.some(p => p.functionCall));
+
+    // Fase 1: Pensiero & Strategia -> Tier FAST (Flash)
+    if (isStart) return config.tiers.fast;
+
+    // Fase 2: Agentic & Tool Execution -> Tier ELITE (High Pro / Ultra)
+    if (hasToolContext) return config.tiers.elite;
+
+    // Fase 3: Scrittura finale & Soluzioni -> Tier BALANCED (Pro)
+    return config.tiers.balanced;
+};
+
 export const callGeminiAgent = async (messages, onStatusUpdate) => {
     const config = state.geminiConfig || { isAuthenticated: false };
     const apiKey = state.geminiApiKey;
-    const activeModel = config.activeModel || "gemini-1.5-pro";
+    
+    // Selezione Dinamica del Modello (Zero-Config Elite)
+    const activeModel = getModelForPhase(messages);
+    
     let url = `${BASE_URL}/models/${activeModel}:generateContent`;
     const headers = { 'Content-Type': 'application/json' };
+
+    console.log(`[GEMINI-ELITE] Using model: ${activeModel} for this turn.`);
 
     if (apiKey) {
         url += `?key=${apiKey}`;
@@ -369,3 +444,57 @@ export const callGeminiAgent = async (messages, onStatusUpdate) => {
 
     return part.text || "Operazione completata.";
 };
+
+/**
+ * Genera il file GEMINI.md alla root del progetto per sincronizzare il contesto.
+ */
+export async function ensureGeminiMetadata(workspacePath) {
+    if (!workspacePath) return false;
+    
+    // Verifichiamo se abbiamo già i tier, altrimenti usiamo default
+    const config = state.geminiConfig || {};
+    const tiers = config.tiers || { fast: 'auto', balanced: 'auto', elite: 'auto' };
+    
+    // Sostituiamo backslash per uniformità nei percorsi di Electron
+    const cleanPath = workspacePath.replace(/\\/g, '/');
+    const filePath = cleanPath.endsWith('/') ? `${cleanPath}GEMINI.md` : `${cleanPath}/GEMINI.md`;
+    
+    const content = `# ${state.workspaceData?.name || 'GENESIS'} - GEMINI NEURAL CONTEXT
+
+Questo file definisce l'identità del progetto e la strategia AI per Gemini in questo workspace.
+
+## 🧠 DYNAMIC ELITE STRATEGY (CHRONOS)
+Il sistema GXCode ha eletto i seguenti modelli per questo workspace in base alle capacità rilevate:
+
+- **FAST TIER**: \`${tiers.fast}\` 
+  > Utilizzato per il pensiero rapido, la pianificazione iniziale e l'analisi dei prompt.
+  
+- **BALANCED TIER**: \`${tiers.balanced}\`
+  > Utilizzato per la generazione di codice, il refactoring e la scrittura di documentazione.
+  
+- **ELITE TIER**: \`${tiers.elite}\`
+  > Utilizzato per workflow agentici complessi, esecuzione di tool (MCP) e task multi-fase.
+
+## 📋 PROJECT IDENTITY
+- **Root**: \`${workspacePath}\`
+- **Identity**: \`${state.workspaceData?.name || 'Unknown'}\`
+
+## 🛠️ INSTRUCTIONS
+Gemini deve fare riferimento a questo file per comprendere la propria configurazione in GXCode e il contesto del progetto corrente.
+
+---
+*Generato automaticamente da GXCode Evolution 2026 - Elite Terminal Edition*
+`;
+
+    try {
+        await window.electronAPI.fsWriteFile(filePath, content);
+        console.log("[GEMINI] GEMINI.md sincronizzato:", filePath);
+        if (window.gxToast) window.gxToast("Sincronizzazione GEMINI.md completata", "success");
+        return true;
+    } catch (err) {
+        console.error("[GEMINI] Errore salvataggio GEMINI.md:", err);
+        return false;
+    }
+}
+
+window.ensureGeminiMetadata = ensureGeminiMetadata;

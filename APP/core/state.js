@@ -82,6 +82,12 @@ export const state = {
             models: ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
             user: null,
             mode: "fast",
+            multiModelStrategyEnabled: true,
+            tiers: {
+                fast: "gemini-1.5-flash",
+                balanced: "gemini-1.5-pro",
+                elite: "gemini-1.5-pro"
+            },
             messages: []
         };
         const saved = JSON.parse(localStorage.getItem('gx-gemini-config') || '{}');

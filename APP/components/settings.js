@@ -519,14 +519,18 @@ const renderTabContent = () => {
                             <h4 class="text-[11px] font-bold text-gray-300 uppercase tracking-widest mb-2">Accesso Rapido File Context</h4>
                             <p class="text-[10px] text-gray-500 mb-6 leading-relaxed">Visualizza i file di istruzioni dinamiche che sincronizzano questo progetto con Claude Code.</p>
                             
-                            <div class="grid grid-cols-2 gap-3">
-                                <button onclick="window.openClaudeMetadata('CLAUDE.md')" class="py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex items-center justify-center gap-3 group-hover:border-orange-400/50 shadow-md">
+                            <div class="grid grid-cols-3 gap-3">
+                                <button onclick="window.openClaudeMetadata('CLAUDE.md')" class="py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex flex-col items-center justify-center gap-2 group-hover:border-orange-400/50 shadow-md">
                                     <span class="text-xl group-hover:scale-110 transition-transform">📝</span>
-                                    <span class="text-[11px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-orange-400 transition-colors">CLAUDE.md</span>
+                                    <span class="text-[10px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-orange-400 transition-colors">CLAUDE.md</span>
                                 </button>
-                                <button onclick="window.openClaudeMetadata('GX_IDENTITY.md')" class="py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex items-center justify-center gap-3 group-hover:border-blue-400/50 shadow-md">
+                                <button onclick="window.openClaudeMetadata('GX_IDENTITY.md')" class="py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex flex-col items-center justify-center gap-2 group-hover:border-blue-400/50 shadow-md">
                                     <span class="text-xl group-hover:scale-110 transition-transform">🤖</span>
-                                    <span class="text-[11px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-blue-400 transition-colors">GX_IDENTITY</span>
+                                    <span class="text-[10px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-blue-400 transition-colors">GX_IDENTITY</span>
+                                </button>
+                                <button onclick="window.openGeminiMetadata()" class="py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex flex-col items-center justify-center gap-2 group-hover:border-teal-400/50 shadow-md">
+                                    <span class="text-xl group-hover:scale-110 transition-transform">💎</span>
+                                    <span class="text-[10px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-teal-400 transition-colors">GEMINI.md</span>
                                 </button>
                             </div>
                         </div>
@@ -989,6 +993,40 @@ window.openClaudeMetadata = async (fileName = 'CLAUDE.md') => {
         await window.electronAPI.shellOpenPath(targetFile);
     } catch (err) {
         window.gxToast(`File ${fileName} non ancora generato.`, 'warning');
+    }
+};
+
+window.openGeminiMetadata = async () => {
+    const rawPath = state.activeTerminalFolder || state.workspaceData?.path;
+    if (!rawPath) {
+        window.gxToast("Nessun progetto aperto.", 'error');
+        return;
+    }
+    
+    // Sanitizzazione uniforme del path per evitare discordanze Windows/Electron
+    const workspacePath = rawPath.replace(/\\/g, '/');
+    const targetFile = workspacePath.endsWith('/') ? `${workspacePath}GEMINI.md` : `${workspacePath}/GEMINI.md`;
+    
+    try {
+        await window.electronAPI.shellOpenPath(targetFile);
+    } catch (err) {
+        // Fallback: Tentativo di generazione al volo se il file manca
+        if (window.ensureGeminiMetadata) {
+            console.log("[GEMINI] File mancante, avvio generazione on-demand...");
+            const success = await window.ensureGeminiMetadata(workspacePath);
+            if (success) {
+                // Piccolo ritardo per permettere al FS di Windows di indicizzare il file
+                setTimeout(async () => {
+                    try {
+                        await window.electronAPI.shellOpenPath(targetFile);
+                    } catch (retryErr) {
+                        window.gxToast(`Impossibile aprire GEMINI.md dopo la generazione.`, 'error');
+                    }
+                }, 300);
+                return;
+            }
+        }
+        window.gxToast(`GEMINI.md non ancora generato.`, 'warning');
     }
 };
 

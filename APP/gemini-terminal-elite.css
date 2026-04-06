@@ -1,0 +1,125 @@
+/* Gemini Elite Terminal - Evolution 2026 Style */
+
+#pane-gemini-cli {
+    position: relative;
+    background: rgba(6, 8, 10, 0.8) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(59, 130, 246, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(59, 130, 246, 0.05);
+    display: flex;
+    flex-direction: column;
+    padding: 0 !important;
+}
+
+.xterm {
+    padding: 0px !important;
+    height: calc(100% - 22px) !important;
+    width: 100% !important;
+}
+
+.xterm-viewport {
+    background-color: transparent !important;
+    overflow-y: auto !important;
+}
+
+.xterm-screen {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.xterm-rows {
+    width: 100% !important;
+}
+
+/* xterm overriders */
+.xterm-viewport::-webkit-scrollbar {
+    width: 4px;
+}
+.xterm-viewport::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.2);
+    border-radius: 10px;
+}
+.xterm-viewport::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.5);
+}
+
+.xterm-cursor {
+    box-shadow: 0 0 8px rgba(96, 165, 250, 0.8);
+}
+
+/* Nano HUD (Compact Evolution 2026) */
+.gemini-nano-hud {
+    height: 22px;
+    background: rgba(0, 0, 0, 0.6);
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-family: 'Inter', sans-serif;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    backdrop-filter: blur(5px);
+}
+
+.hud-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+}
+
+.hud-label-nano {
+    font-size: 6px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.hud-value-nano {
+    font-size: 8px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.hud-dot-sep {
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.hud-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #6b7280;
+}
+
+.hud-status-dot.active {
+    background: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+    animation: hud-pulse-nano 2.5s infinite;
+}
+
+@keyframes hud-pulse-nano {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.8; }
+}
+
+/* Boot Sequence Animation */
+@keyframes terminal-boot {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.terminal-elite-ready {
+    animation: terminal-boot 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}

@@ -28,6 +28,9 @@ function registerPtyHandlers() {
         let args = [];
 
         if (shellType === 'claude') { shell = 'npx.cmd'; args = ['@anthropic-ai/claude-code']; }
+        else if (shellType === 'gemini') { 
+            shell = process.platform === 'win32' ? 'gemini.cmd' : 'gemini'; 
+        }
         else if (shellType === 'bash' && process.platform === 'win32') {
             const commonPaths = ['C:\\Program Files\\Git\\bin\\bash.exe', 'C:\\Program Files (x86)\\Git\\bin\\bash.exe', path.join(os.homedir(), 'AppData\\Local\\Programs\\Git\\bin\\bash.exe')];
             for (const p of commonPaths) { if (fs.existsSync(p)) { shell = p; break; } }
@@ -36,7 +39,14 @@ function registerPtyHandlers() {
         try {
             const ptyProcess = pty.spawn(shell, args, {
                 name: 'xterm-color', cols: 80, rows: 24, cwd: safeCwd,
-                env: { ...process.env, ANTHROPIC_API_KEY: apiKey, CI: 'false', TERM: 'xterm-256color' }
+                env: { 
+                    ...process.env, 
+                    ANTHROPIC_API_KEY: apiKey, 
+                    GEMINI_API_KEY: apiKey,
+                    GOOGLE_API_KEY: apiKey,
+                    CI: 'false', 
+                    TERM: 'xterm-256color' 
+                }
             });
             ptyProcesses[id] = ptyProcess;
             ptyProcess.onData(data => event.sender.send(`terminal-stdout-${id}`, data));
