@@ -1,4 +1,4 @@
-const { ipcMain } = require('electron');
+const { ipcMain, app } = require('electron');
 const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -169,8 +169,8 @@ function registerTestHandlers(mainWindow) {
         const relativeTempPath = path.relative(testCwd, tempFilePath).replace(/\\/g, '/');
         
         // Use IDE's local ws to avoid missing dependency in user workspace
-        const wsPath = path.join(process.cwd(), 'node_modules', 'ws').replace(/\\/g, '\\\\');
-        const ideNodeModules = path.join(process.cwd(), 'node_modules');
+        const wsPath = path.join(app.getAppPath(), 'node_modules', 'ws').replace(/\\/g, '\\\\');
+        const ideNodeModules = path.join(app.getAppPath(), 'node_modules');
 
         // 1. Read and Instrument the test file
         try {
