@@ -169,8 +169,15 @@ function registerTestHandlers(mainWindow) {
         const relativeTempPath = path.relative(testCwd, tempFilePath).replace(/\\/g, '/');
         
         // Use IDE's local ws to avoid missing dependency in user workspace
-        const wsPath = path.join(app.getAppPath(), 'node_modules', 'ws').replace(/\\/g, '\\\\');
-        const ideNodeModules = path.join(app.getAppPath(), 'node_modules');
+        // If app is packaged (asar), external Node processes (Playwright) can't reach inside it.
+        // We use the unpacked version instead.
+        let baseDir = app.getAppPath();
+        if (baseDir.includes('app.asar') && !baseDir.includes('app.asar.unpacked')) {
+            baseDir = baseDir.replace('app.asar', 'app.asar.unpacked');
+        }
+        
+        const wsPath = path.join(baseDir, 'node_modules', 'ws').replace(/\\/g, '\\\\');
+        const ideNodeModules = path.join(baseDir, 'node_modules');
 
         // 1. Read and Instrument the test file
         try {

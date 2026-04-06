@@ -1,6 +1,6 @@
 {
   "name": "gxcode",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "main": "main.js",
   "description": "L'IDE AI-Nativo professionale per lo sviluppo software moderno. Powered by Cloud-GX.",
   "author": "Giovanni Faggiano (Cloud-GX)",
@@ -40,6 +40,10 @@
     "directories": {
       "output": "dist_electron"
     },
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/ws/**/*"
+    ],
     "files": [
       "main.js",
       "preload.js",
