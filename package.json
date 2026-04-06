@@ -1,6 +1,6 @@
 {
   "name": "gxcode",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "main": "main.js",
   "description": "L'IDE AI-Nativo professionale per lo sviluppo software moderno. Powered by Cloud-GX.",
   "author": "Giovanni Faggiano (Cloud-GX)",
@@ -62,9 +62,7 @@
       "allowElevation": true,
       "perMachine": true,
       "deleteAppDataOnUninstall": false,
-      "shortcutName": "GXCode",
-      "installerIcon": "APP/assets/logo.png",
-      "uninstallerIcon": "APP/assets/logo.png"
+      "shortcutName": "GXCode"
     },
     "publish": {
       "provider": "github",
