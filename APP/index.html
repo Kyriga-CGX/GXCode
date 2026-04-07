@@ -187,7 +187,7 @@
                 </div>
                 <div id="pane-debug" class="hidden flex flex-col h-full overflow-hidden"></div>
                 <div id="pane-testing" class="hidden flex flex-col h-full overflow-hidden px-4 py-5">
-                    <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center justify-between mb-2">
                         <div class="flex flex-col">
                             <span class="text-[7px] text-gray-600 font-black uppercase tracking-[0.3em] mb-0.5">Workspace</span>
                             <h3 class="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">Test <span class="text-blue-500">Explorer</span></h3>
@@ -200,6 +200,13 @@
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 3 14 9-14 9V3z"/></svg>
                             </button>
                         </div>
+                    </div>
+                    
+                    <!-- Filtro Progetto -->
+                    <div class="mb-4">
+                        <select id="test-project-selector" class="w-full bg-[var(--bg-side-alt)] border gx-border-theme rounded-lg px-3 py-1.5 text-[10px] text-gray-300 outline-none focus:border-blue-500/50 transition-all font-bold appearance-none cursor-pointer hover:bg-white/5">
+                            <option value="all">TUTTI I PROGETTI</option>
+                        </select>
                     </div>
                     <div id="test-tree-root" class="flex-1 overflow-y-auto custom-scrollbar pr-1"></div>
                 </div>

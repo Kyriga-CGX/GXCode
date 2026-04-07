@@ -132,6 +132,7 @@ export const state = {
     isPlaywrightInstalled: true,
     isTestingInProgress: false,
     testTarget: null, // 'run' o 'debug'
+    selectedTestProject: localStorage.getItem('gx-selected-test-project') || 'all',
     
     // Multi-Project Terminal Support (v1.3.8)
     activeTerminalFolder: localStorage.getItem('gx-active-terminal-folder') || '',
@@ -153,6 +154,11 @@ export const state = {
     detectedModules: [],
     activeModuleId: localStorage.getItem('gx-active-module-id') || null
 };
+
+console.log("[GX-STATE] Global State initialized from Storage.");
+if (state.workspaceData) console.log(`[GX-STATE] Workspace found: ${state.workspaceData.path}`);
+if (state.openFiles.length > 0) console.log(`[GX-STATE] Open files: ${state.openFiles.length}`);
+
 
 const listeners = new Set();
 
@@ -193,6 +199,7 @@ export const setState = (newState) => {
     if (newState.hasOwnProperty('mcpServers')) localStorage.setItem('gx-mcp-servers', JSON.stringify(state.mcpServers));
     if (newState.hasOwnProperty('youtrackConfig')) localStorage.setItem('gx-youtrack-config', JSON.stringify(state.youtrackConfig));
     if (newState.hasOwnProperty('activeTerminalFolder')) localStorage.setItem('gx-active-terminal-folder', state.activeTerminalFolder);
+    if (newState.hasOwnProperty('selectedTestProject')) localStorage.setItem('gx-selected-test-project', state.selectedTestProject);
     if (newState.hasOwnProperty('workspaceData')) localStorage.setItem('gx-workspace-data', JSON.stringify(state.workspaceData));
     if (newState.hasOwnProperty('files')) localStorage.setItem('gx-workspace-files', JSON.stringify(state.files));
     if (newState.hasOwnProperty('activeCgxTheme')) localStorage.setItem('gx-active-skin', state.activeCgxTheme);
@@ -200,10 +207,12 @@ export const setState = (newState) => {
     if (newState.hasOwnProperty('activeSkillCategory')) localStorage.setItem('gx-active-skill-category', state.activeSkillCategory);
     if (newState.hasOwnProperty('activeModuleId')) localStorage.setItem('gx-active-module-id', state.activeModuleId || '');
     
-    // Persistenza Dimensioni Pannelli
-    if (newState.hasOwnProperty('leftSidebarWidth')) localStorage.setItem('gx-left-sidebar-width', state.leftSidebarWidth);
-    if (newState.hasOwnProperty('rightSidebarWidth')) localStorage.setItem('gx-right-sidebar-width', state.rightSidebarWidth);
     if (newState.hasOwnProperty('bottomPanelHeight')) localStorage.setItem('gx-bottom-panel-height', state.bottomPanelHeight);
+
+    console.log("[GX-STATE] Persistence updated for keys:", Object.keys(newState).filter(k => 
+        ['activeRightTab', 'activeActivity', 'activeLeftTab', 'isLeftSidebarOpen', 'isRightSidebarOpen', 
+         'isTerminalMinimized', 'openFiles', 'activeFileId', 'workspaceData', 'activeCgxTheme'].includes(k)
+    ));
 
     for (const listener of listeners) {
         listener(state, prevState);

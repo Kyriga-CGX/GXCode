@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // --- LOGICA SKINNING & SETTINGS ---
-    const getSavedSkin = () => localStorage.getItem('cgx-skin') || 'dark';
+    const getSavedSkin = () => localStorage.getItem('gx-active-skin') || 'dark';
     const SKINS = [
         { id: 'dark', label: 'Dark Mode (Default)' },
         { id: 'light', label: 'Light Mode' },
@@ -120,7 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
             applyVisibility();
             skinSel.addEventListener('change', (e) => {
                 const val = e.target.value;
-                localStorage.setItem('cgx-skin', val);
+                localStorage.setItem('gx-active-skin', val);
                 document.documentElement.dataset.cgxTheme = val;
                 applyVisibility();
             });

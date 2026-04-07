@@ -52,7 +52,7 @@ const getSettingsTabs = () => [
     }
 ];
 
-const getSavedSkin = () => localStorage.getItem('cgx-skin') || 'dark';
+const getSavedSkin = () => localStorage.getItem('gx-active-skin') || 'dark';
 
 const applyGlobalSkinEffects = () => {
     const skin = getSavedSkin();
@@ -969,7 +969,7 @@ window.switchSettingsTab = (tabId) => {
 };
 
 window.applySkin = (skinId) => {
-    localStorage.setItem('cgx-skin', skinId);
+    localStorage.setItem('gx-active-skin', skinId);
     applyGlobalSkinEffects();
     setState({ isSettingsOpen: true }); // Re-render logic
 };

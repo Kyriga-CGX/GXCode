@@ -37,11 +37,11 @@ export async function initTerminal() {
     const bootCheck = () => {
         if (bootTerminalCreated || Object.keys(terminals).length > 0) return;
         
-        const path = state.workspaceData?.path;
+        const folders = getWorkspaceFolders();
+        const path = folders[0]?.path || state.workspaceData?.path;
         if (path) {
             console.log(`[TERMINAL] Workspace rilevato al boot: ${path}. Creo terminale principale.`);
             bootTerminalCreated = true;
-            // Forziamo il percorso del workspace per il primo terminale al boot
             createTerminal('t1', 'ps', path);
         }
     };
@@ -58,9 +58,8 @@ export async function initTerminal() {
         if (!bootTerminalCreated && Object.keys(terminals).length === 0) {
             console.log("[TERMINAL] Nessun workspace rilevato dopo timeout. Provo a caricare sessione...");
             
-            // Proviamo a ri-prendere il path dal workspaceData se si è popolato nel frattempo (es. caricamento lento api)
-            const path = state.workspaceData?.path;
-            const fallbackPath = path || state.activeTerminalFolder || '';
+            const folders = getWorkspaceFolders();
+            const fallbackPath = folders[0]?.path || state.workspaceData?.path || state.activeTerminalFolder || '';
             
             bootTerminalCreated = true;
             createTerminal('t1', 'ps', fallbackPath);
@@ -123,7 +122,7 @@ function onPlusClick(e) {
         import('./dialogs.js').then(m => {
             m.gxQuickPick('Seleziona la cartella di lavoro per il nuovo terminale', qpItems, (path) => {
                 if (path) createTerminal('t' + Date.now(), state.defaultShell || 'ps', path);
-            });
+            }, 'Cerca progetto o cartella...');
         });
     } else {
         const targetPath = folders[0]?.path || state.workspaceData?.path || '';
@@ -170,7 +169,7 @@ function showTerminalPlusMenu(event) {
         import('./dialogs.js').then(m => {
             m.gxQuickPick('Seleziona la cartella di lavoro per il nuovo terminale', qpItems, (path) => {
                 if (path) onSelect(path);
-            });
+            }, 'Cerca progetto o cartella...');
         });
     };
 
@@ -242,7 +241,8 @@ export async function createTerminal(id, shellType = 'ps', forcedPath = null) {
         if (state.activeTerminalFolder && workspaceRoot && state.activeTerminalFolder.startsWith(workspaceRoot)) {
             finalCwd = state.activeTerminalFolder;
         } else {
-            finalCwd = workspaceRoot || '';
+            const folders = getWorkspaceFolders();
+            finalCwd = folders[0]?.path || workspaceRoot || '';
         }
     }
 

@@ -62,7 +62,6 @@ function registerTestHandlers(mainWindow) {
         if (!rootPath) return [];
         console.log(`[TEST-SCAN] Starting scan in: ${rootPath}`);
         const testFiles = [];
-        
         const foldersToScan = [];
         if (rootPath.toString().endsWith('.code-workspace')) {
             try {
@@ -71,15 +70,16 @@ function registerTestHandlers(mainWindow) {
                     config.folders.forEach(f => {
                         let p = f.path;
                         if (!path.isAbsolute(p)) p = path.resolve(path.dirname(rootPath), p);
-                        foldersToScan.push(p);
+                        // Usiamo p (path assoluto) come ID per garantire il match con l'esplora risorse
+                        foldersToScan.push({ absPath: p, id: p, name: f.name || path.basename(p) });
                     });
                 }
             } catch (e) { console.error("[TEST-SCAN] Workspace parse error:", e); }
         } else {
-            foldersToScan.push(rootPath);
+            foldersToScan.push({ absPath: rootPath, id: '.', name: path.basename(rootPath) });
         }
 
-        const asyncScan = async (dir, root) => {
+        const asyncScan = async (dir, root, folderId) => {
             try {
                 const dirents = await fs.promises.readdir(dir, { withFileTypes: true });
                 await Promise.all(dirents.map(async (f) => {
@@ -89,7 +89,7 @@ function registerTestHandlers(mainWindow) {
                     if (f.isDirectory()) {
                         if (['node_modules', '.git', 'dist', 'build', 'target', '.next', 'out', 'bin', 'obj'].includes(nameLower)) return;
                         try {
-                            await asyncScan(full, root);
+                            await asyncScan(full, root, folderId);
                         } catch (e) {}
                     } else if (f.name.match(/\.(spec|test)\.(js|ts|jsx|tsx)$/i)) {
                         try {
@@ -106,9 +106,10 @@ function registerTestHandlers(mainWindow) {
                                     file: f.name,
                                     fullPath: full,
                                     relativePath: path.relative(root, full),
+                                    folderId: folderId,
                                     testMatches
                                 });
-                                console.log(`[TEST-SCAN] Found tests in: ${f.name}`);
+                                console.log(`[TEST-SCAN] Found tests in: ${f.name} (Project: ${folderId})`);
                             }
                         } catch (e) {}
                     }
@@ -117,11 +118,22 @@ function registerTestHandlers(mainWindow) {
         };
 
         for (const folder of foldersToScan) {
-            if (fs.existsSync(folder)) await asyncScan(folder, folder);
+            if (fs.existsSync(folder.absPath)) await asyncScan(folder.absPath, folder.absPath, folder.id);
         }
+
+        // --- INTELLIGENT DE-DUPLICATION (v1.5.8) ---
+        const dedupedMap = new Map();
+        testFiles.forEach(tf => {
+            const normPath = tf.fullPath.toLowerCase().replace(/\\/g, '/');
+            const existing = dedupedMap.get(normPath);
+            if (!existing || tf.folderId.length > existing.folderId.length) {
+                dedupedMap.set(normPath, tf);
+            }
+        });
         
-        console.log(`[TEST-SCAN] Scan finished. Found ${testFiles.length} files.`);
-        return testFiles;
+        const finalTestFiles = Array.from(dedupedMap.values());
+        console.log(`[TEST-SCAN] Scan finished. Original: ${testFiles.length} | Deduped: ${finalTestFiles.length}`);
+        return finalTestFiles;
     });
 
     ipcMain.handle('check-playwright', async (event, workspacePath) => {

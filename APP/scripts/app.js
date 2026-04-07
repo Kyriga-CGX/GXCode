@@ -215,13 +215,19 @@ const bootstrap = async () => {
         console.log("[GX-BOOTSTRAP] Finalizing data sync...");
         await api.loadAll();
         
-        // --- SESSION RESTORE (v1.4.5) ---
+        // --- SESSION RESTORE (v1.5.0) ---
         if (window.restoreSession) {
+            console.log("[GX-BOOTSTRAP] Triggering session restore...");
             await window.restoreSession();
-            // Se c'era un file attivo, ricarichiamolo
+            
+            // Se c'era un file attivo, ricarichiamolo nel Monaco Editor
             if (state.activeFileId) {
-                console.log(`[GX-BOOTSTRAP] Ripristino file attivo: ${state.activeFileId}`);
-                window.openFileInIDE(state.activeFileId);
+                console.log(`[GX-BOOTSTRAP] Restoring active file: ${state.activeFileId}`);
+                setTimeout(() => {
+                    window.openFileInIDE(state.activeFileId);
+                }, 500); // Wait bit for Monaco initialization
+            } else if (state.openFiles.length > 0) {
+                console.log("[GX-BOOTSTRAP] Multiple tabs found, but no active file selected.");
             }
         }
         

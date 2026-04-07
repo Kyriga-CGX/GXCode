@@ -1,19 +1,36 @@
 const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
 const os = require('os');
-const { createApiServer } = require('./api/server');
-const { registerAiRoutes } = require('./api/routes/ai');
-const { registerExternalRoutes } = require('./api/routes/external');
-const { registerMarketplaceRoutes } = require('./api/routes/marketplace');
-const { registerFsHandlers } = require('./ipc/fsHandlers');
-const { registerGitHandlers } = require('./ipc/gitHandlers');
-const { registerTestHandlers } = require('./ipc/testHandlers');
-const { registerPtyHandlers } = require('./ipc/ptyHandlers');
-const { registerAiHandlers } = require('./ipc/aiHandlers');
-const { registerSystemHandlers } = require('./ipc/systemHandlers');
-const { registerDebugHandlers } = require('./ipc/debugHandlers');
 
-// --- HARDENING (Local AppData Redirection) ---
+// --- SINGLE INSTANCE LOCK (v1.5.8) ---
+// Prevents cache corruption and 'Accesso negato' errors by ensuring only one IDE runs at a time.
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+    console.warn("[GX-BOOTSTRAP] Another instance is already running. Quitting this one.");
+    app.quit();
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // Someone tried to run a second instance, we should focus our window.
+        const windows = BrowserWindow.getAllWindows();
+        if (windows.length > 0) {
+            if (windows[0].isMinimized()) windows[0].restore();
+            windows[0].focus();
+        }
+    });
+
+    const { createApiServer } = require('./api/server');
+    const { registerAiRoutes } = require('./api/routes/ai');
+    const { registerExternalRoutes } = require('./api/routes/external');
+    const { registerMarketplaceRoutes } = require('./api/routes/marketplace');
+    const { registerFsHandlers } = require('./ipc/fsHandlers');
+    const { registerGitHandlers } = require('./ipc/gitHandlers');
+    const { registerTestHandlers } = require('./ipc/testHandlers');
+    const { registerPtyHandlers } = require('./ipc/ptyHandlers');
+    const { registerAiHandlers } = require('./ipc/aiHandlers');
+    const { registerSystemHandlers } = require('./ipc/systemHandlers');
+    const { registerDebugHandlers } = require('./ipc/debugHandlers');
+
+    // --- HARDENING (Local AppData Redirection) ---
 // Note: userData is set earlier in the root main.js script
 const localDataPath = app.getPath('userData');
 console.log("[GX-BOOTSTRAP] Main process using UserData:", localDataPath);
@@ -97,3 +114,4 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+}

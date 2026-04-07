@@ -286,7 +286,7 @@ window.openWorkspaceNative = async () => {
         const result = await window.electronAPI.openWorkspace();
         if (result && result.path) {
             setState({ 
-                workspaceData: { path: result.path, isWorkspace: true, name: result.name },
+                workspaceData: { path: result.path, isWorkspace: true, name: result.name, folders: result.folders || [] },
                 files: result.folders || [],
                 activeTerminalFolder: result.path // Sincronizziamo il terminale
             });
@@ -333,6 +333,7 @@ window.openFileInIDE = async (filePath, name) => {
     }
 
     // Protezione Directory (Evita EISDIR)
+
     const normPath = filePath.replace(/\\/g, '/').toLowerCase();
     const normRoot = state.workspaceData?.path?.replace(/\\/g, '/').toLowerCase();
     if (normRoot && normPath === normRoot.replace(/\/$/, '')) {
@@ -517,18 +518,33 @@ export const renderWorkspace = () => {
 };
 
 export const restoreSession = async () => {
-    const { workspaceData } = state;
+    const { workspaceData, openFiles } = state;
+    
     if (workspaceData && workspaceData.path) {
-        console.log(`[GX-RESTORE] Ripristino sessione per: ${workspaceData.path}`);
+        console.log(`[GX-RESTORE] Attempting session restore for: ${workspaceData.path}`);
         try {
-            // Ricarica la struttura dei file per assicurarsi che sia aggiornata
+            // Ricarica la struttura dei file e i folders per i workspace
             const result = await window.electronAPI.openSpecificFolder(workspaceData.path);
-            if (result && result.files) {
-                setState({ files: result.files });
+            if (result) {
+                console.log(`[GX-RESTORE] Workspace structure loaded: ${result.name}`);
+                if (result.isWorkspace) {
+                    setState({ 
+                        workspaceData: { ...workspaceData, folders: result.folders || [] },
+                        files: result.folders || [] 
+                    });
+                } else if (result.files) {
+                    setState({ files: result.files });
+                }
+            } else {
+                console.warn("[GX-RESTORE] Failed to load workspace structure (result null)");
             }
         } catch (err) {
-            console.error("[GX-RESTORE] Errore ripristino cartella:", err);
+            console.error("[GX-RESTORE] Critical error during folder restoration:", err);
         }
+    } else if (openFiles.length > 0) {
+        console.log(`[GX-RESTORE] No workspace found, but ${openFiles.length} files are in session.`);
+    } else {
+        console.log("[GX-RESTORE] No previous session state found to restore.");
     }
 };
 

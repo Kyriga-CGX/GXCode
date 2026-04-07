@@ -1,4 +1,4 @@
-﻿// main.js
+// main.js
 const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
@@ -2528,8 +2528,8 @@ app.whenReady().then(() => {
   ipcMain.handle('git-show-head', async (event, workspacePath, filePath) => {
     try {
       const { execSync } = require('child_process');
-      const relativePath = path.relative(workspacePath || process.cwd(), filePath).replace(/\\/g, '/');
-      const output = execSync(`git show "HEAD:${relativePath}"`, { encoding: 'utf8', cwd: workspacePath || process.cwd() });
+      const relativePath = path.relative(workspacePath || os.homedir(), filePath).replace(/\\/g, '/');
+      const output = execSync(`git show "HEAD:${relativePath}"`, { encoding: 'utf8', cwd: workspacePath || os.homedir() });
       return { success: true, content: output };
     } catch (err) {
       return { success: false, error: err.message };
@@ -2558,7 +2558,7 @@ app.whenReady().then(() => {
               if (!path.isAbsolute(f)) f = path.resolve(path.dirname(safeCwd), f);
               safeCwd = f;
             } else {
-              safeCwd = process.cwd();
+              safeCwd = os.homedir(); 
             }
           } else {
             safeCwd = path.dirname(safeCwd);
@@ -2571,7 +2571,7 @@ app.whenReady().then(() => {
       }
     } catch (e) {
       console.error(`[TERMINAL] Error resolving path: ${e.message}`);
-      safeCwd = process.cwd();
+      safeCwd = os.homedir();
     }
 
     if (!fs.existsSync(safeCwd)) {

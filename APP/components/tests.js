@@ -4,6 +4,7 @@ export const initTests = () => {
     const btnRunAll = document.getElementById('btn-run-all-tests');
     const btnScan = document.getElementById('btn-scan-tests');
     const treeRoot = document.getElementById('test-tree-root');
+    const projectSelector = document.getElementById('test-project-selector');
     
     if (!treeRoot) return;
 
@@ -144,10 +145,40 @@ export const initTests = () => {
             `;
         }
     };
+    
+    const updateProjectDropdown = () => {
+        if (!projectSelector) return;
+        const { workspaceData, selectedTestProject } = state;
+        const folders = workspaceData?.folders || [];
+        
+        // Se non ci sono folder, siamo in un progetto singolo
+        if (folders.length === 0) {
+            projectSelector.style.display = 'none';
+            return;
+        }
+        
+        projectSelector.style.display = 'block';
+        let html = '<option value="all">TUTTI I PROGETTI</option>';
+        folders.forEach(f => {
+            const name = f.name || (f.path ? f.path.split(/[/\\]/).pop() : 'PROJECT');
+            const val = (f.path || '').replace(/\\/g, '/').toLowerCase(); 
+            const isSelected = val === (selectedTestProject || '').toLowerCase();
+            html += `<option value="${val}" ${isSelected ? 'selected' : ''}>${name.toUpperCase()}</option>`;
+        });
+        
+        projectSelector.innerHTML = html;
+    };
 
 
     const renderTestTree = () => {
-        const { workspaceData, testFilesCache, isPlaywrightInstalled, isInstalling } = state;
+        const { workspaceData, testFilesCache, isPlaywrightInstalled, isInstalling, selectedTestProject } = state;
+        
+        // Sincronizza dropdown se necessario
+        if (projectSelector && projectSelector.value !== selectedTestProject) {
+            projectSelector.value = selectedTestProject;
+        }
+        
+        updateProjectDropdown();
         const t = (key) => {
             try {
                 const val = key.split('.').reduce((o, i) => (o ? o[i] : undefined), window.gxTranslations);
@@ -198,7 +229,19 @@ export const initTests = () => {
         }
 
         const treeStructure = {};
-        testFilesCache.forEach(file => {
+        
+        // Filtriamo i file in base al progetto selezionato
+        const filteredFiles = testFilesCache.filter(file => {
+            if (!selectedTestProject || selectedTestProject === 'all') return true;
+            
+            // Normalizzazione estrema per confronto sicuro (case-insensitive + uniform slashes)
+            const fId = (file.folderId || '').replace(/\\/g, '/').toLowerCase();
+            const sId = selectedTestProject.replace(/\\/g, '/').toLowerCase();
+            
+            return fId === sId;
+        });
+
+        filteredFiles.forEach(file => {
             // Fix: Su Windows i path usano \, dobbiamo normalizzarli tutti in /
             const normalizedPath = file.relativePath.replace(/\\/g, '/');
             const parts = normalizedPath.split('/');
@@ -379,13 +422,20 @@ export const initTests = () => {
 
     if (btnScan) btnScan.onclick = () => scanWorkspaceForTests();
 
+    if (projectSelector) {
+        projectSelector.onchange = (e) => {
+            setState({ selectedTestProject: e.target.value });
+        };
+    }
+
     let isScanning = false;
     subscribe((newState, oldState) => {
         const activityChanged = newState.activeActivity !== oldState?.activeActivity;
         const workspaceChanged = newState.workspaceData?.path !== oldState?.workspaceData?.path;
         const cacheChanged = newState.testFilesCache !== oldState?.testFilesCache;
         const statusChanged = newState.isTestingInProgress !== oldState?.isTestingInProgress || 
-                             newState.isPlaywrightInstalled !== oldState?.isPlaywrightInstalled;
+                             newState.isPlaywrightInstalled !== oldState?.isPlaywrightInstalled ||
+                             newState.selectedTestProject !== oldState?.selectedTestProject;
 
         if (newState.activeActivity === 'testing') {
             // Trigger scan only if entering the tab or workspace changed, and we have no cache

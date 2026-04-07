@@ -275,7 +275,7 @@ window.gxPrompt = gxPrompt;
  * items: Array of { label, description, icon, value }
  * onSelect: function(value)
  */
-export const gxQuickPick = (title, items, onSelect) => {
+export const gxQuickPick = (title, items, onSelect, placeholder = 'Cerca comandi o file...') => {
     const root = document.getElementById('dialogs-root');
     if (!root) return;
     root.classList.remove('pointer-events-none');
@@ -283,57 +283,56 @@ export const gxQuickPick = (title, items, onSelect) => {
 
     let selectedIndex = 0; const render = () => {
         root.innerHTML = `
-            <div id="gx-qp-overlay" class="fixed inset-0 bg-black/20 backdrop-blur-3xl flex items-start justify-center z-[100000] animate-fade-in pt-[10vh] p-12">
-                <div class="liquid-glass w-full max-w-3xl rounded-[6rem] flex flex-col scale-in overflow-hidden max-h-[75vh] border-white/5 shadow-[0_120px_300px_rgba(0,0,0,1)] p-6">
-                    <div class="premium-mesh-bg op-40"></div>
-                    <div class="p-12 border-b border-white/[0.02] bg-white/[0.01] relative z-10 text-center">
-                        <div class="flex flex-col items-center gap-4 mb-10">
-                             <div class="w-16 h-16 rounded-full bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-3xl animate-pulse backdrop-blur-3xl">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <div id="gx-qp-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-md flex items-start justify-center z-[100000] animate-fade-in pt-[15vh] p-6">
+                <div class="bg-[#0b0e14] w-full max-w-2xl rounded-3xl flex flex-col scale-in overflow-hidden max-h-[70vh] border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.8)] relative">
+                    <div class="premium-mesh-bg op-20 pointer-events-none"></div>
+                    
+                    <div class="p-8 border-b border-white/[0.05] bg-white/[0.02] relative z-10">
+                        <div class="flex items-center gap-5 mb-6">
+                             <div class="w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-xl">
+                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                              </div>
-                             <div class="space-y-2">
-                                <h3 class="text-white font-black text-2xl uppercase tracking-[0.5em] mb-1">${title}</h3>
-                                <span class="text-[9px] text-gray-700 font-bold uppercase tracking-[0.6em]">GX-ENGINE COMMAND CORE v3.0</span>
+                             <div class="space-y-0.5">
+                                <h3 class="text-white font-bold text-lg uppercase tracking-wider">${title}</h3>
+                                <span class="text-[8px] text-indigo-500/60 font-bold uppercase tracking-[0.4em]">GX-ENGINE QUICK-NAV v4.0</span>
                              </div>
                         </div>
-                        <div class="floating-2026 group max-w-lg mx-auto">
+                        <div class="relative group">
                             <input type="text" id="gx-qp-input" 
-                                   class="pod-input-2026 w-full outline-none placeholder-transparent !py-6 shadow-3xl text-center" 
-                                   placeholder=" " autofocus>
-                            <label class="label-2026 !translate-x-[-50%] !left-1/2">Cerca comandi o file...</label>
-                            <div class="absolute right-10 top-1/2 -translate-y-1/2 flex gap-3 items-center opacity-40 select-none">
-                                <kbd class="px-3 py-1.5 rounded-xl bg-white/5 text-[9px] font-black border border-white/10 uppercase tracking-widest">TAB</kbd>
+                                   class="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white text-base outline-none focus:border-indigo-500/50 transition-all placeholder:text-white/10" 
+                                   placeholder="${placeholder}" autofocus>
+                            <div class="absolute right-6 top-1/2 -translate-y-1/2 flex gap-2 items-center opacity-30 select-none">
+                                <kbd class="px-2 py-1 rounded-lg bg-white/5 text-[8px] font-bold border border-white/10 uppercase tracking-tighter">Enter</kbd>
                             </div>
                         </div>
                     </div>
                     
-                    <div id="gx-qp-list" class="flex-1 overflow-y-auto overflow-x-hidden p-10 custom-scrollbar scroll-smooth space-y-4 relative z-10 max-w-2xl mx-auto w-full">
+                    <div id="gx-qp-list" class="flex-1 overflow-y-auto overflow-x-hidden p-4 custom-scrollbar scroll-smooth space-y-1 relative z-10 w-full">
                         ${items.map((item, idx) => `
-                            <div class="gx-qp-item group flex flex-col items-center gap-3 px-8 py-8 rounded-[3rem] cursor-pointer transition-all duration-500 ${idx === selectedIndex ? 'bg-gradient-to-br from-indigo-500/20 to-indigo-700/20 text-white shadow-[0_40px_100px_rgba(0,0,0,0.5)] scale-[1.05] z-30 relative ring-2 ring-indigo-500/40' : 'hover:bg-white/[0.02] text-gray-600 active:scale-95'}" 
+                            <div class="gx-qp-item group flex items-center gap-4 px-5 py-3.5 rounded-2xl cursor-pointer transition-all duration-150 ${idx === selectedIndex ? 'bg-indigo-600/30 text-white shadow-lg ring-1 ring-indigo-500/40' : 'hover:bg-white/[0.04] text-gray-300 active:scale-[0.98]'}" 
                                  data-index="${idx}">
-                                <div class="shrink-0 w-16 h-16 rounded-full bg-black/40 flex items-center justify-center border border-white/5 transition-transform group-hover:scale-110 shadow-inner ${idx === selectedIndex ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' : ''}">
-                                    ${item.icon || '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>'}
+                                <div class="shrink-0 w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/5 transition-transform ${idx === selectedIndex ? 'bg-indigo-500/30 border-indigo-500/40 text-indigo-300' : 'text-gray-500 group-hover:text-gray-300'}">
+                                    ${item.icon || '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>'}
                                 </div>
-                                <div class="flex flex-col items-center text-center">
-                                    <span class="text-[15px] font-black truncate leading-none tracking-[0.2em] uppercase">${item.label}</span>
-                                    <span class="text-[10px] truncate font-bold mt-2 tracking-[0.15em] ${idx === selectedIndex ? 'text-indigo-400' : 'text-gray-700 group-hover:text-gray-500'}">${item.description || 'ACCESSO RAPIDO'}</span>
+                                <div class="flex flex-col flex-1 min-w-0">
+                                    <span class="text-[14px] font-bold truncate tracking-tight">${item.label}</span>
+                                    <span class="text-[10px] truncate tracking-normal opacity-50 font-medium">${item.description || 'Seleziona per procedere'}</span>
                                 </div>
+                                ${idx === selectedIndex ? '<div class="shrink-0 text-indigo-400"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg></div>' : ''}
                             </div>
                         `).join('')}
                     </div>
                     
-                    <!-- QuickPick Footer Elite 2026 -->
-                    <div class="px-16 py-8 border-t border-white/[0.01] bg-black/10 shrink-0 relative z-10 flex flex-col items-center gap-4">
-                         <div class="h-1 w-20 bg-white/5 rounded-full mb-2"></div>
-                         <div class="flex items-center gap-8 opacity-30">
-                             <div class="flex items-center gap-3"><kbd class="bg-white/5 px-3 py-1.5 rounded-xl text-[10px] font-black border border-white/10 uppercase">ESC</kbd><span class="text-[9px] font-black uppercase tracking-[0.3em]">Ignora</span></div>
-                             <div class="flex items-center gap-3"><kbd class="bg-indigo-500/20 px-3 py-1.5 rounded-xl text-[10px] font-black border border-indigo-500/20 uppercase text-indigo-400">ENTER</kbd><span class="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-400">Esegui</span></div>
+                    <div class="px-8 py-4 border-t border-white/[0.05] bg-black/20 shrink-0 relative z-10 flex items-center justify-between">
+                         <div class="flex items-center gap-4 opacity-40">
+                             <div class="flex items-center gap-2"><kbd class="bg-white/5 px-2 py-1 rounded-lg text-[8px] font-bold border border-white/10 uppercase">ESC</kbd><span class="text-[8px] font-bold uppercase tracking-widest">Chiudi</span></div>
+                             <div class="flex items-center gap-2"><kbd class="bg-white/5 px-2 py-1 rounded-lg text-[8px] font-bold border border-white/10 uppercase">↑↓</kbd><span class="text-[8px] font-bold uppercase tracking-widest">Naviga</span></div>
                          </div>
+                         <div class="text-[8px] font-bold text-indigo-500/40 uppercase tracking-[0.2em] hidden sm:block">GXCode Elite Studio</div>
                     </div>
                 </div>
             </div>
         `;
-
         const input = document.getElementById('gx-qp-input');
         input.focus();
 
