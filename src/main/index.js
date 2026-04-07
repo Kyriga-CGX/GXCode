@@ -19,8 +19,9 @@ const localDataPath = app.getPath('userData');
 console.log("[GX-BOOTSTRAP] Main process using UserData:", localDataPath);
 
 // Inject into Persistence Service (Fulfillment of Relative Path principle)
-const { setBaseDir } = require('./services/persistence');
+const { setBaseDir, ensureDataMigration } = require('./services/persistence');
 setBaseDir(path.join(localDataPath, 'persistence'));
+ensureDataMigration();
 
 const GOOGLE_CONFIG = {
     clientId: "411114937479-jfa96807lfiuo4rlnqd362598s7dj5va.apps.googleusercontent.com",

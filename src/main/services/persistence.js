@@ -15,6 +15,78 @@ function setAiContext(context) {
     console.log(`[GX-DISK] Context updated to: ${currentAiContext}`);
 }
 
+function ensureDataMigration() {
+    const home = os.homedir();
+    const potentialLegacyBases = [
+        path.join(home, '.GXCODE'),
+        path.join(home, '.gemini'),
+        path.join(home, 'OneDrive', '.GXCODE'),
+        path.join(process.env.APPDATA || '', 'GXCode', 'persistence') // Default Electron Roaming
+    ];
+
+    const folders = ['agents', 'skills', 'plugins'];
+    console.log("[GX-DISK] Avvio controllo migrazione dati multifase...");
+
+    for (const oldBase of potentialLegacyBases) {
+        if (!fs.existsSync(oldBase)) continue;
+        
+        console.log(`[GX-DISK] Trovata possibile sorgente legacy: ${oldBase}`);
+
+        for (const folder of folders) {
+            const oldPath = path.join(oldBase, folder);
+            const newPath = path.join(basePersistenceDir, folder);
+            
+            if (fs.existsSync(oldPath)) {
+                if (!fs.existsSync(newPath)) {
+                    try {
+                        fs.mkdirSync(newPath, { recursive: true });
+                    } catch (err) {
+                        console.error(`[GX-DISK] Errore creazione cartella ${newPath}:`, err.message);
+                        continue;
+                    }
+                }
+                
+                try {
+                    const files = fs.readdirSync(oldPath).filter(f => f.endsWith('.json') || folder === 'plugins');
+                    let migratedCount = 0;
+                    for (const file of files) {
+                        const src = path.join(oldPath, file);
+                        const dest = path.join(newPath, file);
+                        
+                        // Migriamo solo se non esiste gi├á nel nuovo percorso
+                        if (!fs.existsSync(dest)) {
+                            try {
+                                if (fs.lstatSync(src).isDirectory()) {
+                                    // Semplice copia ricorsiva per plugin se necessario (anche se solitamente sono JSON)
+                                    // In questo caso gestiamo solo file per semplicit├á, ma plugins potrebbero essere cartelle
+                                    // Se plugins sono cartelle, usiamo cpSync (Node 16.7+)
+                                    if (fs.cpSync) {
+                                        fs.cpSync(src, dest, { recursive: true });
+                                    } else {
+                                        // Fallback manuale o skip? Per ora assumiamo file json
+                                        fs.copyFileSync(src, dest);
+                                    }
+                                } else {
+                                    fs.copyFileSync(src, dest);
+                                }
+                                migratedCount++;
+                            } catch (e) {
+                                console.error(`[GX-DISK] Errore copia ${file}:`, e.message);
+                            }
+                        }
+                    }
+                    if (migratedCount > 0) {
+                        console.log(`[GX-DISK] Migrati ${migratedCount} elementi della cartella ${folder} da ${oldBase}`);
+                    }
+                } catch (e) {
+                    console.error(`[GX-DISK] Errore lettura cartella ${oldPath}:`, e.message);
+                }
+            }
+        }
+    }
+    console.log("[GX-DISK] Migrazione completata (o nessuna nuova sorgente trovata).");
+}
+
 function getAiContext() {
     return currentAiContext;
 }
@@ -77,5 +149,6 @@ module.exports = {
     getActiveAiPath, 
     loadPersistedData, 
     savePersistedData, 
-    deletePersistedData 
+    deletePersistedData,
+    ensureDataMigration
 };

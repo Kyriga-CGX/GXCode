@@ -1,5 +1,5 @@
 /**
- * GXCode IDE - v1.5.5 (Modular Evolution)
+ * GXCode IDE - v1.5.7 (Enhanced Migration & Work PC Fixes)
  * entry point bootstrapped via src/main/index.js
  */
 const { app } = require('electron');
