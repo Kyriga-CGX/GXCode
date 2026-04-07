@@ -34,6 +34,7 @@ const getSettingsTabs = () => [
         title: window.t('settings.groups.ai'),
         tabs: [
             { id: 'ai', label: window.t('settings.tabs.ai'), icon: '🤖' },
+            { id: 'ai-companion', label: 'Ai Companion Local', icon: '✨' },
             { id: 'mcp', label: window.t('settings.tabs.mcp'), icon: '🧩' },
             { id: 'youtrack', label: window.t('settings.tabs.youtrack'), icon: '🎫' }
         ]
@@ -587,6 +588,8 @@ const renderTabContent = () => {
             `;
         case 'updates':
             return renderUpdatesTab();
+        case 'ai-companion':
+            return renderAiCompanionSettings();
         case 'modules':
             return renderModulesTab();
         default:
@@ -597,9 +600,9 @@ const renderTabContent = () => {
 const renderUpdatesTab = () => {
     return `
         <div class="space-y-8">
-            <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl flex items-center justify-between">
+            <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
+                    <div class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </div>
                     <div>
@@ -620,7 +623,7 @@ const renderUpdatesTab = () => {
 
             <div class="space-y-4">
                 <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest" data-i18n="settings.updates.systemInfo">${window.t('settings.updates.systemInfo')}</h5>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="p-4 bg-black/20 border border-gray-800 rounded-lg">
                         <div class="text-[9px] text-gray-600 uppercase font-bold" data-i18n="settings.updates.currentVersion">${window.t('settings.updates.currentVersion')}</div>
                         <div class="text-xs text-gray-300 font-mono mt-1">${state.appVersion}</div>
@@ -877,6 +880,11 @@ const renderSettingsModal = (newSt, prevSt) => {
             }
         });
 
+        // Gestione Visibilità via Data-Attribute (Sincronizzato con index.css V3)
+        if (existingModal) {
+            existingModal.dataset.mobileMenuOpen = state.isSettingsMobileMenuOpen;
+        }
+
         // Aggiorna contenuto solo se: tab cambiata, o non stiamo editando
         if (tabChanged || !isEditing) {
             const headerIcon = existingModal.querySelector('#settings-header-icon');
@@ -885,56 +893,72 @@ const renderSettingsModal = (newSt, prevSt) => {
             
             if (headerIcon) headerIcon.innerHTML = activeTab?.icon || '';
             if (headerTitle) headerTitle.innerText = activeTab?.label || '';
-            if (contentArea) contentArea.innerHTML = renderTabContent();
+            if (contentArea) {
+                contentArea.innerHTML = `
+                    <div class="settings-tab-wrapper animate-slide-in-left">
+                        ${renderTabContent()}
+                    </div>
+                `;
+            }
         }
         return;
     }
 
 
-    // RENDERING INIZIALE (Solo alla prima apertura)
+    // RENDERING INIZIALE (Solo alla prima apertura - V3)
     root.innerHTML = `
-        <div id="settings-modal-overlay" class="fixed inset-0 bg-[#06080a] flex items-center justify-center z-[9999] p-6 pointer-events-auto animate-fade-in">
-            <div class="bg-[var(--bg-main)] w-full max-w-4xl h-[640px] rounded-2xl border border-[var(--border-subtle)] shadow-[0_40px_100px_rgba(0,0,0,0.8)] flex overflow-hidden">
+        <div id="settings-modal-overlay" 
+             data-mobile-menu-open="${state.isSettingsMobileMenuOpen}"
+             class="settings-modal-overlay">
+            <div class="settings-modal-box">
                 <!-- Sidebar -->
-                <div class="w-64 border-r border-[var(--border-dim)] bg-[var(--bg-side)] flex flex-col">
-                    <div class="h-14 flex items-center px-6 border-b border-[var(--border-dim)] bg-[var(--bg-ghost)]">
+                <div id="settings-sidebar" class="settings-sidebar">
+                    <div class="h-14 flex items-center justify-between px-6 border-b border-[var(--border-dim)] bg-[var(--bg-ghost)]">
                         <h2 class="text-sm font-black text-white uppercase tracking-widest" data-i18n="settings.title">${window.t('settings.title')}</h2>
+                        <button onclick="window.closeSettings()" class="settings-mobile-only text-gray-500 hover:text-white">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                        </button>
                     </div>
                     <div class="flex-1 py-4 overflow-y-auto no-scrollbar">
                         ${groups.map(group => `
                             <div class="px-6 py-2 mt-4 first:mt-0">
-                                <h4 class="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2 px-1 opacity-50">${group.title}</h4>
+                                <h4 class="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3 px-1 opacity-50">${group.title}</h4>
                                 <div class="space-y-1">
                                     ${group.tabs.map(tab => `
                                         <div onclick="window.switchSettingsTab('${tab.id}')" 
                                              data-settings-tab="${tab.id}"
-                                             class="px-3 py-2 flex items-center gap-3 rounded-lg cursor-pointer transition-all 
+                                             class="px-3 py-2.5 flex items-center gap-3 rounded-lg cursor-pointer transition-all 
                                              ${state.activeSettingsTab === tab.id 
                                                  ? 'bg-blue-600/15 text-blue-400 border border-blue-500/20 shadow-lg shadow-blue-900/10' 
                                                  : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent'}">
-                                            <span class="text-sm scale-110">${tab.icon}</span>
-                                            <span class="text-[11px] font-bold tracking-tight">${tab.label}</span>
+                                            <span class="text-base scale-110">${tab.icon}</span>
+                                            <span class="text-xs font-bold tracking-tight">${tab.label}</span>
                                         </div>
                                     `).join('')}
                                 </div>
                             </div>
                         `).join('')}
                     </div>
-                    <div class="p-6 border-t border-gray-800 bg-black/10">
+                    <div class="p-6 border-t border-gray-800 bg-black/10 settings-desktop-only">
                         <button onclick="window.closeSettings()" class="w-full py-2 bg-gray-800/50 hover:bg-red-600/20 hover:text-red-400 border border-transparent hover:border-red-500/30 text-gray-400 rounded-lg text-[10px] transition-all uppercase font-black tracking-widest" data-i18n="settings.close">${window.t('settings.close')}</button>
                     </div>
                 </div>
 
                 <!-- Content Area -->
-                <div class="flex-1 flex flex-col bg-[var(--bg-main)]">
-                    <div class="h-14 border-b border-[var(--border-dim)] flex items-center px-8 bg-[var(--bg-main)] relative z-10 shadow-sm">
-                        <div class="flex items-center gap-3">
-                           <span id="settings-header-icon" class="text-lg">${activeTab?.icon || ''}</span>
-                           <h3 id="settings-header-title" class="font-black text-white text-sm uppercase tracking-wide">${activeTab?.label || ''}</h3>
+                <div id="settings-content-area" class="settings-content-area">
+                    <div class="h-14 border-b border-[var(--border-dim)] flex items-center px-6 md:px-8 bg-[var(--bg-main)] relative z-10 shadow-sm">
+                        <div class="flex items-center gap-4">
+                           <button onclick="window.openSettingsMobileMenu()" class="settings-mobile-only p-2 -ml-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">
+                               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                           </button>
+                           <div class="flex items-center gap-3">
+                               <span id="settings-header-icon" class="text-lg">${activeTab?.icon || ''}</span>
+                               <h3 id="settings-header-title" class="font-black text-white text-sm uppercase tracking-wide">${activeTab?.label || ''}</h3>
+                           </div>
                         </div>
                     </div>
-                    <div id="settings-content-body" class="flex-1 overflow-y-auto p-8 custom-scrollbar bg-[var(--bg-main)] min-h-0 relative">
-                        <div class="settings-tab-wrapper animate-fade-in-up">
+                    <div id="settings-content-body" class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-[var(--bg-main)] min-h-0 relative">
+                        <div class="settings-tab-wrapper animate-slide-in-left">
                             ${renderTabContent()}
                         </div>
                     </div>
@@ -954,7 +978,12 @@ const renderSettingsModal = (newSt, prevSt) => {
 };
 
 // Global Actions
-window.closeSettings = () => setState({ isSettingsOpen: false });
+window.closeSettings = () => setState({ 
+    isSettingsOpen: false, 
+    isSettingsMobileMenuOpen: true 
+});
+
+window.openSettingsMobileMenu = () => setState({ isSettingsMobileMenuOpen: true });
 
 window.saveProjectGuidelines = () => {
     const el = document.getElementById('settings-project-guidelines');
@@ -965,7 +994,10 @@ window.saveProjectGuidelines = () => {
 };
 
 window.switchSettingsTab = (tabId) => {
-    setState({ activeSettingsTab: tabId });
+    setState({ 
+        activeSettingsTab: tabId,
+        isSettingsMobileMenuOpen: false
+    });
 };
 
 window.applySkin = (skinId) => {
@@ -1456,3 +1488,266 @@ window.resetShortcuts = () => {
     localStorage.setItem('gx-shortcuts', JSON.stringify(defaults));
     window.gxToast('Scorciatoie resettate ai valori predefiniti', 'info');
 };
+
+/**
+ * --- AI COMPANION LOCAL SETTINGS (Evolution 2026) ---
+ */
+const renderAiCompanionSettings = () => {
+    const comp = state.aiCompanion;
+    const stats = comp.stats || {};
+    const suitability = stats.suitability || { level: 'checking', message: 'Inizializzazione...' };
+
+    return `
+        <div class="space-y-10 animate-fade-in-up pb-10">
+            <!-- Header: AI status & diagnostics -->
+            <div class="p-6 md:p-8 bg-gradient-to-br from-purple-900/10 to-blue-900/10 border border-white/5 rounded-[30px] md:rounded-[40px] relative overflow-hidden backdrop-blur-md">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+                <div class="relative z-10 flex flex-col md:flex-row items-center gap-6 md:gap-8">
+                    <div class="w-32 h-32 rounded-3xl bg-black/40 border border-white/10 flex items-center justify-center text-5xl shadow-2xl">
+                        ${suitability.level === 'recommended' ? '🚀' : suitability.level === 'ok' ? '✅' : suitability.level === 'unsupported' ? '⚠️' : '🔍'}
+                    </div>
+                    <div class="flex-1 text-center md:text-left space-y-3">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-black uppercase text-blue-400 tracking-[0.2em]">
+                            Neural Suite 2026 • Local Runtime
+                        </div>
+                        <h3 class="text-3xl font-black text-white tracking-tighter uppercase italic">${suitability.level === 'unsupported' ? 'Hardware Incompatibile' : 'Motore AI Locale'}</h3>
+                        <p class="text-sm font-bold text-gray-200 leading-relaxed max-w-2xl">${suitability.message}</p>
+                    </div>
+                    <button onclick="window.runAiDiagnostics()" class="px-8 py-3 bg-[var(--bg-side)] border border-white/10 hover:border-purple-500/50 text-gray-400 hover:text-white text-[10px] font-black rounded-2xl transition-all uppercase tracking-widest active:scale-95">
+                        Riesegui Scan
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hardware Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                ${[
+                    { label: 'Processore', val: stats.cpu || 'N/A', icon: '🧠' },
+                    { label: 'Memoria RAM', val: `${stats.freeRam}G / ${stats.totalRam}G`, icon: '⚡' },
+                    { label: 'Grafica (VRAM)', val: stats.gpu || 'Fallback CPU', icon: '🎨' },
+                    { label: 'Spazio Disco', val: stats.disk || 'N/A', icon: '💾' }
+                ].map(s => `
+                    <div class="p-5 bg-black/20 border border-white/5 rounded-3xl group hover:border-white/10 transition-all">
+                        <div class="text-[18px] mb-2">${s.icon}</div>
+                        <div class="text-[9px] font-black text-gray-600 uppercase tracking-widest">${s.label}</div>
+                        <div class="text-[11px] font-bold text-gray-200 mt-1 truncate font-mono">${s.val}</div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <!-- Custom Paths Selection (Visible only if not installed) -->
+            ${!comp.installed ? `
+            <div class="p-8 bg-black/20 border border-white/5 rounded-[40px] space-y-6">
+                <h4 class="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-4">Configurazione Percorsi</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-3">
+                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Percorso Applicazione Ollama</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="ai-install-path" readonly value="${comp.installPath || 'C:\\Ollama'}" 
+                                   class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-gray-300 outline-none">
+                            <button onclick="window.pickAiFolder('installPath')" class="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-bold text-gray-300 transition-all uppercase tracking-widest">Sfoglia</button>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <label class="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Cartella Storage Modelli</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="ai-models-path" readonly value="${comp.modelsPath || 'C:\\OllamaModels'}" 
+                                   class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-gray-300 outline-none">
+                            <button onclick="window.pickAiFolder('modelsPath')" class="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-bold text-gray-300 transition-all uppercase tracking-widest">Sfoglia</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- Decision Box & Installation Progress -->
+            <div class="p-6 md:p-8 border-2 ${suitability.level === 'recommended' ? 'border-emerald-500/20 bg-emerald-500/[0.02]' : suitability.level === 'compromised' ? 'border-orange-500/20 bg-orange-500/[0.02]' : 'border-red-500/20 bg-red-500/[0.02]'} rounded-[30px] md:rounded-[40px] space-y-6">
+                <div class="flex items-start gap-6">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 
+                         ${suitability.level === 'recommended' ? 'bg-emerald-500 text-white' : suitability.level === 'compromised' ? 'bg-orange-500 text-white' : 'bg-red-500 text-white'}">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="text-[10px] font-black uppercase tracking-[0.3em] ${suitability.level === 'recommended' ? 'text-emerald-500' : suitability.level === 'compromised' ? 'text-orange-500' : 'text-red-500'}">
+                            Punteggio Idoneità: ${suitability.level.toUpperCase()}
+                        </div>
+                        <p class="text-sm font-bold text-gray-200 leading-relaxed max-w-2xl">${suitability.message}</p>
+                    </div>
+                </div>
+
+                <!-- Progress area: Installation -->
+                <div id="ai-install-progress-container" class="hidden space-y-3 p-6 bg-black/20 border border-white/5 rounded-2xl">
+                    <div class="flex justify-between items-center text-[10px] font-black uppercase text-blue-400 tracking-widest">
+                        <span id="ai-install-status-label">Download Installer...</span>
+                        <span id="ai-install-percentage">0%</span>
+                    </div>
+                    <div class="w-full h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
+                        <div id="ai-install-bar" class="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Progress area: Model Pulling -->
+                <div id="ai-pull-progress-container" class="hidden space-y-2">
+                    <div class="flex justify-between items-center text-[10px] font-black uppercase text-gray-500 tracking-widest">
+                        <span>Scaricamento Modello...</span>
+                        <span id="ai-pull-percentage">0%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5">
+                        <div id="ai-pull-bar" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p id="ai-pull-status" class="text-[9px] text-gray-600 font-bold truncate">Inizio...</p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="pt-4 flex flex-col md:flex-row items-center gap-4">
+                    ${comp.installed ? `
+                        <div class="flex items-center gap-4 w-full">
+                            <div class="flex-1 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[10px] font-bold text-emerald-400 uppercase tracking-widest text-center">
+                                Motore Configurato
+                            </div>
+                            <button id="btn-pull-mod" onclick="window.pullAiModel()" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black rounded-2xl transition-all uppercase tracking-widest shadow-xl">
+                                Scarica Modello
+                            </button>
+                        </div>
+                    ` : `
+                        <button id="btn-start-inst" onclick="window.installAiCompanion()" class="w-full md:w-auto px-12 py-4 bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-black rounded-2xl transition-all uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(168,85,247,0.2)] active:scale-95 disabled:opacity-30"
+                             ${suitability.level === 'unsupported' ? 'disabled' : ''}>
+                            Scarica e Installa AI Companion
+                        </button>
+                    `}
+                </div>
+            </div>
+
+            <!-- Local Model Selection -->
+            <div class="space-y-4">
+                <h4 class="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Modello di Intelligenza Attiva</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div onclick="setState({ aiCompanion: { ...state.aiCompanion, model: 'qwen2.5-coder:1.5b' } })" 
+                         class="p-6 rounded-[30px] border-2 cursor-pointer transition-all ${comp.model === 'qwen2.5-coder:1.5b' ? 'border-blue-500 bg-blue-500/5' : 'border-white/5 hover:border-white/10 bg-black/10'}">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="px-3 py-1 bg-white/max-[0.05] rounded-full text-[8px] font-black text-blue-400 uppercase">Flash Protocol</span>
+                            <div class="w-3 h-3 rounded-full ${comp.model === 'qwen2.5-coder:1.5b' ? 'bg-blue-500' : 'bg-gray-800'}"></div>
+                        </div>
+                        <h5 class="text-sm font-black text-white uppercase italic">Qwen 2.5 Coder 1.5B</h5>
+                        <p class="text-[9px] text-gray-500 mt-2 leading-relaxed">Ultra veloce. Carica in circa 1.2GB di RAM. Ideale per laptop e mini-PC.</p>
+                    </div>
+
+                    <div onclick="setState({ aiCompanion: { ...state.aiCompanion, model: 'qwen2.5-coder:7b' } })" 
+                         class="p-6 rounded-[30px] border-2 cursor-pointer transition-all ${comp.model === 'qwen2.5-coder:7b' ? 'border-purple-500 bg-purple-500/5' : 'border-white/5 hover:border-white/10 bg-black/10'}">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="px-3 py-1 bg-white/max-[0.05] rounded-full text-[8px] font-black text-purple-400 uppercase">Pro Protocol</span>
+                            <div class="w-3 h-3 rounded-full ${comp.model === 'qwen2.5-coder:7b' ? 'bg-purple-500' : 'bg-gray-800'}"></div>
+                        </div>
+                        <h5 class="text-sm font-black text-white uppercase italic">Qwen 2.5 Coder 7B</h5>
+                        <p class="text-[9px] text-gray-500 mt-2 leading-relaxed">Alta precisione. Richiede ~5GB di VRAM o 8GB di RAM libera. Consigliato per workstation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+window.runAiDiagnostics = async () => {
+    try {
+        window.gxToast("Scansione hardware in corso...", 'info');
+        const stats = await window.electronAPI.aiCompanionGetStats();
+        setState({ aiCompanion: { ...state.aiCompanion, stats } });
+        window.gxToast("Scansione hardware completata.", 'success');
+    } catch (e) {
+        window.gxToast("Errore durante la diagnostica.", 'error');
+    }
+};
+
+window.pickAiFolder = async (key) => {
+    const title = key === 'installPath' ? 'Scegli Cartella Installazione Ollama' : 'Scegli Cartella Storage Modelli';
+    const path = await window.electronAPI.aiCompanionSelectFolder(title);
+    if (path) {
+        setState({ aiCompanion: { ...state.aiCompanion, [key]: path } });
+    }
+};
+
+window.installAiCompanion = async () => {
+    const installPath = state.aiCompanion.installPath || 'C:\\Ollama';
+    const modelsPath = state.aiCompanion.modelsPath || 'C:\\OllamaModels';
+    
+    const progressContainer = document.getElementById('ai-install-progress-container');
+    const progressBar = document.getElementById('ai-install-bar');
+    const progressLabel = document.getElementById('ai-install-status-label');
+    const progressPercent = document.getElementById('ai-install-percentage');
+
+    if (progressContainer) progressContainer.classList.remove('hidden');
+    window.gxToast("Inizio installazione personalizzata...", 'info');
+
+    const removeListener = window.electronAPI.onAiCompanionInstallProgress((data) => {
+        if (progressLabel) progressLabel.innerText = data.status;
+        if (progressBar) progressBar.style.width = `${data.percent}%`;
+        if (progressPercent) progressPercent.innerText = `${data.percent}%`;
+    });
+
+    try {
+        const result = await window.electronAPI.aiCompanionInstall({ installPath, modelsPath });
+        if (result.success) {
+            setState({ aiCompanion: { ...state.aiCompanion, installed: true, status: 'ready' } });
+            window.gxToast("Ollama installato correttamente! Ora puoi scaricare il modello.", 'success');
+        } else {
+            window.gxToast(`Errore installazione: ${result.error}`, 'error');
+        }
+    } catch (e) {
+        window.gxToast("Errore fatale durante l'installazione.", 'error');
+    } finally {
+        if (removeListener) removeListener();
+        if (progressContainer) progressContainer.classList.add('hidden');
+    }
+};
+
+window.pullAiModel = async () => {
+    const model = state.aiCompanion.model;
+    const progressContainer = document.getElementById('ai-pull-progress-container');
+    const progressBar = document.getElementById('ai-pull-bar');
+    const progressPercentage = document.getElementById('ai-pull-percentage');
+    const progressStatus = document.getElementById('ai-pull-status');
+
+    if (progressContainer) progressContainer.classList.remove('hidden');
+    
+    window.gxToast(`Download modello ${model} in corso...`, 'info');
+
+    // Listener per il progresso (PowerShell/Ollama output parsing)
+    const removeListener = window.electronAPI.onAiCompanionPullProgress((data) => {
+        if (progressStatus) progressStatus.innerText = data.trim();
+        
+        // Parsing semplice della percentuale (Ollama manda stringhe tipo "downloading 45%...")
+        const match = data.match(/(\d+)%/);
+        if (match && progressBar && progressPercentage) {
+            const percent = match[1];
+            progressBar.style.width = `${percent}%`;
+            progressPercentage.innerText = `${percent}%`;
+        }
+    });
+
+    try {
+        const result = await window.electronAPI.aiCompanionPullModel(model);
+        if (result.success) {
+            setState({ 
+                aiCompanion: { 
+                    ...state.aiCompanion, 
+                    installed: true, 
+                    status: 'on',
+                    enabled: true
+                } 
+            });
+            window.gxToast("Modello scaricato e pronto. AI Companion è ora ATTIVO!", 'success');
+        } else {
+            window.gxToast("Errore durante il download del modello.", 'error');
+        }
+    } finally {
+        if (removeListener) removeListener();
+        if (progressContainer) progressContainer.classList.add('hidden');
+    }
+};
+
+// Auto-run diagnostics on open if first time
+subscribe((newState, oldState) => {
+    if (newState.activeSettingsTab === 'ai-companion' && !newState.aiCompanion.stats.cpu) {
+        window.runAiDiagnostics();
+    }
+});

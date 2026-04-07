@@ -90,4 +90,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Real-time File System Watcher
   onWorkspaceUpdated: (callback) => ipcRenderer.on('workspace-updated', (event, data) => callback(data)),
+
+  // AI Companion Local
+  aiCompanionGetStats: () => ipcRenderer.invoke('ai-companion:get-stats'),
+  aiCompanionCheckStatus: () => ipcRenderer.invoke('ai-companion:check-status'),
+  aiCompanionInstall: () => ipcRenderer.invoke('ai-companion:install'),
+  aiCompanionPullModel: (modelName) => ipcRenderer.invoke('ai-companion:pull-model', modelName),
+  onAiCompanionPullProgress: (callback) => ipcRenderer.on('ai-companion:pull-progress', (event, data) => callback(data)),
+  aiCompanionSelectFolder: (title) => ipcRenderer.invoke('ai-companion:select-folder', title),
+  onAiCompanionInstallProgress: (callback) => ipcRenderer.on('ai-companion:install-progress', (event, data) => callback(data)),
+  aiCompanionStart: (paths) => ipcRenderer.invoke('ai-companion:start', paths),
 });

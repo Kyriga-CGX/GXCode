@@ -233,6 +233,34 @@ const bootstrap = async () => {
         
         console.log("[GX-BOOTSTRAP] IDE Ready and Stable.");
 
+        // --- AI COMPANION ACTIVITY TRACKER (v1.5.9) ---
+        let aiActivityTimer = null;
+        const trackAiActivity = () => {
+            if (!state.aiCompanion.enabled || state.aiCompanion.status === 'unconfigured') return;
+            
+            // Se non era già in helping, impostiamolo
+            if (state.aiCompanion.status !== 'helping') {
+                setState({ aiCompanion: { ...state.aiCompanion, status: 'helping' } });
+            }
+
+            // Reset timer (debounce)
+            clearTimeout(aiActivityTimer);
+            aiActivityTimer = setTimeout(() => {
+                if (state.aiCompanion.enabled) {
+                    setState({ aiCompanion: { ...state.aiCompanion, status: 'on' } });
+                }
+            }, 3000); // 3 secondi di inattività per tornare IDLE
+        };
+
+        // Listeners su Monaco (se esistenti)
+        if (window.editor) {
+            window.editor.onDidChangeModelContent(trackAiActivity);
+            window.editor.onMouseMove(trackAiActivity);
+        }
+        if (window.editorRight) {
+            window.editorRight.onDidChangeModelContent(trackAiActivity);
+        }
+
     } catch (fatalError) {
         console.error("[GX-BOOTSTRAP] FATAL ERROR during initialization:", fatalError);
         alert(`Errore critico avvio: ${fatalError.message}`);

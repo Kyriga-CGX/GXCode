@@ -43,6 +43,7 @@ export const state = {
     isMarketplaceOpen: false,
     activeMarketplaceTab: 'agents',
     isSettingsOpen: false,
+    isSettingsMobileMenuOpen: true,
     isAddingRepo: false,
     activeSettingsTab: 'preferences',
     activeLeftTab: localStorage.getItem('gx-active-left-tab') || 'explorer',
@@ -152,7 +153,24 @@ export const state = {
 
     // Tomcat Backend Setup Assistant (v1.4.6)
     detectedModules: [],
-    activeModuleId: localStorage.getItem('gx-active-module-id') || null
+    activeModuleId: localStorage.getItem('gx-active-module-id') || null,
+
+    // AI Companion State (Evolution 2026)
+    aiCompanion: (() => {
+        const defaults = {
+            installed: false,
+            enabled: localStorage.getItem('gx-ai-companion-enabled') === 'true',
+            status: 'unconfigured', // unconfigured, checking, ready, downloading, on, off, helping
+            stats: { cpu: '', totalRam: 0, freeRam: 0, gpu: '', disk: '', suitability: null },
+            model: localStorage.getItem('gx-ai-companion-model') || 'qwen2.5-coder:1.5b',
+            installPath: localStorage.getItem('gx-ai-companion-install-path') || '',
+            modelsPath: localStorage.getItem('gx-ai-companion-models-path') || '',
+            isIlluminated: false,
+            lastActivity: Date.now()
+        };
+        const saved = JSON.parse(localStorage.getItem('gx-ai-companion-state') || '{}');
+        return { ...defaults, ...saved };
+    })()
 };
 
 console.log("[GX-STATE] Global State initialized from Storage.");
@@ -206,6 +224,13 @@ export const setState = (newState) => {
     if (newState.hasOwnProperty('projectGuidelines')) localStorage.setItem('gx-project-guidelines', state.projectGuidelines);
     if (newState.hasOwnProperty('activeSkillCategory')) localStorage.setItem('gx-active-skill-category', state.activeSkillCategory);
     if (newState.hasOwnProperty('activeModuleId')) localStorage.setItem('gx-active-module-id', state.activeModuleId || '');
+    if (newState.hasOwnProperty('aiCompanion')) {
+        localStorage.setItem('gx-ai-companion-state', JSON.stringify(state.aiCompanion));
+        localStorage.setItem('gx-ai-companion-enabled', state.aiCompanion.enabled);
+        localStorage.setItem('gx-ai-companion-install-path', state.aiCompanion.installPath);
+        localStorage.setItem('gx-ai-companion-models-path', state.aiCompanion.modelsPath);
+        localStorage.setItem('gx-ai-companion-model', state.aiCompanion.model);
+    }
     
     if (newState.hasOwnProperty('bottomPanelHeight')) localStorage.setItem('gx-bottom-panel-height', state.bottomPanelHeight);
 

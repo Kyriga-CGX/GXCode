@@ -1543,3 +1543,229 @@ body {
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+
+/* --- AI COMPANION: SLIME & BUBBLE (Evolution 2026) --- */
+
+.slime-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slime-body {
+    width: 60px;
+    height: 50px;
+    background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+    border-radius: 50% 50% 40% 40% / 60% 60% 40% 40%;
+    position: relative;
+    box-shadow: 0 10px 25px rgba(168, 85, 247, 0.4), inset 0 -5px 15px rgba(0, 0, 0, 0.2);
+    animation: slime-breathe 3s infinite ease-in-out;
+    transition: all 0.5s ease;
+}
+
+.slime-container.helping .slime-body {
+    background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
+    transform: scale(1.1);
+    box-shadow: 0 0 30px rgba(236, 72, 153, 0.5);
+}
+
+.slime-container.thinking .slime-body {
+    animation: slime-think 2s infinite ease-in-out;
+}
+
+.slime-container.sleeping .slime-body {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+    filter: grayscale(0.5);
+    opacity: 0.6;
+    animation: slime-sleep 5s infinite ease-in-out;
+}
+
+.slime-eye {
+    width: 6px;
+    height: 6px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 18px;
+    transition: all 0.3s ease;
+}
+
+.slime-eye.left { left: 16px; }
+.slime-eye.right { right: 16px; }
+
+.slime-container.thinking .slime-eye {
+    height: 2px;
+    border-radius: 2px;
+}
+
+.slime-container.helping .slime-eye {
+    width: 8px;
+    height: 8px;
+}
+
+.slime-mouth {
+    width: 10px;
+    height: 4px;
+    border-bottom: 2px solid #fff;
+    border-radius: 0 0 10px 10px;
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0.8;
+}
+
+.slime-shadow {
+    width: 40px;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 50%;
+    position: absolute;
+    bottom: -15px;
+    filter: blur(4px);
+    animation: slime-shadow-breathe 3s infinite ease-in-out;
+}
+
+.ai-bubble {
+    transition: all 0.4s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+    transform-origin: bottom center;
+}
+
+.ai-bubble.visible {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+}
+
+.ai-bubble:not(.visible) {
+    opacity: 0;
+    transform: scale(0.8) translateY(10px);
+    pointer-events: none;
+}
+
+/* Animations */
+@keyframes slime-breathe {
+    0%, 100% { transform: scaleY(1) translateY(0); }
+    50% { transform: scaleY(0.9) translateY(4px); }
+}
+
+@keyframes slime-shadow-breathe {
+    0%, 100% { transform: scaleX(1); opacity: 0.4; }
+    50% { transform: scaleX(1.2); opacity: 0.2; }
+}
+
+@keyframes slime-think {
+    0%, 100% { transform: rotate(-5deg) scale(1); }
+    50% { transform: rotate(5deg) scale(1.05); }
+}
+
+@keyframes slime-sleep {
+    0%, 100% { transform: scale(0.95); opacity: 0.5; }
+    50% { transform: scale(0.9); opacity: 0.3; }
+}
+
+/* Tab AI Glow */
+#sidebar-tab-ai-companion.llm-active::after {
+    box-shadow: 0 0 25px #a855f7 !important;
+    background: #a855f7 !important;
+}
+
+/* --- RESPONSIVE SETTINGS MODAL (V3 - Standard CSS) --- */
+.settings-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: #06080a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    pointer-events: auto;
+    animation: fadeIn 0.3s ease;
+}
+
+.settings-modal-box {
+    background: var(--bg-main);
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--border-subtle);
+}
+
+.settings-sidebar {
+    width: 100%;
+    border-right: 1px solid var(--border-dim);
+    background: var(--bg-side);
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-main);
+}
+
+/* DESKTOP VIEW (Breakpoints matching standard md: 768px) */
+@media (min-width: 768px) {
+    .settings-modal-overlay { padding: 24px; }
+    
+    .settings-modal-box {
+        max-width: 896px; /* 4xl */
+        height: 640px;
+        border-radius: 16px;
+        flex-direction: row;
+        box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+    }
+
+    .settings-sidebar {
+        width: 256px !important;
+        display: flex !important;
+    }
+
+    .settings-content-area {
+        display: flex !important;
+    }
+
+    .settings-mobile-only {
+        display: none !important;
+    }
+}
+
+/* MOBILE VIEW (Master-Detail transitions) */
+@media (max-width: 767px) {
+    .settings-modal-overlay { padding: 0; }
+    
+    .settings-modal-overlay[data-mobile-menu-open="true"] .settings-content-area {
+        display: none !important;
+    }
+    
+    .settings-modal-overlay[data-mobile-menu-open="false"] .settings-sidebar {
+        display: none !important;
+    }
+
+    .settings-desktop-only {
+        display: none !important;
+    }
+}
+
+.animate-slide-in-left {
+    animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}

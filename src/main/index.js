@@ -29,6 +29,7 @@ if (!gotTheLock) {
     const { registerAiHandlers } = require('./ipc/aiHandlers');
     const { registerSystemHandlers } = require('./ipc/systemHandlers');
     const { registerDebugHandlers } = require('./ipc/debugHandlers');
+    const { registerAiCompanionHandlers } = require('./ipc/aiCompanionHandlers');
 
     // --- HARDENING (Local AppData Redirection) ---
 // Note: userData is set earlier in the root main.js script
@@ -89,6 +90,7 @@ app.whenReady().then(() => {
     registerAiHandlers(GOOGLE_CONFIG);
     registerSystemHandlers();
     registerDebugHandlers(mainWindow);
+    registerAiCompanionHandlers();
 
     // 4. Auto-Updater Logic (Safe Mode)
     if (app.isPackaged) {

@@ -1,5 +1,6 @@
 import { state, subscribe, setState } from '../core/state.js';
 import { api } from '../core/api.js';
+import { renderAiCompanion } from './aiCompanion.js';
 
 /**
  * Gestore centralizzato delle azioni della Sidebar (v8.0 Professional)
@@ -440,16 +441,7 @@ export const renderSidebar = () => {
             `;
         }).join('');
     } else if (activeTab === 'companion') {
-        container.innerHTML = `
-            <div class="flex flex-col items-center justify-center p-8 text-center gap-4 mt-6 animate-fade-in">
-                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 to-indigo-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 text-3xl animate-pulse shadow-[0_0_30px_rgba(168,85,247,0.2)]">✨</div>
-                <div class="space-y-1">
-                    <h3 class="text-[11px] font-bold text-gray-200 uppercase tracking-widest">AI Companion</h3>
-                    <p class="text-[10px] text-gray-500 leading-relaxed uppercase tracking-tighter">Attiva assistenti dedicati dal Marketplace per potenziare il tuo flusso di lavoro.</p>
-                </div>
-                <button onclick="setState({ isMarketplaceOpen: true, activeMarketplaceTab: 'ai-companion' })" class="mt-2 px-8 py-2.5 bg-purple-600 hover:bg-purple-500 text-white shadow-[0_4px_20px_rgba(168,85,247,0.4)] text-[10px] font-bold rounded-xl transition-all active:scale-95 uppercase tracking-widest">Sfoglia Companion</button>
-            </div>
-        `;
+        renderAiCompanion(container);
     }
 };
 
