@@ -1,5 +1,6 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
+const os = require('os');
 const { createApiServer } = require('./api/server');
 const { registerAiRoutes } = require('./api/routes/ai');
 const { registerExternalRoutes } = require('./api/routes/external');
@@ -12,6 +13,16 @@ const { registerAiHandlers } = require('./ipc/aiHandlers');
 const { registerSystemHandlers } = require('./ipc/systemHandlers');
 const { registerDebugHandlers } = require('./ipc/debugHandlers');
 
+// --- HARDENING (Local AppData Redirection) ---
+// Note: userData is set earlier in the root main.js script
+const localDataPath = app.getPath('userData');
+console.log("[GX-BOOTSTRAP] Main process using UserData:", localDataPath);
+
+// Inject into Persistence Service (Fulfillment of Relative Path principle)
+const { setBaseDir, ensureDataMigration } = require('./services/persistence');
+setBaseDir(path.join(localDataPath, 'persistence'));
+ensureDataMigration();
+
 const GOOGLE_CONFIG = {
     clientId: "411114937479-jfa96807lfiuo4rlnqd362598s7dj5va.apps.googleusercontent.com",
     clientSecret: "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",
@@ -22,6 +33,7 @@ function createWindow() {
     const win = new BrowserWindow({
         width: 1400, height: 900, frame: false,
         icon: path.join(app.getAppPath(), "APP", "assets", "logo.png"),
+        backgroundColor: '#0d1117',
         webPreferences: { 
             nodeIntegration: false, 
             contextIsolation: true, 
@@ -61,14 +73,21 @@ app.whenReady().then(() => {
     registerSystemHandlers();
     registerDebugHandlers(mainWindow);
 
-    // 4. Auto-Updater Logic
-    const { autoUpdater } = require('electron-updater');
-    autoUpdater.on('update-available', () => {
-        mainWindow.webContents.send('update-available');
-    });
-    autoUpdater.on('update-downloaded', () => {
-        mainWindow.webContents.send('update-ready-to-install');
-    });
+    // 4. Auto-Updater Logic (Safe Mode)
+    if (app.isPackaged) {
+        try {
+            const { autoUpdater } = require('electron-updater');
+            autoUpdater.on('update-available', () => {
+                mainWindow.webContents.send('update-available');
+            });
+            autoUpdater.on('update-downloaded', () => {
+                mainWindow.webContents.send('update-ready-to-install');
+            });
+            autoUpdater.checkForUpdatesAndNotify();
+        } catch (e) {
+            console.warn("AutoUpdater init failed:", e.message);
+        }
+    }
 
     // 5. Final Load
     // We already called win.loadFile(path.join(process.cwd(), "APP", "index.html")) inside createWindow.

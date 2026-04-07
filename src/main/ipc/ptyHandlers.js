@@ -27,11 +27,18 @@ function registerPtyHandlers() {
         let shell = process.platform === 'win32' ? 'powershell.exe' : 'bash';
         let args = [];
 
-        if (shellType === 'claude') { shell = 'npx.cmd'; args = ['@anthropic-ai/claude-code']; }
-        else if (shellType === 'gemini') { 
-            shell = process.platform === 'win32' ? 'gemini.cmd' : 'gemini'; 
-        }
-        else if (shellType === 'bash' && process.platform === 'win32') {
+        if (shellType === 'claude') { 
+            shell = 'npx.cmd'; args = ['@anthropic-ai/claude-code']; 
+        } else if (shellType === 'gemini') {
+            // Auto-check and install logic for gemini-cli
+            if (process.platform === 'win32') {
+                shell = 'powershell.exe';
+                args = ['-NoExit', '-Command', "if (Get-Command gemini -ErrorAction SilentlyContinue) { gemini } else { Write-Host '[GX-GEMINI] Agente non trovato. Installazione in corso...'; npm install -g @google/gemini-cli; gemini }"];
+            } else {
+                shell = 'bash';
+                args = ['-c', "if command -v gemini >/dev/null 2>&1; then gemini; else echo '[GX-GEMINI] Agente non trovato. Installazione in corso...'; npm install -g @google/gemini-cli; gemini; fi"];
+            }
+        } else if (shellType === 'bash' && process.platform === 'win32') {
             const commonPaths = ['C:\\Program Files\\Git\\bin\\bash.exe', 'C:\\Program Files (x86)\\Git\\bin\\bash.exe', path.join(os.homedir(), 'AppData\\Local\\Programs\\Git\\bin\\bash.exe')];
             for (const p of commonPaths) { if (fs.existsSync(p)) { shell = p; break; } }
         }

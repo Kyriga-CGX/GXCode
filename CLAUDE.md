@@ -18,3 +18,6 @@ Per ottimizzare costi e prestazioni, Claude deve seguire queste linee guida nell
 - **Claude 3 Haiku**: Analisi di file esistenti, analisi del brief di progetto (es: `Brief Analyzer`) e compiti di sola lettura.
 - **Claude 3.5 Sonnet**: Generazione di nuovo codice, creazione di layout e documenti (es: `UI Copy Generator`, `Layout Architect`), applicazione di modifiche e refactoring.
 - **Claude 3 Opus**: Gestione di agenti complessi, delega di compiti a skill esterne e creazione/orchestrazione di sotto-agenti specializzati.
+
+## CURRENT WORKSPACE CONTEXT
+- **Root Path**: ./ (Current project root)

@@ -488,52 +488,52 @@ const renderTabContent = () => {
         case 'folders':
             return `
                 <div class="space-y-8">
-                    <div>
-                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4" data-i18n="settings.folders.title">${window.t('settings.folders.title')}</h4>
-                        <p class="text-[10px] text-gray-500 mb-6" data-i18n="settings.folders.desc">${window.t('settings.folders.desc')}</p>
-                        
-                        <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl group hover:border-blue-500/30 transition shadow-inner">
-                            <h4 class="text-[11px] font-bold text-gray-300 uppercase tracking-widest mb-2" data-i18n="settings.folders.systemDir">${window.t('settings.folders.systemDir')}</h4>
-                            <p class="text-[10px] text-gray-500 mb-6 leading-relaxed" data-i18n="settings.folders.systemDirDesc">${window.t('settings.folders.systemDirDesc')}</p>
-                            
-                            <button onclick="window.electronAPI.openGxCodeFolder()" class="w-full py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex items-center justify-center gap-3 group-hover:border-blue-500/50 shadow-md">
-                                <span class="text-xl group-hover:scale-110 transition-transform">📂</span>
-                                <span class="text-[11px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-blue-400 transition-colors" data-i18n="settings.folders.openFolder">${window.t('settings.folders.openFolder')}</span>
-                            </button>
-                        </div>
+                                <div class="px-5 py-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl group hover:border-blue-500/30 transition shadow-inner">
+                                    <h4 class="text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-1.5" data-i18n="settings.folders.systemDir">${window.t('settings.folders.systemDir')}</h4>
+                                    <p class="text-[9px] text-gray-500 mb-4 leading-relaxed" data-i18n="settings.folders.systemDirDesc">${window.t('settings.folders.systemDirDesc')}</p>
+                                    
+                                    <button onclick="window.electronAPI.openGxCodeFolder()" class="w-full py-3 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex items-center justify-center gap-3 group-hover:border-blue-500/50 shadow-md">
+                                        <span class="text-lg group-hover:scale-110 transition-transform">📂</span>
+                                        <span class="text-[10px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-blue-400 transition-colors" data-i18n="settings.folders.openFolder">${window.t('settings.folders.openFolder')}</span>
+                                    </button>
+                                </div>
 
                         <!-- Nuova Sezione Project Context (Linee Guida) -->
-                        <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl group hover:border-blue-500/30 transition shadow-inner mt-4">
-                            <h4 class="text-[11px] font-bold text-gray-300 uppercase tracking-widest mb-2">Project Context (Linee Guida)</h4>
-                            <p class="text-[10px] text-gray-500 mb-4 leading-relaxed">Inserisci qui le regole e i contesti del progetto. Queste informazioni verranno inserite nel file CLAUDE.md per istruire l'AI sul tuo modo di lavorare.</p>
-                            
-                            <textarea id="settings-project-guidelines" 
-                                      class="w-full h-32 bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-xl p-4 text-[11px] text-gray-300 outline-none focus:border-blue-500/50 transition-all font-mono custom-scrollbar mb-4"
-                                      placeholder="Es: Usa solo arrow functions, mantieni i componenti piccoli, segui lo schema X...">${state.projectGuidelines || ''}</textarea>
-                            
-                            <button onclick="window.saveProjectGuidelines()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-xl transition shadow-lg shadow-blue-900/20 uppercase tracking-widest">Salva Linee Guida</button>
-                        </div>
+                                <div class="px-5 py-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl group hover:border-blue-500/30 transition shadow-inner">
+                                    <h4 class="text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-1.5">Project Context (Linee Guida)</h4>
+                                    <p class="text-[9px] text-gray-500 mb-3 leading-relaxed">Inserisci qui le regole e i contesti del progetto. Queste informazioni verranno inserite nel file CLAUDE.md per istruire l'AI sul tuo modo di lavorare.</p>
+                                    
+                                    <textarea id="settings-project-guidelines" 
+                                              class="w-full h-24 bg-[var(--bg-main)] border border-[var(--border-subtle)] rounded-xl p-3 text-[10px] text-gray-300 outline-none focus:border-blue-500/50 transition-all font-mono custom-scrollbar mb-3"
+                                              placeholder="Es: Usa solo arrow functions, mantieni i componenti piccoli, segui lo schema X...">${state.projectGuidelines || ''}</textarea>
+                                    
+                                    <button onclick="window.saveProjectGuidelines()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-bold rounded-xl transition shadow-lg shadow-blue-900/20 uppercase tracking-widest">Salva Linee Guida</button>
+                                </div>
 
                         <!-- Sezione CLAUDE.md -->
-                        <div class="p-6 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-2xl group hover:border-orange-500/30 transition shadow-inner mt-4">
-                            <h4 class="text-[11px] font-bold text-gray-300 uppercase tracking-widest mb-2">Accesso Rapido File Context</h4>
-                            <p class="text-[10px] text-gray-500 mb-6 leading-relaxed">Visualizza i file di istruzioni dinamiche che sincronizzano questo progetto con Claude Code.</p>
-                            
-                            <div class="grid grid-cols-3 gap-3">
-                                <button onclick="window.openClaudeMetadata('CLAUDE.md')" class="py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex flex-col items-center justify-center gap-2 group-hover:border-orange-400/50 shadow-md">
-                                    <span class="text-xl group-hover:scale-110 transition-transform">📝</span>
-                                    <span class="text-[10px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-orange-400 transition-colors">CLAUDE.md</span>
-                                </button>
-                                <button onclick="window.openClaudeMetadata('GX_IDENTITY.md')" class="py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex flex-col items-center justify-center gap-2 group-hover:border-blue-400/50 shadow-md">
-                                    <span class="text-xl group-hover:scale-110 transition-transform">🤖</span>
-                                    <span class="text-[10px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-blue-400 transition-colors">GX_IDENTITY</span>
-                                </button>
-                                <button onclick="window.openGeminiMetadata()" class="py-4 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex flex-col items-center justify-center gap-2 group-hover:border-teal-400/50 shadow-md">
-                                    <span class="text-xl group-hover:scale-110 transition-transform">💎</span>
-                                    <span class="text-[10px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-teal-400 transition-colors">GEMINI.md</span>
-                                </button>
-                            </div>
-                        </div>
+                                <div class="px-5 py-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-xl group hover:border-orange-500/30 transition shadow-inner">
+                                    <h4 class="text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-1.5">Accesso Rapido File Context</h4>
+                                    <p class="text-[9px] text-gray-500 mb-4 leading-relaxed">Visualizza i file di istruzioni dinamiche che sincronizzano questo progetto con gli agenti AI.</p>
+                                    
+                                    <div class="grid grid-cols-2 gap-2.5">
+                                        <button onclick="window.openAiMetadata('CLAUDE.md')" class="py-3 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex items-center justify-center gap-2 group-hover:border-orange-400/50 shadow-md">
+                                            <span class="text-base group-hover:scale-110 transition-transform">📝</span>
+                                            <span class="text-[10px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-orange-400 transition-colors">CLAUDE.md</span>
+                                        </button>
+                                        <button onclick="window.openAiMetadata('GX_IDENTITY.md')" class="py-3 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex items-center justify-center gap-2 group-hover:border-blue-400/50 shadow-md">
+                                            <span class="text-base group-hover:scale-110 transition-transform">🤖</span>
+                                            <span class="text-[10px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-blue-400 transition-colors">GX_IDENTITY</span>
+                                        </button>
+                                        <button onclick="window.openAiMetadata('GEMINI.md')" class="py-3 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex items-center justify-center gap-2 group-hover:border-blue-500/50 shadow-md">
+                                            <span class="text-base group-hover:scale-110 transition-transform">💎</span>
+                                            <span class="text-[10px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-blue-500 transition-colors">GEMINI.md</span>
+                                        </button>
+                                        <button onclick="window.openAiMetadata('GEMINI_IDENTITY.md')" class="py-3 bg-[#0d1117] hover:bg-black text-gray-300 border border-gray-700 rounded-xl transition-all flex items-center justify-center gap-2 group-hover:border-purple-500/50 shadow-md">
+                                            <span class="text-base group-hover:scale-110 transition-transform">🆔</span>
+                                            <span class="text-[10px] font-bold tracking-widest uppercase text-gray-200 group-hover:text-purple-500 transition-colors">G-IDENTITY</span>
+                                        </button>
+                                    </div>
+                                </div>
                     </div>
                 </div>
             `;
@@ -933,8 +933,10 @@ const renderSettingsModal = (newSt, prevSt) => {
                            <h3 id="settings-header-title" class="font-black text-white text-sm uppercase tracking-wide">${activeTab?.label || ''}</h3>
                         </div>
                     </div>
-                    <div id="settings-content-body" class="flex-1 overflow-y-auto p-10 custom-scrollbar bg-[var(--bg-main)]">
-                        ${renderTabContent()}
+                    <div id="settings-content-body" class="flex-1 overflow-y-auto p-8 custom-scrollbar bg-[var(--bg-main)] min-h-0 relative">
+                        <div class="settings-tab-wrapper animate-fade-in-up">
+                            ${renderTabContent()}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -972,63 +974,23 @@ window.applySkin = (skinId) => {
     setState({ isSettingsOpen: true }); // Re-render logic
 };
 
-window.openClaudeMetadata = async (fileName = 'CLAUDE.md') => {
+window.openAiMetadata = async (fileName = 'CLAUDE.md') => {
     const workspacePath = state.activeTerminalFolder || state.workspaceData?.path;
     if (!workspacePath) {
         window.gxToast("Nessun progetto aperto nel workspace.", 'error');
         return;
     }
     
-    const separator = workspacePath.includes('\\') ? '\\' : '/';
-    let targetFile = "";
-    
-    if (fileName === 'CLAUDE.md') {
-        targetFile = workspacePath.endsWith(separator) ? `${workspacePath}CLAUDE.md` : `${workspacePath}${separator}CLAUDE.md`;
-    } else {
-        // Altrimenti è GX_IDENTITY che sta in .claudecode
-        targetFile = workspacePath.endsWith(separator) ? `${workspacePath}.claudecode${separator}GX_IDENTITY.md` : `${workspacePath}${separator}.claudecode${separator}GX_IDENTITY.md`;
-    }
-    
     try {
-        await window.electronAPI.shellOpenPath(targetFile);
+        const success = await window.electronAPI.openAiMetadata(workspacePath, fileName);
+        if (!success) throw new Error("File missing");
     } catch (err) {
-        window.gxToast(`File ${fileName} non ancora generato.`, 'warning');
+        window.gxToast(`File ${fileName} non ancora generato. Prova ad avviare l'Agente corrispondente.`, 'warning');
     }
 };
 
-window.openGeminiMetadata = async () => {
-    const rawPath = state.activeTerminalFolder || state.workspaceData?.path;
-    if (!rawPath) {
-        window.gxToast("Nessun progetto aperto.", 'error');
-        return;
-    }
-    
-    // Sanitizzazione uniforme del path per evitare discordanze Windows/Electron
-    const workspacePath = rawPath.replace(/\\/g, '/');
-    const targetFile = workspacePath.endsWith('/') ? `${workspacePath}GEMINI.md` : `${workspacePath}/GEMINI.md`;
-    
-    try {
-        await window.electronAPI.shellOpenPath(targetFile);
-    } catch (err) {
-        // Fallback: Tentativo di generazione al volo se il file manca
-        if (window.ensureGeminiMetadata) {
-            console.log("[GEMINI] File mancante, avvio generazione on-demand...");
-            const success = await window.ensureGeminiMetadata(workspacePath);
-            if (success) {
-                // Piccolo ritardo per permettere al FS di Windows di indicizzare il file
-                setTimeout(async () => {
-                    try {
-                        await window.electronAPI.shellOpenPath(targetFile);
-                    } catch (retryErr) {
-                        window.gxToast(`Impossibile aprire GEMINI.md dopo la generazione.`, 'error');
-                    }
-                }, 300);
-                return;
-            }
-        }
-        window.gxToast(`GEMINI.md non ancora generato.`, 'warning');
-    }
-};
+// Aliases for legacy compatibility
+window.openClaudeMetadata = window.openAiMetadata;
 
 window.setPref = (key, value) => {
     console.log(`Setting preference ${key} to ${value}`);

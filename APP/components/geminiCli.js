@@ -1,13 +1,12 @@
 import { state } from '../core/state.js';
 import { triggerGlowOnMention } from '../core/uiUtils.js';
-import { ensureGeminiMetadata } from '../core/geminiApi.js';
 
+let glowedInThisSession = new Set();
 let geminiTerm = null;
 let geminiFitAddon = null;
 let isStarted = false;
-let glowedInThisSession = new Set();
 
-// Mention Autocomplete State
+// Mention Autocomplete State (Replicating Claude pattern)
 let isMentionMode = false;
 let mentionPrefix = '';
 let selectedIndex = 0;
@@ -18,51 +17,15 @@ export const initGeminiCli = async () => {
     if (!container) return;
     if (geminiTerm) return; 
 
-    // Elite HUD Creation
-    const hud = document.createElement('div');
-    hud.className = 'gemini-nano-hud';
-    
-    // Recupero Tier Dinamici
-    const tiers = state.geminiConfig?.tiers || {};
-    const modelHint = (tiers.balanced || 'pro').split('-').pop().toUpperCase();
-
-    hud.innerHTML = `
-        <div class="hud-item pr-3">
-            <span class="hud-label-nano">WKS</span>
-            <span class="hud-value-nano">${state.workspaceData?.name || 'Local'}</span>
-        </div>
-        <div class="hud-dot-sep"></div>
-        <div class="hud-item pl-3 pr-3" title="Strategy: Dynamic Elite | Tiers: ${tiers.fast} / ${tiers.balanced}">
-            <span class="hud-label-nano">CHRONOS</span>
-            <span class="hud-value-nano text-blue-400">${modelHint}</span>
-        </div>
-        <div class="flex-grow"></div>
-        <div class="hud-item">
-            <div class="hud-status-dot active scale-[0.7]"></div>
-            <span class="hud-value-nano opacity-40 uppercase text-[7px] tracking-widest pl-1">Link</span>
-        </div>
-    `;
-    container.appendChild(hud);
-
     geminiTerm = new Terminal({
         cursorBlink: true,
-        fontSize: 13,
-        fontWeight: 'normal',
-        fontFamily: '"JetBrains Mono", "Fira Code", Menlo, Monaco, monospace',
-        letterSpacing: 0.5,
+        fontSize: 12,
+        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
         theme: {
-            background: 'transparent',
-            foreground: '#e2e8f0',
-            cursor: '#3b82f6',
-            selection: 'rgba(59, 130, 246, 0.4)',
-            black: '#1a1a1a',
-            red: '#f87171',
-            green: '#34d399',
-            yellow: '#fbbf24',
-            blue: '#60a5fa',
-            magenta: '#c084fc',
-            cyan: '#22d3ee',
-            white: '#f1f5f9'
+            background: '#06080a',
+            foreground: '#d1d5db',
+            cursor: '#3b82f6', // Gemini Blue
+            selection: 'rgba(59, 130, 246, 0.3)'
         },
         allowProposedApi: true
     });
@@ -71,34 +34,17 @@ export const initGeminiCli = async () => {
     geminiTerm.loadAddon(geminiFitAddon);
     geminiTerm.open(container);
     
-    // Boot animation
-    container.classList.add('terminal-elite-ready');
-    
-    const ro = new ResizeObserver(() => {
-        if (container.offsetWidth > 0) {
-            geminiFitAddon.fit();
-            if (geminiTerm) geminiTerm.refresh(0, geminiTerm.rows - 1);
-        }
-    });
+    const ro = new ResizeObserver(() => geminiFitAddon.fit());
     ro.observe(container);
-
-    // Initial fit force after 300ms
-    setTimeout(() => {
-        if (container.offsetWidth > 0) {
-            geminiFitAddon.fit();
-            geminiTerm.refresh(0, geminiTerm.rows - 1);
-        }
-    }, 300);
 
     geminiTerm.onData(data => window.electronAPI.terminalWrite('gemini-cli', data));
     window.electronAPI.onTerminalData('gemini-cli', (data) => {
         geminiTerm.write(data);
-        // Attiva l'illuminazione in barra laterale quando Gemini cita Agenti/Skill
         triggerGlowOnMention(data, state, glowedInThisSession);
     });
     geminiTerm.onResize(size => window.electronAPI.terminalResize('gemini-cli', size.cols, size.rows));
 
-    // Monitor input per tag @mentions
+    // Monitor input for @mentions (Claude Pattern)
     geminiTerm.onKey(e => {
         const { domEvent } = e;
         if (isMentionMode) {
@@ -108,15 +54,13 @@ export const initGeminiCli = async () => {
         }
     });
 
-    // Gestione tasti speciali per navigazione suggerimenti
     geminiTerm.attachCustomKeyEventHandler((e) => {
         if (isMentionMode && filteredItems.length > 0) {
             if (['ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Tab'].includes(e.key)) {
-                return false; // Intercettiamo per il popup
+                return false; 
             }
         }
         if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'V')) return false;
-
         if (e.ctrlKey && e.key === 'c' && geminiTerm.hasSelection()) {
             window.electronAPI.clipboardWrite(geminiTerm.getSelection());
             return false;
@@ -147,77 +91,81 @@ export const startGeminiCli = async () => {
     if (isStarted) return;
     if (!geminiTerm) await initGeminiCli();
 
-    // Controllo se il comando gemini è disponibile nel sistema
-    let isCommandFound = false;
-    try {
-        const check = await window.electronAPI.executeCommand('gemini --version');
-        if (check && !check.error) {
-            isCommandFound = true;
-        }
-    } catch (err) {}
-
-    if (!isCommandFound) {
-        geminiTerm.write('\r\n\x1b[33m[!] Gemini CLI non rilevato. Avvio installazione automatica...\x1b[0m\r\n');
-        geminiTerm.write('\x1b[34m[NPM] Esecuzione: npm install -g @google/gemini-cli\x1b[0m\r\n');
-        geminiTerm.write('\x1b[90mQuesta operazione potrebbe richiedere alcuni secondi...\x1b[0m\r\n');
-
-        try {
-            // Esegue l'installazione globale
-            const installRes = await window.electronAPI.executeCommand('npm install -g @google/gemini-cli');
-            
-            if (installRes && !installRes.error) {
-                geminiTerm.write('\x1b[32m[✓] Installazione completata con successo!\x1b[0m\r\n');
-                // Piccola pausa per dare tempo al sistema di "vedere" il nuovo comando
-                await new Promise(r => setTimeout(r, 1500));
-            } else {
-                const errorMsg = installRes ? (installRes.stderr || installRes.error) : "Errore sconosciuto";
-                throw new Error(errorMsg);
-            }
-        } catch (err) {
-            geminiTerm.write('\r\n\x1b[31;1mERRORE INSTALLAZIONE AUTOMATICA\x1b[0m\r\n');
-            geminiTerm.write(`\x1b[33mDettaglio: ${err.message}\x1b[0m\r\n`);
-            geminiTerm.write('\x1b[38;5;244mIl comando ha fallito. Prova ad eseguire manualmente in un terminale esterno:\x1b[0m\r\n');
-            geminiTerm.write('   \x1b[1;36mnpm install -g @google/gemini-cli\x1b[0m\r\n');
-            geminiTerm.write('\x1b[90m(Potrebbe essere necessario eseguire come Amministratore)\x1b[0m\r\n');
-            return;
-        }
-    }
-
-    geminiTerm.write('\x1b[32m[✓] Gemini CLI rilevato. Avvio sessione interattiva...\x1b[0m\r\n');
-
-    const workspacePath = state.workspaceData?.path || "";
-    const activeModel = state.geminiConfig?.activeModel || "gemini-1.5-pro";
+    geminiTerm.write('\x1b[34m[GXCODE] Avvio Gemini AI CLI Agent...\x1b[0m\r\n');
     
-    // Genera/Aggiorna il file di identità GEMINI.md
+    const workspacePath = state.activeTerminalFolder || state.workspaceData?.path;
+
+    // Automatismi Context (GEMINI.md) - Replicating Claude logic
     await ensureGeminiMetadata(workspacePath);
-    
-    // Update HUD (Se i puntatori ID sono stati iniettati)
-    const wsLabel = document.getElementById('ghud-workspace');
-    const modelLabel = document.getElementById('ghud-model');
-    const statusDot = document.getElementById('ghud-status');
-    const statusText = document.getElementById('ghud-status-text');
 
-    if (wsLabel) wsLabel.textContent = workspacePath.split(/[\\/]/).pop() || 'GX Workspace';
-    if (modelLabel) modelLabel.textContent = activeModel;
-    if (statusDot) statusDot.classList.add('active');
-    if (statusText) statusText.textContent = 'syncing';
-
-    // Passiamo la API Key dallo stato per l'autenticazione automatica
-    const res = await window.electronAPI.terminalCreate('gemini-cli', 'gemini', workspacePath, state.geminiApiKey);
+    const res = await window.electronAPI.terminalCreate('gemini-cli', 'gemini', workspacePath);
     
     if (res && res.success) {
         isStarted = true;
-        if (statusText) statusText.textContent = 'active';
         geminiTerm.focus();
     } else {
-        if (statusDot) statusDot.classList.remove('active');
-        if (statusText) statusText.textContent = 'failed';
         geminiTerm.write(`\r\n\x1b[31;1mERRORE AVVIO GEMINI CLI\x1b[0m\r\n`);
         geminiTerm.write(`\x1b[33mDettaglio: ${res.error}\x1b[0m\r\n`);
     }
 };
 
-// --- LOGICA AUTOCOMPLETE @MENTIONS (REPLICA CLAUDE) ---
+/**
+ * Automatismi Gemini: Genera il file GEMINI.md con il contesto del workspace.
+ */
+const ensureGeminiMetadata = async (workspacePath) => {
+    if (!workspacePath) return;
+    try {
+        const gitInfo = await window.electronAPI.getGitRemote(workspacePath);
+        const projectIdentity = gitInfo.success ? gitInfo.url : workspacePath.split(/[/\\]/).filter(Boolean).pop();
+        const openFiles = state.openFiles || [];
+        const activeFile = state.activeFileId;
+
+        const getRelative = (fullPath) => {
+            if (!fullPath) return 'None';
+            const normPath = fullPath.replace(/\\/g, '/');
+            const normRoot = workspacePath.replace(/\\/g, '/');
+            let relative = normPath.replace(normRoot, '');
+            if (relative.startsWith('/')) relative = relative.substring(1);
+            return relative || '.';
+        };
+
+        let content = `# ${projectIdentity.toUpperCase()} - GEMINI CONTEXT\n\n`;
+        content += `This project is being managed by **GXCode IDE**.\n\n`;
+        content += `## PROJECT IDENTITY\n`;
+        content += `- **Remote/ID**: \`${projectIdentity}\`\n`;
+        content += `- **Local Root**: \`.\` (Current Working Directory)\n\n`;
+
+        if (openFiles.length > 0) {
+            content += `## CURRENT WORKSPACE CONTEXT\n`;
+            content += `- **Open Editor Tabs**:\n`;
+            openFiles.forEach(f => {
+                const relPath = getRelative(f.path);
+                content += `  - \`${relPath}\` ${f.path === activeFile ? '**[ACTIVE]**' : ''}\n`;
+            });
+            content += `\n`;
+        }
+        
+        content += `\n## INSTRUCTIONS\n`;
+        content += `1. Prioritize working with the current open files provided in this context.\n`;
+        content += `2. Refer to GEMINI_IDENTITY.md for project-specific directives.\n`;
+
+        const separator = workspacePath.includes('\\') ? '\\' : '/';
+        const targetFile = workspacePath.endsWith(separator) ? `${workspacePath}GEMINI.md` : `${workspacePath}${separator}GEMINI.md`;
+        await window.electronAPI.fsWriteFile(targetFile, content);
+        console.log("[GX-GEMINI] GEMINI.md generated.");
+    } catch (err) {
+        console.error("[GX-GEMINI] Metadata Error:", err);
+    }
+};
+
+export const focusGeminiCli = () => {
+    if (geminiTerm) {
+        geminiTerm.focus();
+        setTimeout(() => geminiFitAddon.fit(), 100);
+    }
+};
+
+// --- MENTION AUTOCOMPLETE LOGIC (Mirroring Claude) ---
 
 const startMentionMode = () => {
     isMentionMode = true;
@@ -230,11 +178,8 @@ const startMentionMode = () => {
 const stopMentionMode = () => {
     isMentionMode = false;
     mentionPrefix = '';
-    const popup = document.getElementById('claude-mentions-popup');
-    if (popup) {
-        popup.style.display = 'none';
-        popup.classList.add('hidden');
-    }
+    const popup = document.getElementById('gemini-mentions-popup');
+    if (popup) popup.style.display = 'none';
 };
 
 const updateFilteredItems = () => {
@@ -242,10 +187,7 @@ const updateFilteredItems = () => {
         ...(state.agents || []).map(a => ({ ...a, type: 'agent' })),
         ...(state.skills || []).map(s => ({ ...s, type: 'skill' }))
     ];
-    filteredItems = all.filter(i => 
-        i.name.toLowerCase().includes(mentionPrefix.toLowerCase())
-    ).slice(0, 8);
-    
+    filteredItems = all.filter(i => i.name.toLowerCase().includes(mentionPrefix.toLowerCase())).slice(0, 8);
     if (selectedIndex >= filteredItems.length) selectedIndex = 0;
 };
 
@@ -261,9 +203,8 @@ const handleMentionKey = (e) => {
     } else if (e.key === 'Escape' || e.key === ' ') {
         stopMentionMode();
     } else if (e.key === 'Backspace') {
-        if (mentionPrefix.length === 0) {
-            stopMentionMode();
-        } else {
+        if (mentionPrefix.length === 0) stopMentionMode();
+        else {
             mentionPrefix = mentionPrefix.slice(0, -1);
             updateFilteredItems();
             renderMentions();
@@ -272,72 +213,40 @@ const handleMentionKey = (e) => {
         mentionPrefix += e.key;
         updateFilteredItems();
         renderMentions();
-
-        if (e.key === '/' || e.key === '\\' || (filteredItems.length === 0 && mentionPrefix.length > 2)) {
-            stopMentionMode();
-        }
+        if (e.key === '/' || e.key === '\\') stopMentionMode();
     }
 };
 
 const showMentionsPopup = () => {
-    const popup = document.getElementById('claude-mentions-popup');
+    const popup = document.getElementById('gemini-mentions-popup');
     if (!popup || !geminiTerm) return;
 
-    const core = geminiTerm._core;
-    const charWidth = core._renderService?.dimensions?.actualCellWidth || 7.8;
-    const charHeight = core._renderService?.dimensions?.actualCellHeight || 15;
-    
+    const termRect = geminiTerm.element.getBoundingClientRect();
     const cursorX = geminiTerm.buffer.active.cursorX;
     const cursorY = geminiTerm.buffer.active.cursorY;
+    const charWidth = 7.2; // Default approx
+    const charHeight = 15; // Default approx
     
-    const termRect = geminiTerm.element.getBoundingClientRect();
-    
-    let left = termRect.left + (cursorX * charWidth);
-    let top = termRect.top + (cursorY * charHeight) + 20;
-
-    if (top + 250 > window.innerHeight) {
-        top = termRect.top + (cursorY * charHeight) - 260;
-    }
-    if (left + 220 > window.innerWidth) {
-        left = window.innerWidth - 230;
-    }
-
-    popup.style.left = `${Math.max(10, left)}px`;
-    popup.style.top = `${Math.max(10, top)}px`;
+    popup.style.left = `${termRect.left + (cursorX * charWidth)}px`;
+    popup.style.top = `${termRect.top + (cursorY * charHeight) + 20}px`;
     popup.style.display = 'flex';
-    popup.classList.remove('hidden');
-    popup.style.zIndex = '999999';
-    
     renderMentions();
 };
 
 const renderMentions = () => {
-    const popup = document.getElementById('claude-mentions-popup');
+    const popup = document.getElementById('gemini-mentions-popup');
     if (!popup) return;
-
     if (filteredItems.length === 0) {
-        popup.innerHTML = `<div class="p-2 text-[10px] text-gray-500 uppercase tracking-widest text-center">Nessun risultato</div>`;
+        popup.innerHTML = `<div class="p-2 text-[10px] text-gray-500 text-center">Nessun risultato</div>`;
         return;
     }
-
-    popup.innerHTML = filteredItems.map((item, idx) => {
-        const isSelected = idx === selectedIndex;
-        const icon = item.type === 'agent' ? '🤖' : '⚡';
-        return `
-            <div class="mention-item ${isSelected ? 'selected' : ''}" onclick="window.selectGeminiMentionByIndex(${idx})">
-                <div class="mention-icon ${item.type}">${icon}</div>
-                <div class="mention-info">
-                    <div class="mention-name">${item.name}</div>
-                    <div class="mention-type">${item.type}</div>
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    window.selectGeminiMentionByIndex = (idx) => {
-        selectedIndex = idx;
-        selectMention();
-    };
+    popup.innerHTML = filteredItems.map((item, idx) => `
+        <div class="mention-item ${idx === selectedIndex ? 'selected' : ''}" onclick="window.selectGeminiMention(${idx})">
+            <div class="mention-name">${item.name}</div>
+            <div class="mention-type">${item.type}</div>
+        </div>
+    `).join('');
+    window.selectGeminiMention = (idx) => { selectedIndex = idx; selectMention(); };
 };
 
 const selectMention = () => {
@@ -347,11 +256,4 @@ const selectMention = () => {
         window.electronAPI.terminalWrite('gemini-cli', remaining + ' ');
     }
     stopMentionMode();
-};
-
-export const focusGeminiCli = () => {
-    if (geminiTerm) {
-        geminiTerm.focus();
-        setTimeout(() => geminiFitAddon.fit(), 100);
-    }
 };

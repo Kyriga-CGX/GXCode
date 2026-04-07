@@ -145,20 +145,27 @@
 
 /* --- UTILITIES 2026 --- */
 .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(59, 130, 246, 0.2);
+    background: rgba(59, 130, 246, 0.4);
     border-radius: 10px;
+    border: 2px solid var(--bg-main);
     transition: all 0.3s;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(59, 130, 246, 0.5);
+    background: rgba(59, 130, 246, 0.7);
+}
+.settings-tab-wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 /* --- THEME FIXES & OVERWRITES --- */
