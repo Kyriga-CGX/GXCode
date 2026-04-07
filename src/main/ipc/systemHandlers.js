@@ -93,7 +93,7 @@ function registerSystemHandlers() {
         if (lower.startsWith('claude')) currentAiContext = '.claude';
         else if (lower.startsWith('gemini')) currentAiContext = '.gemini';
         return new Promise(resolve => {
-            exec(cmd, { cwd: customCwd || process.cwd() }, (err, stdout, stderr) => resolve({ error: err?.message, stdout, stderr }));
+            exec(cmd, { cwd: customCwd || os.homedir() }, (err, stdout, stderr) => resolve({ error: err?.message, stdout, stderr }));
         });
     });
 

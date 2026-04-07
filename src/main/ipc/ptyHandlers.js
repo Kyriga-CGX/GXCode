@@ -22,7 +22,7 @@ function registerPtyHandlers() {
                 }
             } catch (e) { console.error("PTY Workspace parse error:", e.message); }
         }
-        if (!safeCwd || !fs.existsSync(safeCwd)) safeCwd = process.cwd();
+        if (!safeCwd || !fs.existsSync(safeCwd)) safeCwd = os.homedir();
 
         let shell = process.platform === 'win32' ? 'powershell.exe' : 'bash';
         let args = [];

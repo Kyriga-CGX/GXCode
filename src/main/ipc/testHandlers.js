@@ -2,6 +2,7 @@ const { ipcMain, app } = require('electron');
 const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { WebSocketServer } = require('ws');
 let debugServer = null;
 let activeDebugSocket = null;
@@ -46,16 +47,16 @@ function registerTestHandlers(mainWindow) {
         }
     }
 
-    // Restore Debugger Control IPCs
-    ipcMain.on('debug-continue', () => {
+    // Listen to internal debugger events (from debugHandlers.js)
+    ipcMain.on('gx-debug:internal:continue', () => {
         if (activeDebugSocket) activeDebugSocket.send(JSON.stringify({ type: 'resume' }));
     });
-    ipcMain.on('debug-step', () => {
+    ipcMain.on('gx-debug:internal:step', () => {
         if (activeDebugSocket) activeDebugSocket.send(JSON.stringify({ type: 'resume' }));
     });
-    ipcMain.on('debug-stop', () => {
-        ipcMain.emit('playwright-debug-stop');
-        if (activeDebugSocket) activeDebugSocket.send(JSON.stringify({ type: 'resume' }));
+    ipcMain.on('gx-debug:internal:stop', () => {
+        ipcMain.emit('playwright-debug-stop'); // Kill child process
+        if (activeDebugSocket) activeDebugSocket.send(JSON.stringify({ type: 'resume' })); // Release loop
     });
 
     ipcMain.handle('scan-tests', async (event, rootPath) => {
@@ -155,7 +156,7 @@ function registerTestHandlers(mainWindow) {
     });
 
     ipcMain.handle('run-test', async (event, workspacePath, filePath, testName) => {
-        const ideNodeModules = path.join(process.cwd(), 'node_modules');
+        const ideNodeModules = path.join(app.getAppPath(), 'node_modules');
         const env = { 
             ...process.env, 
             NODE_PATH: (process.env.NODE_PATH ? process.env.NODE_PATH + path.delimiter : '') + ideNodeModules

@@ -3,10 +3,12 @@ const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+const os = require('os');
+
 function registerGitHandlers() {
     const runGit = (args, workspacePath) => {
         try {
-            const cwd = workspacePath || process.cwd();
+            const cwd = workspacePath || os.homedir();
             return execSync(`git ${args}`, { encoding: 'utf8', cwd });
         } catch (err) {
             console.error(`[GIT] Error running: git ${args}`, err.message);
@@ -62,7 +64,7 @@ function registerGitHandlers() {
 
     ipcMain.handle('git-show-head', async (event, workspacePath, filePath) => {
         try {
-            const rel = path.relative(workspacePath || process.cwd(), filePath).replace(/\\/g, '/');
+            const rel = path.relative(workspacePath || os.homedir(), filePath).replace(/\\/g, '/');
             const output = runGit(`show "HEAD:${rel}"`, workspacePath);
             return { success: true, content: output };
         } catch (err) { return { success: false, error: err.message }; }

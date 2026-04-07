@@ -28,7 +28,7 @@ graph TD
 
 ---
 
-## 🎯 Funzionalità Elite (v1.4.5)
+## 🎯 Funzionalità Elite (v1.5.9)
 
 ### 🤖 Hub AI Multimodale & Locale
 - **GX AI (Ollama)**: Integrazione locale profonda con supporto streaming e **Tool-Use**. L'AI può leggere, creare e modificare file nel tuo progetto in tempo reale in totale sicurezza.
