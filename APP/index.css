@@ -723,6 +723,22 @@
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
+/* AI Companions Toggle Animation */
+#ai-companions-container {
+    max-width: 500px;
+    opacity: 1;
+}
+
+#ai-companions-container.ai-companions-hidden {
+    max-width: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#toggle-ai-chevron.chevron-rotated {
+    transform: rotate(180deg);
+}
+
 /* Sidebar Split Logic */
 #sidebar-primary-section {
     min-height: 150px;
@@ -742,6 +758,13 @@
     cursor: row-resize;
     position: relative;
     z-index: 100;
+    transition: background-color 0.2s ease, height 0.2s ease;
+}
+
+#sidebar-drag-bar:hover,
+#sidebar-drag-bar.resizing-active {
+    background-color: rgba(59, 130, 246, 0.4) !important;
+    height: 4px !important;
 }
 
 #sidebar-drag-bar::after {
@@ -774,7 +797,9 @@
     margin: -2px 0;
 }
 
-.resizer:hover, .resizing {
+.resizer:hover, 
+.resizer.resizing-active,
+body.resizing .resizer {
     background-color: rgba(59, 130, 246, 0.4) !important;
 }
 
@@ -1667,6 +1692,129 @@ body {
     50% { transform: scale(0.9); opacity: 0.3; }
 }
 
+/* Slime Hands - hidden by default */
+.slime-hand {
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(135deg, #a855f7, #6366f1);
+    border-radius: 50%;
+    position: absolute;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);
+    pointer-events: none;
+}
+
+.slime-hand.left-hand { 
+    left: -5px;
+    bottom: 10px;
+}
+
+.slime-hand.right-hand { 
+    right: -5px;
+    bottom: 10px;
+}
+
+/* Thinking: hands on chin (mentre pensa) */
+.slime-container.thinking .slime-hand {
+    opacity: 1;
+    bottom: 18px;
+}
+
+.slime-container.thinking .slime-hand.left-hand {
+    left: 8px;
+    transform: rotate(-30deg) translateY(-5px);
+}
+
+.slime-container.thinking .slime-hand.right-hand {
+    right: 8px;
+    transform: rotate(30deg) translateY(-5px);
+}
+
+/* Deleting: hands up (mani in alto mentre cancella) */
+.slime-container.deleting .slime-hand {
+    opacity: 1;
+    bottom: auto;
+    top: -5px;
+    animation: slime-hands-up 0.6s ease-in-out infinite alternate;
+}
+
+.slime-container.deleting .slime-hand.left-hand {
+    left: 5px;
+    animation-delay: 0s;
+}
+
+.slime-container.deleting .slime-hand.right-hand {
+    right: 5px;
+    animation-delay: 0.15s;
+}
+
+@keyframes slime-hands-up {
+    0% { transform: translateY(0) scale(1); }
+    100% { transform: translateY(-8px) scale(1.1); }
+}
+
+/* Helping with hands (mani eccitate mentre aiuta) */
+.slime-container.helping .slime-hand {
+    opacity: 1;
+    bottom: 5px;
+    animation: slime-excited 0.5s ease-in-out infinite alternate;
+}
+
+.slime-container.helping .slime-hand.left-hand {
+    left: 0px;
+    transform: rotate(-20deg);
+}
+
+.slime-container.helping .slime-hand.right-hand {
+    right: 0px;
+    transform: rotate(20deg);
+}
+
+@keyframes slime-excited {
+    0% { transform: translateY(0) scale(1); }
+    100% { transform: translateY(-5px) scale(1.05); }
+}
+
+/* Update helping state to include hands gradient */
+.slime-container.helping .slime-hand {
+    background: linear-gradient(135deg, #ec4899, #a855f7);
+    box-shadow: 0 2px 8px rgba(236, 72, 153, 0.6);
+}
+
+/* Excited: mani che salutano (quando auto-corregge con successo) */
+.slime-container.excited .slime-hand {
+    opacity: 1;
+    bottom: 15px;
+    animation: slime-wave 0.4s ease-in-out infinite alternate;
+}
+
+.slime-container.excited .slime-hand.left-hand {
+    left: -8px;
+    transform: rotate(-40deg);
+    animation-delay: 0s;
+}
+
+.slime-container.excited .slime-hand.right-hand {
+    right: -8px;
+    transform: rotate(40deg);
+    animation-delay: 0.2s;
+}
+
+@keyframes slime-wave {
+    0% { transform: translateY(0) rotate(-40deg); }
+    100% { transform: translateY(-10px) rotate(-20deg); }
+}
+
+.slime-container.excited .slime-body {
+    animation: slime-bounce 0.6s ease-in-out infinite;
+}
+
+@keyframes slime-bounce {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-8px) scale(1.05); }
+}
+
 /* Tab AI Glow */
 #sidebar-tab-ai-companion.llm-active::after {
     box-shadow: 0 0 25px #a855f7 !important;
@@ -1769,3 +1917,45 @@ body {
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+/* AI Suggestion Pills */
+.ai-suggestion-pill {
+    animation: slideInRight 0.3s ease-out;
+    transition: all 0.2s ease;
+}
+
+.ai-suggestion-pill:hover {
+    transform: translateX(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Custom Scrollbar per Pills */
+#ai-suggestion-pills-container .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+#ai-suggestion-pills-container .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+}
+
+#ai-suggestion-pills-container .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+#ai-suggestion-pills-container .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+

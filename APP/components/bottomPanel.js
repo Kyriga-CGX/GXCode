@@ -1,8 +1,10 @@
 import { state, setState, subscribe } from '../core/state.js';
 import { initCustomAi } from './customAi.js';
 import { initOllama } from './ollama.js';
+import { initPorts } from './ports.js';
 import { initClaudeCli, startClaudeCli, focusClaudeCli } from './claudeCli.js';
 import { initGeminiCli, startGeminiCli, focusGeminiCli } from './geminiCli.js';
+import { initQwenCli, startQwenCli, focusQwenCli } from './qwenCli.js';
 
 export const initBottomPanel = () => {
     const btnTerminal = document.getElementById('tab-terminal-btn');
@@ -10,6 +12,16 @@ export const initBottomPanel = () => {
     const btnOutput = document.getElementById('tab-output-btn');
     const btnClose = document.getElementById('close-panel-btn');
     const bottomPanel = document.getElementById('bottom-panel');
+    const btnToggleAI = document.getElementById('toggle-ai-companions-btn');
+    const aiContainer = document.getElementById('ai-companions-container');
+    const chevron = document.getElementById('toggle-ai-chevron');
+
+    // Restore AI companions visibility state from localStorage
+    const aiCompanionsHidden = localStorage.getItem('gx-ai-companions-hidden') === 'true';
+    if (aiCompanionsHidden && aiContainer) {
+        aiContainer.classList.add('ai-companions-hidden');
+        chevron?.classList.add('chevron-rotated'); // Ruota a < quando nascosto
+    }
 
     const panes = {
         terminal: document.getElementById('pane-terminal'),
@@ -20,6 +32,7 @@ export const initBottomPanel = () => {
         'ai-ollama': document.getElementById('pane-ollama'),
         'ai-gemini': document.getElementById('pane-agent'), // Reindirizzato all'Agente
         'ai-claude': document.getElementById('pane-ai-claude'),
+        'ai-qwen': document.getElementById('pane-ai-qwen'),
         'ai-custom': document.getElementById('pane-ai-custom')
     };
 
@@ -32,6 +45,7 @@ export const initBottomPanel = () => {
         'ai-ollama': document.getElementById('tab-ollama-btn'),
         'ai-gemini': document.getElementById('tab-gemini-btn'),
         'ai-claude': document.getElementById('tab-claude-btn'),
+        'ai-qwen': document.getElementById('tab-qwen-btn'),
         'ai-custom': document.getElementById('tab-custom-ai-btn')
     };
 
@@ -73,6 +87,16 @@ export const initBottomPanel = () => {
                     startClaudeCli();
                     focusClaudeCli();
                 }
+            } else if (tabId === 'ai-qwen') {
+                console.log("[BOTTOM-PANEL] Switching to Qwen tab");
+                console.log("[BOTTOM-PANEL] startQwenCli type:", typeof startQwenCli);
+                if (typeof startQwenCli === 'function') {
+                    console.log("[BOTTOM-PANEL] Calling startQwenCli()...");
+                    startQwenCli();
+                    focusQwenCli();
+                } else {
+                    console.error("[BOTTOM-PANEL] startQwenCli is NOT a function!");
+                }
             } else if (tabId === 'ai-ollama') {
                 if (window.scrollOllamaToBottom) window.scrollOllamaToBottom();
             }
@@ -96,17 +120,27 @@ export const initBottomPanel = () => {
         };
     }
 
+    // Toggle AI Companions visibility
+    if (btnToggleAI && aiContainer && chevron) {
+        btnToggleAI.onclick = () => {
+            const isHidden = aiContainer.classList.toggle('ai-companions-hidden');
+            chevron.classList.toggle('chevron-rotated', isHidden);
+            localStorage.setItem('gx-ai-companions-hidden', isHidden);
+        };
+    }
+
     // Drag bar per ridimensionamento manuale (Horizontal)
     const dragBar = document.getElementById('terminal-drag-bar');
     if (dragBar && bottomPanel) {
         let isResizing = false;
-        
+
         // Applica altezza iniziale dallo stato
         bottomPanel.style.height = `${state.bottomPanelHeight}px`;
 
         dragBar.addEventListener('mousedown', (e) => {
             isResizing = true;
             document.body.classList.add('resizing');
+            dragBar.classList.add('resizing-active');
             document.body.style.cursor = 'row-resize';
             document.body.style.userSelect = 'none';
         });
@@ -115,11 +149,11 @@ export const initBottomPanel = () => {
             if (!isResizing) return;
             const windowHeight = window.innerHeight;
             const newHeight = windowHeight - e.clientY;
-            
+
             // Vincoli: 36px - 80% altezza schermo
             if (newHeight >= 36 && newHeight < (windowHeight * 0.8)) {
                 setState({ bottomPanelHeight: Math.round(newHeight) });
-                
+
                 // Se superiamo una certa soglia, consideriamo non più minimizzato
                 if (newHeight > 50 && state.isTerminalMinimized) {
                     setState({ isTerminalMinimized: false });
@@ -131,6 +165,7 @@ export const initBottomPanel = () => {
             if (isResizing) {
                 isResizing = false;
                 document.body.classList.remove('resizing');
+                dragBar.classList.remove('resizing-active');
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
                 // Trigger resize event per xterm.js e Monaco
@@ -149,7 +184,8 @@ export const initBottomPanel = () => {
     // Inizializza logic Custom AI, Gemini e Ports
     initOllama();
     initPorts();
-    // Claude CLI e Gemini CLI
+    // Claude CLI, Gemini CLI e Qwen CLI
     initClaudeCli();
     initGeminiCli();
+    initQwenCli();
 };

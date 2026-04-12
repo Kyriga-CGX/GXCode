@@ -195,6 +195,7 @@
             "title": "Preferenze Editor",
             "autoSave": "Salvataggio Automatico",
             "autoSaveDesc": "Salva automaticamente i file dopo le modifiche",
+            "autoSaveInterval": "Intervallo Auto-Save",
             "fontSize": "Dimensione Font Editor",
             "tabSize": "Dimensione Tab",
             "wordWrap": "A Capo Automatico",

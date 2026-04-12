@@ -5,6 +5,7 @@ const os = require('os');
 const { setupWatcher, clearAllWatchers } = require('../services/watcher');
 const { updateClaudeContext, updateGeminiContext } = require('../services/context');
 const { getAiContext } = require('../services/persistence');
+const autoCorrectionService = require('../services/autoCorrectionService');
 
 function registerFsHandlers(mainWindow) {
     const sortFiles = (files) => {
@@ -223,13 +224,99 @@ function registerFsHandlers(mainWindow) {
         } catch (e) { return `Errore lettura: ${e.message}`; }
     });
 
-    ipcMain.handle('fs-write-file', async (event, filePath, content) => {
+    ipcMain.handle('fs-write-file', async (event, filePath, content, options = {}) => {
         try {
             const dir = path.dirname(filePath);
             if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-            fs.writeFileSync(filePath, content, 'utf8');
-            return { success: true };
-        } catch (e) { return { error: e.message }; }
+
+            // AUTO-CORRECTION POLICY:
+            // - Auto-save (mentre scrivi): NESSUNA validazione/correzione
+            // - Manual save (Ctrl+S): validazione + auto-correction
+            // - Idle trigger: validazione + auto-correction (gestito da AI reactivity)
+            let finalContent = content;
+            let wasFixed = false;
+            let correctedContent = null;
+
+            const isAutoSave = options?.isAutoSave === true;
+            const isIdleTrigger = options?.isIdleTrigger === true;
+            const isManualSave = !isAutoSave && !isIdleTrigger;
+
+            // Only validate on manual saves (Ctrl+S), NOT during typing
+            if (isManualSave) {
+                try {
+                    const correctionResult = await autoCorrectionService.validateAndFix(filePath, content);
+
+                    if (correctionResult.fixed && correctionResult.success) {
+                        finalContent = correctionResult.code;
+                        correctedContent = correctionResult.code;
+                        wasFixed = true;
+
+                        if (global.mainWindow && !global.mainWindow.isDestroyed()) {
+                            global.mainWindow.webContents.send('file-auto-corrected', {
+                                filePath,
+                                fixed: true,
+                                autoFixed: correctionResult.autoFixed || false,
+                                aiFixed: correctionResult.aiFixed || false,
+                                correctedContent: correctedContent,
+                                message: 'File auto-corretto prima del salvataggio'
+                            });
+                        }
+                    } else if (!correctionResult.success && correctionResult.errors.length > 0) {
+                        if (global.mainWindow && !global.mainWindow.isDestroyed()) {
+                            global.mainWindow.webContents.send('file-save-error', {
+                                filePath,
+                                errors: correctionResult.errors,
+                                message: 'File salvato con errori di sintassi'
+                            });
+                        }
+                    }
+                } catch (validationError) {
+                    console.error('[AUTO-CORRECTION] Validation error:', validationError.message);
+                }
+            } else if (isAutoSave) {
+                console.log(`[AUTO-SAVE] Skipping validation (user is typing): ${path.basename(filePath)}`);
+            } else if (isIdleTrigger) {
+                console.log(`[IDLE] Running validation for: ${path.basename(filePath)}`);
+            }
+
+            // SAFETY CHECK: Never overwrite with empty content
+            if (finalContent === '' || finalContent === null || finalContent === undefined) {
+                console.error('[FS-WRITE] REJECTED: Attempted to write empty content to', filePath);
+                return {
+                    error: 'Scrittura rifiutata: il contenuto è vuoto',
+                    rejected: true
+                };
+            }
+
+            // SAFETY CHECK: If file exists, don't overwrite with significantly smaller content
+            if (fs.existsSync(filePath)) {
+                const existingContent = fs.readFileSync(filePath, 'utf8');
+                const existingLines = existingContent.split('\n').filter(l => l.trim()).length;
+                const newLines = finalContent.split('\n').filter(l => l.trim()).length;
+
+                if (existingLines > 10 && newLines < existingLines * 0.5) {
+                    console.warn(`[FS-WRITE] WARNING: Content shrinking (${existingLines} → ${newLines} lines)`);
+                    if (global.mainWindow && !global.mainWindow.isDestroyed()) {
+                        global.mainWindow.webContents.send('file-save-warning', {
+                            filePath,
+                            existingLines,
+                            newLines,
+                            message: `Attenzione: il file sta diminuendo (${existingLines} → ${newLines} righe)`
+                        });
+                    }
+                }
+            }
+
+            fs.writeFileSync(filePath, finalContent, 'utf8');
+
+            if (wasFixed) {
+                autoCorrectionService.trackFix(filePath, wasFixed, 0);
+            }
+
+            return { success: true, fixed: wasFixed };
+        } catch (e) {
+            return { error: e.message };
+        }
     });
 
     ipcMain.handle('fs-create-file', async (event, dirPath, name) => {
@@ -375,6 +462,32 @@ function registerFsHandlers(mainWindow) {
         }
 
         return results;
+    });
+
+    // Auto-correction control handlers
+    ipcMain.handle('auto-correction:set-enabled', async (event, enabled) => {
+        autoCorrectionService.setEnabled(enabled);
+        return { success: true, enabled };
+    });
+
+    ipcMain.handle('auto-correction:get-status', async () => {
+        return {
+            enabled: autoCorrectionService.enabled,
+            maxRetries: autoCorrectionService.maxRetries
+        };
+    });
+
+    ipcMain.handle('auto-correction:get-stats', async (event, filePath) => {
+        return autoCorrectionService.getFixStats(filePath);
+    });
+
+    ipcMain.handle('auto-correction:clear-history', async (event, filePath) => {
+        if (filePath) {
+            autoCorrectionService.clearHistory(filePath);
+        } else {
+            autoCorrectionService.clearAllHistory();
+        }
+        return { success: true };
     });
 }
 

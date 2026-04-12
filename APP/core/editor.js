@@ -162,6 +162,21 @@ export const initEditor = () => {
     window.editorRight = editorRight;
     window.getActiveEditorSide = getActiveEditorSide;
     window.setActiveEditorSide = setActiveEditorSide;
+
+    // AI REACTIVITY: Setup triggers per editor principale
+    setupAiReactivityTriggers(editor);
+    if (editorRight) setupAiReactivityTriggers(editorRight);
+
+    // IDLE VALIDATION: Validates code after user stops typing (5s idle)
+    // This ensures AI only intervenes when user is done writing
+    if (state.aiCompanion?.enabled) {
+        setupIdleValidation(editor);
+        if (editorRight) setupIdleValidation(editorRight);
+    }
+
+    // AUTO-SAVE: Initialize auto-save system
+    setupAutoSave();
+
     console.log("[GX-EDITOR] Editor System Initialized.");
 };
 
@@ -236,11 +251,255 @@ export const handleSave = async (ed) => {
     if (!activeFileId) return;
     const content = ed.getValue();
     try {
-        await window.electronAPI.fsWriteFile(activeFileId, content);
-        if (window.gxToast) window.gxToast("Salvataggio completato", "success");
+        // Set slime to "thinking" expression before save
+        if (window.setSlimeExpression) {
+            window.setSlimeExpression('thinking', 3000);
+        }
+
+        const saveResult = await window.electronAPI.fsWriteFile(activeFileId, content);
+
+        // NOTE: The actual editor update with corrected content happens in the 
+        // 'file-auto-corrected' event listener below (instant update from backend)
+        
+        // Check if file was auto-corrected
+        if (saveResult?.fixed) {
+            if (window.gxToast) {
+                window.gxToast("✓ File auto-corretto durante il salvataggio", "success");
+            }
+        } else {
+            if (window.gxToast) window.gxToast("✓ Salvataggio completato", "success");
+        }
+
+        // AI REACTIVITY: Trigger analisi post-save
+        if (window.electronAPI.aiReactivityAnalyze && state.aiCompanion?.enabled) {
+            const cursorPos = ed.getPosition();
+            window.electronAPI.aiReactivityAnalyze({
+                filePath: activeFileId,
+                code: content,
+                cursorLine: cursorPos?.lineNumber || 1,
+                trigger: 'onSave',
+                lintErrors: []
+            });
+        }
     } catch (err) {
         if (window.gxToast) window.gxToast(err.message, "error");
     }
+};
+
+// Auto-save timer management
+let autoSaveTimer = null;
+let autoSaveEnabled = localStorage.getItem('gx-autosave') !== 'false';
+let autoSaveInterval = parseInt(localStorage.getItem('gx-autosave-interval') || '2000');
+
+export const setupAutoSave = () => {
+    // Clear existing timer
+    if (autoSaveTimer) {
+        clearInterval(autoSaveTimer);
+        autoSaveTimer = null;
+    }
+
+    // Read current settings
+    autoSaveEnabled = localStorage.getItem('gx-autosave') !== 'false';
+    autoSaveInterval = parseInt(localStorage.getItem('gx-autosave-interval') || '2000');
+
+    if (!autoSaveEnabled) {
+        console.log('[GX-EDITOR] Auto-save disabled');
+        return;
+    }
+
+    console.log(`[GX-EDITOR] Auto-save enabled with ${autoSaveInterval}ms interval`);
+
+    // Setup change listeners for both editors
+    const setupAutoSaveForEditor = (ed) => {
+        if (!ed) return;
+
+        ed.onDidChangeModelContent(() => {
+            if (!autoSaveEnabled) return;
+
+            // Clear existing timer
+            if (autoSaveTimer) clearTimeout(autoSaveTimer);
+
+            // Set new timer
+            autoSaveTimer = setTimeout(async () => {
+                const activeFileId = state.activeFileId;
+                if (!activeFileId) return;
+
+                const content = ed.getValue();
+                try {
+                    // IMPORTANT: Pass isAutoSave flag to skip validation
+                    const saveResult = await window.electronAPI.fsWriteFile(activeFileId, content, { isAutoSave: true });
+
+                    // Check if file was auto-corrected (shouldn't happen with auto-save)
+                    if (saveResult?.fixed) {
+                        console.log('[GX-EDITOR] Auto-saved with correction:', activeFileId);
+                        if (window.gxToast) {
+                            window.gxToast("File auto-corretto durante l'auto-salvataggio", "info");
+                        }
+                    } else {
+                        console.log('[GX-EDITOR] Auto-saved:', activeFileId);
+                    }
+                } catch (err) {
+                    console.error('[GX-EDITOR] Auto-save failed:', err);
+                }
+            }, autoSaveInterval);
+        });
+    };
+
+    setupAutoSaveForEditor(editor);
+    setupAutoSaveForEditor(editorRight);
+};
+
+// Listen for settings changes
+subscribe((newState, oldState) => {
+    // Re-setup auto-save when preferences change
+    const autoSave = localStorage.getItem('gx-autosave');
+    const interval = localStorage.getItem('gx-autosave-interval');
+    if (autoSave !== null || interval !== null) {
+        setupAutoSave();
+    }
+});
+
+// Export saveActiveFile for global access
+export const saveActiveFile = async () => {
+    const activeEditor = getActiveEditorSide() === 'right' ? editorRight : editor;
+    if (!activeEditor) {
+        if (window.gxToast) window.gxToast("Nessun editor attivo", "warning");
+        return;
+    }
+    await handleSave(activeEditor);
+};
+
+// Make it globally accessible
+window.saveActiveFile = saveActiveFile;
+window.setupAutoSave = setupAutoSave;
+
+// AI REACTIVITY: Idle detection per analisi proattiva
+let idleTimer = null;
+const IDLE_TIMEOUT = 2500; // 2.5 secondi
+
+// Idle validation timer - triggers AI validation only when user stops typing
+let idleValidationTimer = null;
+const IDLE_VALIDATION_TIMEOUT = 5000; // 5 seconds of idle before validating
+
+export const setupAiReactivityTriggers = (ed) => {
+    // DISABLED: AI reactivity causes Ollama timeouts and is not needed
+    // Rule-based auto-correction handles syntax errors without AI
+    console.log('[AI-REACTIVITY] Disabled (using rule-based auto-correction instead)');
+    return;
+    
+    /* Original code disabled:
+    if (!window.electronAPI.aiReactivityAnalyze) return;
+
+    // Trigger on content change (debounced idle detection)
+    ed.onDidChangeModelContent(() => {
+        // Clear existing timer
+        if (idleTimer) clearTimeout(idleTimer);
+
+        // Start new idle timer for AI analysis (non-blocking, just suggestions)
+        idleTimer = setTimeout(() => {
+            if (!state.aiCompanion?.enabled) return;
+
+            const content = ed.getValue();
+            const cursorPos = ed.getPosition();
+            const activeFileId = state.activeFileId;
+
+            if (!activeFileId || !content) return;
+
+            console.log('[AI-REACTIVITY] Idle trigger - analyzing code (suggestions only)...');
+            window.electronAPI.aiReactivityAnalyze({
+                filePath: activeFileId,
+                code: content,
+                cursorLine: cursorPos?.lineNumber || 1,
+                trigger: 'onIdle',
+                lintErrors: []
+            });
+        }, IDLE_TIMEOUT);
+
+        // CRITICAL: Do NOT trigger validation while user is typing
+        // Validation only happens on manual save (Ctrl+S)
+        console.log('[AI-REACTIVITY] User is typing - skipping validation');
+    });
+
+    // Trigger on file switch
+    const originalSetModel = ed.setModel.bind(ed);
+    ed.setModel = (model) => {
+        originalSetModel(model);
+
+        if (state.aiCompanion?.enabled && model) {
+            const content = model.getValue();
+            const activeFileId = state.activeFileId;
+
+            if (activeFileId && content) {
+                console.log('[AI-REACTIVITY] File switch trigger - warming up context...');
+                window.electronAPI.aiReactivityAnalyze({
+                    filePath: activeFileId,
+                    code: content,
+                    cursorLine: 1,
+                    trigger: 'onFileSwitch',
+                    lintErrors: []
+                });
+            }
+        }
+    };
+    */
+};
+
+/**
+ * Idle Validation - Validates code after user stops typing for a while
+ * This runs AFTER the user has been idle, not during typing
+ */
+export const setupIdleValidation = (ed) => {
+    if (!ed || !state.aiCompanion?.enabled) return;
+
+    ed.onDidChangeModelContent(() => {
+        // Clear existing idle validation timer
+        if (idleValidationTimer) clearTimeout(idleValidationTimer);
+
+        // Start new idle validation timer
+        idleValidationTimer = setTimeout(async () => {
+            if (!state.aiCompanion?.enabled) return;
+
+            const activeFileId = state.activeFileId;
+            if (!activeFileId) return;
+
+            const content = ed.getValue();
+            if (!content || content.trim().length === 0) return;
+
+            console.log('[IDLE-VALIDATION] User has been idle - running validation...');
+
+            // Set slime to thinking expression
+            if (window.setSlimeExpression) {
+                window.setSlimeExpression('thinking', 5000);
+            }
+
+            try {
+                // Call validation with idle trigger flag
+                const saveResult = await window.electronAPI.fsWriteFile(activeFileId, content, {
+                    isIdleTrigger: true
+                });
+
+                // If file was auto-corrected during idle validation, update editor
+                if (saveResult?.fixed) {
+                    const correctedContent = await window.electronAPI.readFile(activeFileId);
+                    if (correctedContent && correctedContent !== content) {
+                        ed.setValue(correctedContent);
+                        console.log('[IDLE-VALIDATION] Editor updated with idle corrections');
+
+                        // Set slime to helping/excited expression
+                        if (window.setSlimeExpression) {
+                            window.setSlimeExpression('helping', 3000);
+                        }
+
+                        if (window.gxToast) {
+                            window.gxToast("✓ Codice corretto durante l'idle", "success");
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('[IDLE-VALIDATION] Error:', err);
+            }
+        }, IDLE_VALIDATION_TIMEOUT);
+    });
 };
 
 export const toggleBreakpoint = (line, type = 'standard') => {
@@ -339,3 +598,54 @@ export const getDocumentSymbols = (model) => {
     });
     return symbols;
 };
+
+// Listen for auto-correction events from backend
+if (window.electronAPI?.onFileAutoCorrected) {
+    window.electronAPI.onFileAutoCorrected((data) => {
+        console.log('[GX-EDITOR] File auto-corrected:', data.filePath);
+        
+        // If the corrected file is currently open in the editor, update it immediately
+        if (state.activeFileId === data.filePath) {
+            const activeEditor = getActiveEditorSide() === 'right' ? editorRight : editor;
+            if (activeEditor) {
+                try {
+                    // Use the corrected content directly from the event (no need to read from disk)
+                    if (data.correctedContent) {
+                        const currentContent = activeEditor.getValue();
+                        
+                        // Only update if content actually changed
+                        if (data.correctedContent !== currentContent) {
+                            activeEditor.setValue(data.correctedContent);
+                            console.log('[GX-EDITOR] Editor updated instantly with auto-corrected content');
+                            
+                            // Set slime to "helping" expression when AI auto-fixes
+                            if (window.setSlimeExpression) {
+                                window.setSlimeExpression(data.aiFixed ? 'helping' : 'excited', 3000);
+                            }
+                        }
+                    }
+                    
+                    if (window.gxToast) {
+                        window.gxToast("✓ File auto-corretto: " + (data.aiFixed ? "da AI" : "automaticamente"), "success");
+                    }
+                } catch (err) {
+                    console.error('[GX-EDITOR] Failed to update editor with auto-corrected content:', err);
+                }
+            }
+        }
+    });
+}
+
+// Listen for file save errors
+if (window.electronAPI?.onFileSaveError) {
+    window.electronAPI.onFileSaveError((data) => {
+        console.warn('[GX-EDITOR] File saved with errors:', data.filePath, data.errors);
+
+        if (window.gxToast) {
+            const errorCount = data.errors.length;
+            const errorMessages = data.errors.slice(0, 3).map(e => `Line ${e.line}: ${e.message}`).join('; ');
+            const moreText = errorCount > 3 ? ` (+${errorCount - 3} altri)` : '';
+            window.gxToast(`${errorCount} error${errorCount > 1 ? 'i' : 'e'} di sintassi: ${errorMessages}${moreText}`, "error", 6000);
+        }
+    });
+}

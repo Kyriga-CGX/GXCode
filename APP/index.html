@@ -196,6 +196,9 @@
                             <button id="btn-scan-tests" class="p-2 rounded-lg hover:bg-white/5 text-gray-500 hover:text-blue-400 transition-all active:scale-90" title="Scansiona Workspace">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.05 6.63 2.9L21 8"/><path d="M21 3v5h-5"/></svg>
                             </button>
+                            <button id="btn-force-scan" class="p-2 rounded-lg hover:bg-white/5 text-red-500 hover:text-red-400 transition-all active:scale-90 border border-red-500/30" title="FORZA SCAN (Debug)">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/></svg>
+                            </button>
                             <button id="btn-run-all-tests" class="p-2 rounded-lg hover:bg-white/5 text-gray-500 hover:text-emerald-400 transition-all active:scale-90" title="Esegui Tutti i Test">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 3 14 9-14 9V3z"/></svg>
                             </button>
@@ -281,9 +284,15 @@
                         <button id="tab-debug-console-btn" class="evolution-tab-btn h-full px-4">Debug</button>
                     </div>
                     <div class="flex items-center h-full gap-2 pr-2">
-                        <button id="tab-ollama-btn" class="evolution-pill-btn text-emerald-400">GX AI</button>
-                        <button id="tab-gemini-btn" class="evolution-pill-btn text-blue-400">Gemini</button>
-                        <button id="tab-claude-btn" class="evolution-pill-btn text-orange-400">Claude</button>
+                        <button id="toggle-ai-companions-btn" class="p-1.5 text-gray-500 hover:text-white transition-all rounded-lg hover:bg-white/5" title="Mostra/Nascondi AI Companions">
+                            <svg id="toggle-ai-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="transition-transform duration-300"><path d="m9 6 6 6-6 6"/></svg>
+                        </button>
+                        <div id="ai-companions-container" class="flex items-center h-full gap-2 transition-all duration-300 ease-in-out overflow-hidden">
+                            <button id="tab-ollama-btn" class="evolution-pill-btn text-emerald-400">GX AI</button>
+                            <button id="tab-gemini-btn" class="evolution-pill-btn text-blue-400">Gemini</button>
+                            <button id="tab-claude-btn" class="evolution-pill-btn text-orange-400">Claude</button>
+                            <button id="tab-qwen-btn" class="evolution-pill-btn text-violet-400">Qwen</button>
+                        </div>
                         <div class="h-4 w-[1px] gx-divide-theme mx-1"></div>
                         <button id="close-panel-btn" class="p-1.5 text-gray-500 hover:text-white transition-all rounded-lg hover:bg-white/5"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m18 15-6-6-6 6"/></svg></button>
                     </div>
@@ -297,6 +306,7 @@
                     <div id="pane-agent" class="absolute inset-0 hidden flex flex-col overflow-hidden bg-[#06080a]"><div id="pane-gemini-cli" class="flex-1 w-full"></div></div>
                     <div id="pane-ollama" class="absolute inset-0 hidden flex flex-col"></div>
                     <div id="pane-ai-claude" class="absolute inset-0 hidden flex flex-col overflow-hidden"><div id="pane-claude-cli" class="flex-1 w-full p-2"></div></div>
+                    <div id="pane-ai-qwen" class="absolute inset-0 hidden flex flex-col overflow-hidden"><div id="pane-qwen-cli" class="flex-1 w-full p-2"></div></div>
                     <div id="pane-ai-custom" class="absolute inset-0 hidden flex flex-col"></div>
                 </div>
             </div>
@@ -352,9 +362,12 @@
     
     <!-- Claude @Mentions Popup -->
     <div id="claude-mentions-popup" class="hidden"></div>
-    
+
     <!-- Gemini @Mentions Popup -->
     <div id="gemini-mentions-popup" class="hidden"></div>
+
+    <!-- Qwen @Mentions Popup -->
+    <div id="qwen-mentions-popup" class="hidden"></div>
     
     <script type="module" src="scripts/app.js"></script>
 </body>

@@ -55,6 +55,69 @@ const delBtn = (p) => `<button class="gx-del-btn opacity-0 group-hover:opacity-1
         <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
     </svg></button>`;
 
+// ── Git Status Badge Helpers ───────────────────────────────────────────────
+const GIT_STATUS_COLORS = {
+    'M': '#f59e0b',   // Modified - amber
+    'A': '#10b981',   // Added/Staged - emerald
+    'D': '#ef4444',   // Deleted - red
+    'U': '#3b82f6',   // Untracked - blue
+    'R': '#a855f7',   // Renamed - purple
+    'C': '#06b6d4',   // Copied - cyan
+    '??': '#3b82f6',  // Untracked (porcelain) - blue
+};
+
+const GIT_STATUS_LABELS = {
+    'M': 'M',
+    'A': 'A',
+    'D': 'D',
+    'U': 'U',
+    'R': 'R',
+    'C': 'C',
+    '??': 'U',
+};
+
+export const getGitStatusBadge = (filePath) => {
+    if (!state.gitStatus || !filePath) return '';
+    
+    const normPath = normalizePath(filePath);
+    const status = state.gitStatus[normPath];
+    
+    if (!status) return '';
+    
+    const color = GIT_STATUS_COLORS[status] || '#9ca3af';
+    const label = GIT_STATUS_LABELS[status] || status.charAt(0);
+    
+    return `<span class="git-status-badge inline-flex items-center justify-center w-[14px] h-[14px] text-[8px] font-bold rounded-sm ml-1 shrink-0" style="color: ${color}; background: ${color}22; border: 1px solid ${color}44;">${label}</span>`;
+};
+
+export const getDirectoryGitStatus = (dirPath, allFiles) => {
+    if (!state.gitStatus || !dirPath) return null;
+    
+    const normDir = normalizePath(dirPath);
+    
+    // Ora che gitStatus usa path normalizzati (slash, lowercase), possiamo fare match diretto
+    const childStatuses = Object.entries(state.gitStatus)
+        .filter(([path, status]) => {
+            const normChild = normalizePath(path);
+            return normChild.startsWith(normDir + '/');
+        })
+        .map(([, status]) => status);
+    
+    if (childStatuses.length === 0) return null;
+    
+    // Priorità: Deleted > Modified > Added > Untracked > Renamed > Copied
+    const priority = ['D', 'M', 'A', 'U', 'R', 'C', '??'];
+    for (const p of priority) {
+        if (childStatuses.includes(p)) {
+            const color = GIT_STATUS_COLORS[p] || '#9ca3af';
+            const label = GIT_STATUS_LABELS[p] || p.charAt(0);
+            return { color, label, count: childStatuses.length };
+        }
+    }
+    
+    return null;
+};
+
 export const renderFileTree = (files, depth = 0) => {
     if (!files || !Array.isArray(files) || files.length === 0) return '';
 
@@ -76,27 +139,42 @@ export const renderFileTree = (files, depth = 0) => {
     
     return sortedFiles.map(file => {
         const isDirectory = checkIsDir(file);
-                             
+
         const normItem = normalizePath(file.path);
         const isExpanded = state.expandedFolders.some(p => normalizePath(p) === normItem);
         const children = file.children || file.files || file.items;
-        
+
         const icon = isDirectory ? getFolderIcon(file.name, isExpanded) : getFileIcon(file.name);
         const isActive = state.activeFileId === file.path;
         const isSelected = state.activeExplorerItem === file.path;
+
+        // Git status badge
+        const gitBadge = isDirectory
+            ? getDirectoryGitStatus(file.path, children)
+            : getGitStatusBadge(file.path);
+
+        // Per le cartelle, mostra un pallino colorato se contiene file modificati
+        const folderGitIndicator = isDirectory && gitBadge
+            ? `<span class="git-folder-indicator w-2 h-2 rounded-full shrink-0 ml-1" style="background: ${gitBadge.color}; box-shadow: 0 0 6px ${gitBadge.color}44;"></span>`
+            : '';
+
+        // Per i file, mostra il badge con lettera
+        const fileGitBadge = !isDirectory && gitBadge
+            ? gitBadge
+            : '';
 
         const chevron = isDirectory ? `
             <svg class="text-gray-600 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                 <path d="M9 5l7 7-7 7"/>
             </svg>` : '<div class="w-[8px]"></div>';
 
-        const linesHtml = Array.from({ length: depth }, (_, i) => 
+        const linesHtml = Array.from({ length: depth }, (_, i) =>
             `<div class="hierarchy-line" style="left: -${(i + 1) * 20 - 10}px; opacity: ${1 - (i * 0.15)}"></div>`
         ).join('');
 
         return `
             <div class="flex flex-col relative" style="margin-left: ${depth === 0 ? '0' : '20px'}">
-                <div class="explorer-item-card ${isActive ? 'active' : ''} ${isSelected ? 'selected-explorer-item' : ''}" 
+                <div class="explorer-item-card ${isActive ? 'active' : ''} ${isSelected ? 'selected-explorer-item' : ''}"
                      data-path="${file.path}" data-name="${file.name}" data-is-directory="${isDirectory}"
                      draggable="true"
                      ondragstart="window.onExplorerDragStart(event, '${file.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')"
@@ -104,16 +182,18 @@ export const renderFileTree = (files, depth = 0) => {
                      ondragleave="window.onExplorerDragLeave(event)"
                      ondrop="window.onExplorerDrop(event, '${file.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', ${isDirectory})"
                      onclick="window.selectExplorerItem('${file.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', ${isDirectory}); ${isDirectory ? `window.toggleExplorerFolder('${file.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')` : `window.openFileInIDE('${file.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${file.name.replace(/'/g, "\\'")}')`}">
-                    
+
                     ${linesHtml}
-                    
+
                     <div class="flex items-center gap-2 overflow-hidden flex-1">
                         ${chevron}
                         <div class="shrink-0 flex items-center justify-center w-4 h-4 translate-y-[0.5px]">${icon}</div>
                         <span class="text-[10px] font-bold truncate tracking-tight transition-colors ${isActive || isSelected ? 'text-white' : 'text-gray-400 group-hover:text-gray-200'}">${file.name}</span>
+                        ${folderGitIndicator}
+                        ${fileGitBadge}
                     </div>
                 </div>
-                
+
                 ${isDirectory && isExpanded && children ? `
                     <div class="explorer-children-container">
                         ${renderFileTree(children, depth + 1)}

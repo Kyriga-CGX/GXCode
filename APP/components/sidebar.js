@@ -234,6 +234,7 @@ function initSidebarResizer() {
         isDragging = true;
         document.body.style.cursor = 'row-resize';
         dragBar.classList.add('bg-blue-500');
+        dragBar.classList.add('resizing-active');
     });
 
     document.addEventListener('mousemove', (e) => {
@@ -242,7 +243,7 @@ function initSidebarResizer() {
         const containerRect = container.getBoundingClientRect();
         const relativeY = e.clientY - containerRect.top;
         const containerHeight = containerRect.height;
-        
+
         // Vincoli: almeno 100px per sezione
         if (relativeY > 100 && relativeY < containerHeight - 100) {
             const percentage = (relativeY / containerHeight) * 100;
@@ -256,6 +257,7 @@ function initSidebarResizer() {
             isDragging = false;
             document.body.style.cursor = 'default';
             dragBar.classList.remove('bg-blue-500');
+            dragBar.classList.remove('resizing-active');
         }
     });
 }
@@ -268,19 +270,20 @@ function initPanelResizers() {
 
     const setupResizer = (resizer, target, side) => {
         if (!resizer || !target) return;
-        
+
         let isResizing = false;
 
         resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
             document.body.classList.add('resizing');
+            resizer.classList.add('resizing-active');
             document.body.style.cursor = 'col-resize';
             e.preventDefault();
         });
 
         window.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
-            
+
             let newWidth;
             if (side === 'left') {
                 newWidth = e.clientX - target.getBoundingClientRect().left;
@@ -302,6 +305,7 @@ function initPanelResizers() {
             if (isResizing) {
                 isResizing = false;
                 document.body.classList.remove('resizing');
+                resizer.classList.remove('resizing-active');
                 document.body.style.cursor = '';
                 // Trigger layout refresh
                 window.dispatchEvent(new Event('resize'));
@@ -506,14 +510,21 @@ export const initSidebar = () => {
     window.updateRightTabs = updateRightTabs;
     window.updateLeftTabs = updateLeftTabs;
     window.updatePanes = updatePanes;
+    window.renderSidebar = renderSidebar;
 
     subscribe((newState, oldState) => {
         // OTTIMIZZAZIONE FLICKER: Renderizza il contenuto laterale solo se cambiano i dati rilevanti
+        const oldComp = oldState?.aiCompanion || {};
+        const newComp = newState.aiCompanion || {};
         const needsResSidebar =
             newState.activeRightTab !== oldState?.activeRightTab ||
             newState.agents !== oldState?.agents ||
             newState.skills !== oldState?.skills ||
-            newState.activeSkillCategory !== oldState?.activeSkillCategory;
+            newState.activeSkillCategory !== oldState?.activeSkillCategory ||
+            newComp.installed !== oldComp.installed ||
+            newComp.modelDownloaded !== oldComp.modelDownloaded ||
+            newComp.enabled !== oldComp.enabled ||
+            newComp.status !== oldComp.status;
 
         if (needsResSidebar) {
             renderSidebar();

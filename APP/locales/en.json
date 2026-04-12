@@ -194,6 +194,7 @@
             "title": "Editor Preferences",
             "autoSave": "Auto-Save",
             "autoSaveDesc": "Automatically save files after changes",
+            "autoSaveInterval": "Auto-Save Interval",
             "fontSize": "Editor Font Size",
             "tabSize": "Tab Size",
             "wordWrap": "Word Wrap",

@@ -2540,11 +2540,17 @@ app.whenReady().then(() => {
   const ptyProcesses = {};
 
   ipcMain.handle('terminal-create', (event, id, shellType, workspacePath, apiKey) => {
-    console.log(`[TERMINAL] Requesting new PTY - ID: ${id}, Shell: ${shellType}, Workspace: ${workspacePath}`);
-    
+    console.log(`[TERMINAL] ========== REQUEST ==========`);
+    console.log(`[TERMINAL] ID: ${id}`);
+    console.log(`[TERMINAL] shellType: "${shellType}" (type: ${typeof shellType})`);
+    console.log(`[TERMINAL] workspacePath: ${workspacePath}`);
+    console.log(`[TERMINAL] apiKey: ${apiKey ? '***' : 'none'}`);
+    console.log(`[TERMINAL] platform: ${process.platform}`);
+    console.log(`[TERMINAL] =============================`);
+
     // Validazione CWD (Previene Error 267 su Windows se il path non ├¿ una directory)
     let safeCwd = workspacePath;
-    
+
     try {
       if (safeCwd && fs.existsSync(safeCwd)) {
         const stats = fs.statSync(safeCwd);
@@ -2558,7 +2564,7 @@ app.whenReady().then(() => {
               if (!path.isAbsolute(f)) f = path.resolve(path.dirname(safeCwd), f);
               safeCwd = f;
             } else {
-              safeCwd = os.homedir(); 
+              safeCwd = os.homedir();
             }
           } else {
             safeCwd = path.dirname(safeCwd);
@@ -2576,17 +2582,22 @@ app.whenReady().then(() => {
 
     if (!fs.existsSync(safeCwd)) {
        console.warn(`[TERMINAL] Final path "${safeCwd}" non esistente. Fallback su Home.`);
-       safeCwd = os.homedir(); 
+       safeCwd = os.homedir();
     }
-    
+
     console.log(`[TERMINAL] Spawning PTY process with CWD: ${safeCwd}`);
 
     let shell = process.platform === 'win32' ? 'powershell.exe' : 'bash';
     let args = [];
 
     if (shellType === 'claude') {
+      console.log(`[TERMINAL] Matched: CLAude CLI`);
       shell = process.platform === 'win32' ? 'npx.cmd' : 'npx';
       args = ['@anthropic-ai/claude-code'];
+    } else if (shellType === 'qwen') {
+      console.log(`[TERMINAL] Matched: QWEN CLI`);
+      shell = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+      args = ['-y', '@qwen-code/qwen-code'];
     } else if (shellType === 'gemini' || shellType === 'npm run gemini') {
       const scriptPath = path.join(__dirname, 'APP', 'scripts', 'gemini-cli.js');
       if (process.platform === 'win32') {

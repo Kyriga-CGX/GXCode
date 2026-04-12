@@ -19,6 +19,7 @@ import { initDebugToolbar } from '../components/debugToolbar.js';
 import { initSidebar } from '../components/sidebar.js';
 import { initGlobalEvents } from '../core/events.js';
 import { tomcatAssistant } from '../components/tomcatAssistant.js';
+import { initAiSuggestionPills } from '../components/aiSuggestionPills.js';
 import '../components/dialogs.js';
 
 // 1. ESPOSIZIONE GLOBALE IMMEDIATA (Anti-Regressione)
@@ -147,6 +148,7 @@ const bootstrap = async () => {
             { name: 'Debug', fn: initDebug },
             { name: 'DebugToolbar', fn: initDebugToolbar },
             { name: 'AiBridge', fn: initAiKnowledgeBridge },
+            { name: 'AiSuggestionPills', fn: initAiSuggestionPills },
             { name: 'TomcatAssistant', fn: tomcatAssistant.init },
             { name: 'Updater', fn: initUpdater }
         ];
@@ -235,12 +237,35 @@ const bootstrap = async () => {
 
         // --- AI COMPANION ACTIVITY TRACKER (v1.5.9) ---
         let aiActivityTimer = null;
+        let aiExpressionTimer = null;
+        
+        // Set slime expression temporarily
+        window.setSlimeExpression = (expression, duration = 2000) => {
+            if (!state.aiCompanion.enabled) return;
+
+            setState({ aiCompanion: { ...state.aiCompanion, status: expression } });
+            
+            // FIX: Update DOM immediately without waiting for subscribe debounce
+            if (window.updateCompanionSlime) window.updateCompanionSlime();
+
+            // Auto-reset to 'on' after duration
+            clearTimeout(aiExpressionTimer);
+            aiExpressionTimer = setTimeout(() => {
+                if (state.aiCompanion.enabled) {
+                    setState({ aiCompanion: { ...state.aiCompanion, status: 'on' } });
+                    if (window.updateCompanionSlime) window.updateCompanionSlime();
+                }
+            }, duration);
+        };
+
         const trackAiActivity = () => {
             if (!state.aiCompanion.enabled || state.aiCompanion.status === 'unconfigured') return;
-            
+
             // Se non era già in helping, impostiamolo
             if (state.aiCompanion.status !== 'helping') {
                 setState({ aiCompanion: { ...state.aiCompanion, status: 'helping' } });
+                // FIX: Update DOM immediately
+                if (window.updateCompanionSlime) window.updateCompanionSlime();
             }
 
             // Reset timer (debounce)
@@ -248,6 +273,7 @@ const bootstrap = async () => {
             aiActivityTimer = setTimeout(() => {
                 if (state.aiCompanion.enabled) {
                     setState({ aiCompanion: { ...state.aiCompanion, status: 'on' } });
+                    if (window.updateCompanionSlime) window.updateCompanionSlime();
                 }
             }, 3000); // 3 secondi di inattività per tornare IDLE
         };

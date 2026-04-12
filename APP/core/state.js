@@ -120,6 +120,16 @@ export const state = {
         return { ...defaults, ...saved };
     })(),
 
+    qwenCliConfig: (() => {
+        const defaults = {
+            command: "npx @qwen-code/qwen-code",
+            lastSession: null,
+            env: {}
+        };
+        const saved = JSON.parse(localStorage.getItem('gx-qwen-cli-config') || '{}');
+        return { ...defaults, ...saved };
+    })(),
+
     _geminiLoading: false,
     _ollamaLoading: false,
     _ollamaStreaming: false,
@@ -157,12 +167,25 @@ export const state = {
 
     // AI Companion State (Evolution 2026)
     aiCompanion: (() => {
+        const VALID_MODELS = ['qwen2.5-coder:1.5b', 'qwen2.5-coder:7b', 'qwen2.5-coder:14b', 'qwen2.5-coder:32b'];
+        let savedModel = localStorage.getItem('gx-ai-companion-model') || 'qwen2.5-coder:7b';
+
+        // Migrazione: se il modello salvato non esiste su Ollama, usa il default
+        if (!VALID_MODELS.includes(savedModel)) {
+            console.warn(`[GX-STATE] Invalid model "${savedModel}" in localStorage, migrating to default "qwen2.5-coder:7b"`);
+            savedModel = 'qwen2.5-coder:7b';
+            localStorage.setItem('gx-ai-companion-model', savedModel);
+        }
+
         const defaults = {
-            installed: false,
+            installed: false, // Ollama è installato nel sistema?
+            modelDownloaded: false, // Il modello selezionato è scaricato?
             enabled: localStorage.getItem('gx-ai-companion-enabled') === 'true',
             status: 'unconfigured', // unconfigured, checking, ready, downloading, on, off, helping
             stats: { cpu: '', totalRam: 0, freeRam: 0, gpu: '', disk: '', suitability: null },
-            model: localStorage.getItem('gx-ai-companion-model') || 'qwen2.5-coder:1.5b',
+            // DEFAULT: qwen2.5-coder:7b è il miglior bilanciamento qualità/performance.
+            // Richiede ~5GB RAM. Perfetto per PC con 16GB+ RAM.
+            model: savedModel,
             installPath: localStorage.getItem('gx-ai-companion-install-path') || '',
             modelsPath: localStorage.getItem('gx-ai-companion-models-path') || '',
             isIlluminated: false,
@@ -214,6 +237,7 @@ export const setState = (newState) => {
     if (newState.hasOwnProperty('geminiConfig')) localStorage.setItem('gx-gemini-config', JSON.stringify(state.geminiConfig));
     if (newState.hasOwnProperty('ollamaConfig')) localStorage.setItem('gx-ollama-config', JSON.stringify(state.ollamaConfig));
     if (newState.hasOwnProperty('claudeCliConfig')) localStorage.setItem('gx-claude-cli-config', JSON.stringify(state.claudeCliConfig));
+    if (newState.hasOwnProperty('qwenCliConfig')) localStorage.setItem('gx-qwen-cli-config', JSON.stringify(state.qwenCliConfig));
     if (newState.hasOwnProperty('mcpServers')) localStorage.setItem('gx-mcp-servers', JSON.stringify(state.mcpServers));
     if (newState.hasOwnProperty('youtrackConfig')) localStorage.setItem('gx-youtrack-config', JSON.stringify(state.youtrackConfig));
     if (newState.hasOwnProperty('activeTerminalFolder')) localStorage.setItem('gx-active-terminal-folder', state.activeTerminalFolder);

@@ -1,10 +1,12 @@
 import { state, subscribe, setState } from '../core/state.js';
 import { showContextMenu } from './contextMenu.js';
-import { 
-    initEditor, 
-    updateBreakpointDecorations, 
-    updateDebugActiveLine, 
-    handleSave 
+import {
+    initEditor,
+    updateBreakpointDecorations,
+    updateDebugActiveLine,
+    handleSave,
+    saveActiveFile,
+    setupAutoSave
 } from '../core/editor.js';
 import { 
     renderFileTree, 
@@ -607,9 +609,13 @@ export const initWorkspace = () => {
             if (isRootChange) {
                 console.log("[GX-WORKSPACE] Root refresh required.");
                 if (window.refreshWorkspace) window.refreshWorkspace();
+                // Refresh Git status when root changes
+                if (window.refreshGitStatusSilent) window.refreshGitStatusSilent();
             } else {
                 console.log(`[GX-WORKSPACE] Surgical subfolder refresh: ${parentPath}`);
                 if (window.fetchFolderContents) window.fetchFolderContents(parentPath);
+                // Refresh Git status on any file change
+                if (window.refreshGitStatusSilent) window.refreshGitStatusSilent();
             }
         });
     }

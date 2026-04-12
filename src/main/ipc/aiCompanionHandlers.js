@@ -15,6 +15,20 @@ function registerAiCompanionHandlers() {
     });
 
     /**
+     * Ottiene il percorso di installazione predefinito
+     */
+    ipcMain.handle('ai-companion:get-default-install-path', async () => {
+        return aiCompanionService.getDefaultInstallPath();
+    });
+
+    /**
+     * Ottiene il percorso predefinito per i modelli
+     */
+    ipcMain.handle('ai-companion:get-default-models-path', async () => {
+        return aiCompanionService.getDefaultModelsPath();
+    });
+
+    /**
      * Verifica se Ollama è attivo
      */
     ipcMain.handle('ai-companion:check-status', async () => {
@@ -64,7 +78,69 @@ function registerAiCompanionHandlers() {
      * Avvio manuale servizio
      */
     ipcMain.handle('ai-companion:start', async (event, { installPath, modelsPath }) => {
-        return await aiCompanionService.startOllamaService(installPath, modelsPath);
+        try {
+            console.log(`[GX-AI-IPC] Start request received. installPath: ${installPath}, modelsPath: ${modelsPath}`);
+            const result = await aiCompanionService.startOllamaService(installPath, modelsPath);
+            console.log(`[GX-AI-IPC] Start result: ${result}`);
+            return { success: result };
+        } catch (err) {
+            console.error("[GX-AI-IPC] Error starting service:", err);
+            return { success: false, error: err.message };
+        }
+    });
+
+    /**
+     * Stop manuale servizio
+     */
+    ipcMain.handle('ai-companion:stop', async () => {
+        try {
+            console.log('[GX-AI-IPC] Stop request received');
+            const result = await aiCompanionService.killOllamaService();
+            console.log(`[GX-AI-IPC] Stop result: ${result}`);
+            return { success: result };
+        } catch (err) {
+            console.error("[GX-AI-IPC] Error stopping service:", err);
+            return { success: false, error: err.message };
+        }
+    });
+
+    /**
+     * Verifica se Ollama è già attivo (per ripristino stato all'avvio)
+     */
+    ipcMain.handle('ai-companion:is-running', async () => {
+        return await aiCompanionService.checkOllamaStatus();
+    });
+
+    /**
+     * Verifica se un modello specifico è installato
+     */
+    ipcMain.handle('ai-companion:is-model-installed', async (event, modelName) => {
+        return new Promise((resolve) => {
+            const { spawn } = require('child_process');
+            const child = spawn('ollama', ['list']);
+
+            let output = '';
+            child.stdout.on('data', (data) => {
+                output += data.toString();
+            });
+
+            child.on('close', (code) => {
+                if (code === 0) {
+                    // Controlla se il modello è presente nell'output
+                    const isInstalled = output.includes(modelName);
+                    console.log(`[GX-AI-IPC] Model ${modelName} installed: ${isInstalled}`);
+                    resolve({ success: true, isInstalled });
+                } else {
+                    console.error(`[GX-AI-IPC] Error listing models: ${code}`);
+                    resolve({ success: false, isInstalled: false });
+                }
+            });
+
+            child.on('error', (err) => {
+                console.error("[GX-AI-IPC] Error spawning ollama list:", err);
+                resolve({ success: false, isInstalled: false, error: "Ollama non trovato nel PATH." });
+            });
+        });
     });
 
     /**

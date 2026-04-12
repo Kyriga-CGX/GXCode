@@ -27,8 +27,12 @@ function registerPtyHandlers() {
         let shell = process.platform === 'win32' ? 'powershell.exe' : 'bash';
         let args = [];
 
-        if (shellType === 'claude') { 
-            shell = 'npx.cmd'; args = ['@anthropic-ai/claude-code']; 
+        if (shellType === 'claude') {
+            console.log(`[PTY] Matched: CLAUDE CLI`);
+            shell = 'npx.cmd'; args = ['@anthropic-ai/claude-code'];
+        } else if (shellType === 'qwen') {
+            console.log(`[PTY] Matched: QWEN CLI`);
+            shell = 'npx.cmd'; args = ['-y', '@qwen-code/qwen-code'];
         } else if (shellType === 'gemini') {
             // Auto-check and install logic for gemini-cli
             if (process.platform === 'win32') {

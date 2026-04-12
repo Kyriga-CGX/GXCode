@@ -171,13 +171,13 @@ export const initTests = () => {
 
 
     const renderTestTree = () => {
-        const { workspaceData, testFilesCache, isPlaywrightInstalled, isInstalling, selectedTestProject } = state;
-        
+        const { workspaceData, testFilesCache, isPlaywrightInstalled, isInstalling, selectedTestProject, playwrightBrowsersInstalled } = state;
+
         // Sincronizza dropdown se necessario
         if (projectSelector && projectSelector.value !== selectedTestProject) {
             projectSelector.value = selectedTestProject;
         }
-        
+
         updateProjectDropdown();
         const t = (key) => {
             try {
@@ -189,6 +189,17 @@ export const initTests = () => {
         if (!workspaceData || !workspaceData.path) {
             treeRoot.innerHTML = `<div class="opacity-20 text-[9px] uppercase text-gray-500 font-bold text-center mt-10">${t('tests.openWorkspace')}</div>`;
             return;
+        }
+
+        // Banner per browser mancanti (COMPATTO)
+        let browserWarningHtml = '';
+        if (isPlaywrightInstalled && !playwrightBrowsersInstalled) {
+            browserWarningHtml = `
+                <div class="mb-2 p-1.5 flex items-center justify-between bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <span class="text-[8px] text-yellow-400 font-bold uppercase tracking-wider">⚠️ Browser mancanti</span>
+                    <button onclick="window.autoInstallPlaywright()" class="px-2 py-0.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 text-[7px] font-bold rounded transition uppercase">Installa</button>
+                </div>
+            `;
         }
 
         if (isInstalling) {
@@ -256,32 +267,59 @@ export const initTests = () => {
             });
         });
 
-        treeRoot.innerHTML = Object.entries(treeStructure)
+        treeRoot.innerHTML = browserWarningHtml + (Object.entries(treeStructure)
             .sort(([aName, aNode], [bName, bNode]) => {
                 if (aNode.type !== bNode.type) return aNode.type === 'folder' ? -1 : 1;
                 return aName.localeCompare(bName);
             })
             .map(([name, node]) => renderNode(node, name))
-            .join('') || `<div class="opacity-20 text-[9px] uppercase text-gray-500 font-bold text-center mt-10">Nessun test trovato</div>`;
+            .join('') || `<div class="opacity-20 text-[9px] uppercase text-gray-500 font-bold text-center mt-10">Nessun test trovato</div>`);
     };
 
     const scanWorkspaceForTests = async () => {
-        if (!state.workspaceData || !state.workspaceData.path) return;
+        console.log(`[GX-TESTS] scanWorkspaceForTests CALLED`);
+        console.log(`[GX-TESTS] Current workspaceData:`, state.workspaceData);
         
+        if (!state.workspaceData || !state.workspaceData.path) {
+            console.warn(`[GX-TESTS] ABORTING: No workspace data available`);
+            return;
+        }
+
+        console.log(`[GX-TESTS] Starting scan for: ${state.workspaceData.path}`);
+
         try {
             const res = await window.electronAPI.checkPlaywright(state.workspaceData.path);
-            setState({ isPlaywrightInstalled: !!res?.installed });
+            console.log(`[GX-TESTS] Playwright check result:`, res);
             
-            if (!state.isPlaywrightInstalled) {
+            setState({ 
+                isPlaywrightInstalled: !!res?.installed,
+                playwrightBrowsersInstalled: !!res?.browsersInstalled
+            });
+
+            // FIX: Mostra sempre i test anche se mancano i browser
+            // Prima scansioniamo, POI mostriamo eventuale warning
+            treeRoot.innerHTML = `<div class="opacity-40 text-[9px] uppercase text-blue-400 font-bold text-center mt-10 animate-pulse">${t('tests.scanning')}...</div>`;
+            console.log(`[GX-TESTS] Calling electronAPI.scanTests...`);
+            const results = await window.electronAPI.scanTests(state.workspaceData.path);
+            console.log(`[GX-TESTS] scanTests returned ${results?.length || 0} test files:`, results);
+            setState({ testFilesCache: results });
+            
+            // Se Playwright NON è installato, mostra il prompt di installazione
+            if (!res?.installed) {
+                console.log(`[GX-TESTS] Playwright not installed, showing install prompt`);
                 renderTestTree();
                 return;
             }
 
-            treeRoot.innerHTML = `<div class="opacity-40 text-[9px] uppercase text-blue-400 font-bold text-center mt-10 animate-pulse">${t('tests.scanning')}...</div>`;
-            const results = await window.electronAPI.scanTests(state.workspaceData.path);
-            setState({ testFilesCache: results });
+            // Se Playwright è installato ma mancano i browser, mostra un banner informativo ma lascia i test visibili
+            if (!res?.browsersInstalled) {
+                console.log(`[GX-TESTS] Playwright installed but browsers missing - showing tests with banner`);
+                // Il renderTestTree mostrerà i test + un banner informativo in cima
+            }
+            
             renderTestTree();
         } catch(e) {
+            console.error(`[GX-TESTS] Scan error:`, e);
             treeRoot.innerHTML = `<div class="opacity-50 text-[9px] uppercase text-red-500 font-bold text-center mt-10">Errore scansione: ${e.message}</div>`;
         }
     };
@@ -428,27 +466,77 @@ export const initTests = () => {
         };
     }
 
+    // Initial scan on module load
+    console.log(`[GX-TESTS] Module initialized. Checking if initial scan needed...`);
+    console.log(`[GX-TESTS] Current workspace:`, state.workspaceData);
+    console.log(`[GX-TESTS] Current testFilesCache:`, state.testFilesCache);
+    
+    if (state.workspaceData?.path && (!state.testFilesCache || state.testFilesCache.length === 0)) {
+        console.log(`[GX-TESTS] Initial scan needed - workspace exists but no cache`);
+        setTimeout(() => {
+            console.log(`[GX-TESTS] Starting initial scan...`);
+            scanWorkspaceForTests();
+        }, 1000); // Wait 1s for full app initialization
+    } else if (state.workspaceData?.path && state.testFilesCache?.length > 0) {
+        console.log(`[GX-TESTS] Cache already has ${state.testFilesCache.length} files, skipping initial scan`);
+    } else {
+        console.log(`[GX-TESTS] No workspace loaded yet, waiting for workspace change`);
+    }
+
+    // Subscribe to state changes
     let isScanning = false;
+    let isClearingCache = false;
+    let scanDebounceTimer = null;
+    
     subscribe((newState, oldState) => {
         const activityChanged = newState.activeActivity !== oldState?.activeActivity;
         const workspaceChanged = newState.workspaceData?.path !== oldState?.workspaceData?.path;
         const cacheChanged = newState.testFilesCache !== oldState?.testFilesCache;
-        const statusChanged = newState.isTestingInProgress !== oldState?.isTestingInProgress || 
+        const statusChanged = newState.isTestingInProgress !== oldState?.isTestingInProgress ||
                              newState.isPlaywrightInstalled !== oldState?.isPlaywrightInstalled ||
                              newState.selectedTestProject !== oldState?.selectedTestProject;
 
-        if (newState.activeActivity === 'testing') {
-            // Trigger scan only if entering the tab or workspace changed, and we have no cache
-            if ((activityChanged || workspaceChanged) && (!newState.testFilesCache || newState.testFilesCache.length === 0)) {
-                if (!isScanning) {
+        // Se il workspace è cambiato, resetta la cache E forza lo scan
+        if (workspaceChanged && newState.workspaceData?.path && !isClearingCache) {
+            console.log(`[GX-TESTS] Workspace changed to "${newState.workspaceData?.path}", clearing cache and forcing scan`);
+            isClearingCache = true;
+            
+            // Resetta la cache
+            setState({ testFilesCache: [] });
+            isClearingCache = false;
+            
+            // Forza lo scan dopo un breve delay
+            if (!isScanning && !scanDebounceTimer) {
+                console.log(`[GX-TESTS] Scheduling forced scan for: ${newState.workspaceData.path}`);
+                scanDebounceTimer = setTimeout(() => {
+                    scanDebounceTimer = null;
+                    console.log(`[GX-TESTS] Executing forced scan...`);
                     isScanning = true;
                     scanWorkspaceForTests().finally(() => {
                         isScanning = false;
                     });
-                }
-            } else if (activityChanged || cacheChanged || statusChanged) {
-                renderTestTree();
+                }, 500);
             }
+            
+            return;
+        }
+
+        // Skip se stiamo solo chiarendo la cache
+        if (isClearingCache) return;
+
+        // IMPORTANTE: Se abbiamo un workspace E la cache è vuota, facciamo lo scan SEMPRE
+        const hasValidWorkspace = newState.workspaceData?.path;
+        const hasNoCache = !newState.testFilesCache || newState.testFilesCache.length === 0;
+        const shouldAutoScan = hasValidWorkspace && hasNoCache;
+
+        if (shouldAutoScan && !isScanning && !scanDebounceTimer) {
+            console.log(`[GX-TESTS] Auto-scanning workspace: ${newState.workspaceData.path}`);
+            isScanning = true;
+            scanWorkspaceForTests().finally(() => {
+                isScanning = false;
+            });
+        } else if (newState.activeActivity === 'testing' && (activityChanged || cacheChanged || statusChanged)) {
+            renderTestTree();
         }
     });
 

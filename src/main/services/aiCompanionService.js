@@ -1,6 +1,7 @@
 const { exec } = require('child_process');
 const os = require('os');
 const http = require('http');
+const path = require('path');
 
 /**
  * AI Companion Service - GXCode Evolution 2026
@@ -10,6 +11,31 @@ class AiCompanionService {
     constructor() {
         this.isChecking = false;
         this.lastStats = null;
+        this.ollamaProcess = null; // Track the Ollama process
+    }
+
+    /**
+     * Ottiene il percorso di installazione predefinito in base al sistema operativo
+     */
+    getDefaultInstallPath() {
+        if (process.platform === 'win32') {
+            return process.env.LOCALAPPDATA || path.join(process.env.USERPROFILE, 'AppData', 'Local');
+        } else if (process.platform === 'darwin') {
+            return '/Applications';
+        } else {
+            return '/usr/local';
+        }
+    }
+
+    /**
+     * Ottiene il percorso predefinito per i modelli in base al sistema operativo
+     */
+    getDefaultModelsPath() {
+        if (process.platform === 'win32') {
+            return path.join(process.env.USERPROFILE || '', '.ollama', 'models');
+        } else {
+            return path.join(process.env.HOME || '', '.ollama', 'models');
+        }
     }
 
     /**
@@ -136,38 +162,94 @@ class AiCompanionService {
     }
 
     /**
-     * Scarica l'installer di Ollama con progresso
+     * Scarica l'installer di Ollama con progresso e retry logic
      */
     async downloadInstaller(installDir, onProgress) {
         const https = require('https');
         const fs = require('fs');
         const path = require('path');
         const url = 'https://ollama.com/download/OllamaSetup.exe';
+        
+        // Crea la directory se non esiste
+        if (!fs.existsSync(installDir)) {
+            fs.mkdirSync(installDir, { recursive: true });
+        }
+        
         const dest = path.join(installDir, 'OllamaSetup.exe');
+        const maxRetries = 3;
+        let retryCount = 0;
 
-        return new Promise((resolve, reject) => {
-            const file = fs.createWriteStream(dest);
-            https.get(url, (response) => {
-                const total = parseInt(response.headers['content-length'], 10);
-                let downloaded = 0;
+        const downloadWithRetry = () => {
+            return new Promise((resolve, reject) => {
+                const file = fs.createWriteStream(dest);
+                
+                const request = https.get(url, { followRedirect: true }, (response) => {
+                    // Handle redirects
+                    if (response.statusCode === 301 || response.statusCode === 302) {
+                        file.close();
+                        fs.unlink(dest, () => {});
+                        reject(new Error('Redirect not supported'));
+                        return;
+                    }
+                    
+                    if (response.statusCode !== 200) {
+                        file.close();
+                        fs.unlink(dest, () => {});
+                        reject(new Error(`HTTP ${response.statusCode}`));
+                        return;
+                    }
 
-                response.on('data', (chunk) => {
-                    downloaded += chunk.length;
-                    const percent = Math.round((downloaded / total) * 100);
-                    onProgress(percent);
+                    const total = parseInt(response.headers['content-length'], 10);
+                    let downloaded = 0;
+
+                    response.on('data', (chunk) => {
+                        downloaded += chunk.length;
+                        const percent = total ? Math.round((downloaded / total) * 100) : 0;
+                        onProgress(percent);
+                    });
+
+                    response.pipe(file);
+
+                    file.on('finish', () => {
+                        file.close();
+                        resolve(dest);
+                    });
                 });
 
-                response.pipe(file);
-
-                file.on('finish', () => {
+                request.on('error', (err) => {
                     file.close();
-                    resolve(dest);
+                    fs.unlink(dest, () => {});
+                    reject(err);
                 });
-            }).on('error', (err) => {
-                fs.unlink(dest, () => {});
-                reject(err);
+
+                file.on('error', (err) => {
+                    fs.unlink(dest, () => {});
+                    reject(err);
+                });
             });
-        });
+        };
+
+        // Retry logic
+        while (retryCount < maxRetries) {
+            try {
+                onProgress(0);
+                const exePath = await downloadWithRetry();
+                console.log(`[AI-COMPANION] Download completed after ${retryCount + 1} attempt(s)`);
+                return exePath;
+            } catch (err) {
+                retryCount++;
+                console.warn(`[AI-COMPANION] Download attempt ${retryCount} failed:`, err.message);
+                
+                if (retryCount >= maxRetries) {
+                    throw new Error(`Download failed after ${maxRetries} attempts: ${err.message}`);
+                }
+                
+                // Wait before retry (exponential backoff)
+                const waitTime = Math.pow(2, retryCount) * 1000;
+                onProgress(0);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+        }
     }
 
     /**
@@ -196,31 +278,107 @@ class AiCompanionService {
      * Avvia il server Ollama se non è già attivo
      */
     async startOllamaService(installDir, modelsPath) {
-        const path = require('path');
-        const { spawn } = require('child_process');
-        
-        // Verifica se è già in ascolto
-        const isActive = await this.checkOllamaStatus();
-        if (isActive) return true;
+        try {
+            console.log(`[AI-COMPANION] Starting Ollama service from: ${installDir} with models in ${modelsPath}`);
+            
+            // Verifica se è già in ascolto
+            const isActive = await this.checkOllamaStatus();
+            if (isActive) {
+                console.log('[AI-COMPANION] Ollama is already running');
+                return true;
+            }
 
-        const exeName = 'ollama.exe';
-        const fullPath = path.join(installDir, 'ollama app', exeName); 
-        // Nota: Ollama installer di solito mette l'exe in una sottocartella o lo aggiunge al PATH
-        // Se l'utente ha scelto una DIR, cercatelo lì.
-        
-        console.log(`[AI-COMPANION] Avvio servizio Ollama da: ${installDir} con modelli in ${modelsPath}`);
-        
-        const env = { ...process.env };
-        if (modelsPath) env.OLLAMA_MODELS = modelsPath;
+            // Set OLLAMA_MODELS environment variable
+            if (modelsPath) {
+                process.env.OLLAMA_MODELS = modelsPath;
+                console.log(`[AI-COMPANION] Set OLLAMA_MODELS to: ${modelsPath}`);
+            }
 
-        const child = spawn('ollama', ['serve'], {
-            env,
-            detached: true,
-            stdio: 'ignore'
-        });
+            // Tenta di avviare Ollama
+            const { spawn } = require('child_process');
+            
+            this.ollamaProcess = spawn('ollama', ['serve'], {
+                env: { ...process.env },
+                detached: true,
+                stdio: 'ignore',
+                windowsHide: true
+            });
 
-        child.unref(); // Lascia correre indipendente
-        return true;
+            this.ollamaProcess.unref();
+            console.log(`[AI-COMPANION] Ollama process started with PID: ${this.ollamaProcess.pid}`);
+
+            // Gestione chiusura inaspettata del processo
+            this.ollamaProcess.on('exit', (code, signal) => {
+                console.log(`[AI-COMPANION] Ollama process exited with code ${code}, signal ${signal}`);
+                this.ollamaProcess = null;
+            });
+
+            this.ollamaProcess.on('error', (err) => {
+                console.error('[AI-COMPANION] Ollama process error:', err.message);
+                this.ollamaProcess = null;
+            });
+
+            // Aspetta che Ollama sia pronto (max 10 secondi)
+            for (let i = 0; i < 20; i++) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const ready = await this.checkOllamaStatus();
+                if (ready) {
+                    console.log('[AI-COMPANION] Ollama service is ready');
+                    return true;
+                }
+            }
+
+            console.warn('[AI-COMPANION] Ollama did not become ready within timeout');
+            return false;
+        } catch (err) {
+            console.error('[AI-COMPANION] Failed to start Ollama service:', err);
+            this.ollamaProcess = null;
+            return false;
+        }
+    }
+
+    /**
+     * Ferma il server Ollama in modo sicuro
+     */
+    async killOllamaService() {
+        try {
+            console.log('[AI-COMPANION] Attempting to stop Ollama service safely...');
+            const currentPid = process.pid;
+            console.log(`[AI-COMPANION] Current IDE PID: ${currentPid}`);
+
+            // Prima prova a killare SOLO il processo che abbiamo trackato
+            if (this.ollamaProcess && this.ollamaProcess.pid) {
+                try {
+                    console.log(`[AI-COMPANION] Killing ONLY tracked process PID: ${this.ollamaProcess.pid}`);
+                    if (process.platform === 'win32') {
+                        const { execSync } = require('child_process');
+                        // Uccide SOLO il processo trackato, NON i figli (/T rimosso per sicurezza)
+                        execSync(`taskkill /pid ${this.ollamaProcess.pid} /F`, { stdio: 'ignore' });
+                    } else {
+                        process.kill(this.ollamaProcess.pid, 'SIGTERM');
+                    }
+                    this.ollamaProcess = null;
+                    console.log('[AI-COMPANION] ✅ Ollama service stopped (tracked process killed)');
+                    return true;
+                } catch (err) {
+                    console.warn('[AI-COMPANION] Could not kill tracked process:', err.message);
+                    this.ollamaProcess = null;
+                }
+            }
+
+            // Se non abbiamo un processo trackato, Ollama potrebbe essere già stato avviato esternamente
+            // In questo caso, NON uccidiamo nulla per sicurezza
+            console.log('[AI-COMPANION] ⚠️ No tracked process found. Ollama may have been started externally.');
+            console.log('[AI-COMPANION] ⚠️ Skipping port-based cleanup to avoid killing IDE or other processes.');
+            
+            // Aggiorna stato locale
+            return true;
+
+        } catch (err) {
+            console.error('[AI-COMPANION] ❌ Error stopping Ollama service:', err);
+            this.ollamaProcess = null;
+            return false;
+        }
     }
 }
 

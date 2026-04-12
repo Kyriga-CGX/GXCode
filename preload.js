@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   debugTest: (workspacePath, filePath, testName, breakpoints) => ipcRenderer.invoke('debug-test', workspacePath, filePath, testName, breakpoints),
   runAllTests: (workspacePath) => ipcRenderer.invoke('run-all-tests', workspacePath),
   installPlaywright: (workspacePath) => ipcRenderer.invoke('install-playwright', workspacePath),
+  getDebugPort: () => ipcRenderer.invoke('get-debug-port'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   performUpdate: () => ipcRenderer.invoke('perform-update'),
   
@@ -74,7 +75,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clipboardWrite: (text) => ipcRenderer.invoke('clipboard-write', text),
   fsCreateFile: (dirPath, name) => ipcRenderer.invoke('fs-create-file', dirPath, name),
   fsCreateFolder: (dirPath, name) => ipcRenderer.invoke('fs-create-folder-v2', dirPath, name),
-  fsWriteFile: (filePath, content) => ipcRenderer.invoke('fs-write-file', filePath, content),
+  fsWriteFile: (filePath, content, options) => ipcRenderer.invoke('fs-write-file', filePath, content, options),
   fsDelete: (targetPath) => ipcRenderer.invoke('fs-delete', targetPath),
   fsRename: (oldPath, newPath) => ipcRenderer.invoke('fs-rename', oldPath, newPath),
   getAiPaths: () => ipcRenderer.invoke('get-ai-paths'),
@@ -87,6 +88,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Test Runner Output
   onTestOutput: (callback) => ipcRenderer.on('test-output', (event, data) => callback(data)),
+  onTestDebugPaused: (callback) => ipcRenderer.on('test-debug-paused', (event, line) => callback(line)),
   
   // Real-time File System Watcher
   onWorkspaceUpdated: (callback) => ipcRenderer.on('workspace-updated', (event, data) => callback(data)),
@@ -100,4 +102,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
   aiCompanionSelectFolder: (title) => ipcRenderer.invoke('ai-companion:select-folder', title),
   onAiCompanionInstallProgress: (callback) => ipcRenderer.on('ai-companion:install-progress', (event, data) => callback(data)),
   aiCompanionStart: (paths) => ipcRenderer.invoke('ai-companion:start', paths),
+  aiCompanionStop: () => ipcRenderer.invoke('ai-companion:stop'),
+  aiCompanionGetDefaultInstallPath: () => ipcRenderer.invoke('ai-companion:get-default-install-path'),
+  aiCompanionGetDefaultModelsPath: () => ipcRenderer.invoke('ai-companion:get-default-models-path'),
+  aiCompanionIsRunning: () => ipcRenderer.invoke('ai-companion:is-running'),
+  aiCompanionIsModelInstalled: (modelName) => ipcRenderer.invoke('ai-companion:is-model-installed', modelName),
+
+  // AI Reactivity Engine
+  aiReactivityAnalyze: (payload) => ipcRenderer.invoke('ai-reactivity:analyze', payload),
+  aiReactivityAbort: () => ipcRenderer.invoke('ai-reactivity:abort'),
+  aiReactivityClearQueue: () => ipcRenderer.invoke('ai-reactivity:clear-queue'),
+  aiReactivityUpdateConfig: (config) => ipcRenderer.invoke('ai-reactivity:update-config', config),
+  aiReactivityGetStatus: () => ipcRenderer.invoke('ai-reactivity:get-status'),
+  aiReactivityManualAnalysis: (payload) => ipcRenderer.invoke('ai-reactivity:manual-analysis', payload),
+  aiReactivityIsReady: () => ipcRenderer.invoke('ai-reactivity:is-ready'),
+  onAiAnalysisStream: (callback) => ipcRenderer.on('ai-analysis-stream', (event, data) => callback(data)),
+  onAiAnalysisComplete: (callback) => ipcRenderer.on('ai-analysis-complete', (event, data) => callback(data)),
+
+  // Auto-Correction Service
+  autoCorrectionSetEnabled: (enabled) => ipcRenderer.invoke('auto-correction:set-enabled', enabled),
+  autoCorrectionGetStatus: () => ipcRenderer.invoke('auto-correction:get-status'),
+  autoCorrectionGetStats: (filePath) => ipcRenderer.invoke('auto-correction:get-stats', filePath),
+  autoCorrectionClearHistory: (filePath) => ipcRenderer.invoke('auto-correction:clear-history', filePath),
+  onFileAutoCorrected: (callback) => ipcRenderer.on('file-auto-corrected', (event, data) => callback(data)),
+  onFileSaveError: (callback) => ipcRenderer.on('file-save-error', (event, data) => callback(data)),
+  onAiAnalysisError: (callback) => ipcRenderer.on('ai-analysis-error', (event, data) => callback(data)),
 });

@@ -79,6 +79,7 @@ const renderTabContent = () => {
     switch (state.activeSettingsTab) {
         case 'preferences': {
             const autoSave = localStorage.getItem('gx-autosave') !== 'false';
+            const autoSaveInterval = parseInt(localStorage.getItem('gx-autosave-interval') || '2000');
             const fontSize = parseInt(localStorage.getItem('gx-font-size') || '14');
             const tabSize = parseInt(localStorage.getItem('gx-tab-size') || '4');
             const wordWrap = localStorage.getItem('gx-word-wrap') === 'true';
@@ -100,6 +101,19 @@ const renderTabContent = () => {
                             <input type="checkbox" id="pref-autosave" class="sr-only peer" ${autoSave ? 'checked' : ''} onchange="window.setPref('gx-autosave', this.checked)">
                             <div class="w-9 h-5 bg-gray-700 peer-checked:bg-blue-600 rounded-full peer-focus:ring-2 peer-focus:ring-blue-500/50 transition after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
                         </label>
+                    </div>
+
+                    <!-- Auto-Save Interval -->
+                    <div class="p-4 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-lg group hover:border-blue-500/30 transition">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-gray-200">${window.t('settings.preferences.autoSaveInterval') || 'Intervallo Auto-Save'}</span>
+                            <span id="pref-autosave-interval-val" class="text-xs text-blue-400 font-mono">${autoSaveInterval}ms</span>
+                        </div>
+                        <input type="range" min="500" max="10000" step="500" value="${autoSaveInterval}" id="pref-autosave-interval" class="w-full accent-blue-500 cursor-pointer" oninput="window.setPref('gx-autosave-interval', this.value); document.getElementById('pref-autosave-interval-val').textContent = this.value + 'ms'">
+                        <div class="flex justify-between text-[9px] text-gray-600 mt-1">
+                            <span>500ms</span>
+                            <span>10s</span>
+                        </div>
                     </div>
 
                     <!-- Font Size Slider -->
@@ -1035,13 +1049,20 @@ window.setPref = (key, value) => {
         if (key === 'gx-tab-size') options.tabSize = parseInt(value);
         if (key === 'gx-word-wrap') options.wordWrap = value ? 'on' : 'off';
         if (key === 'gx-minimap') options.minimap = { enabled: value };
-        
+
         window.editor.updateOptions(options);
     }
 
     // Se cambia la dimensione del font del terminale, invia un evento (verrà catturato da terminal.js)
     if (key === 'gx-terminal-font-size') {
         window.dispatchEvent(new CustomEvent('gx-term-font-change', { detail: value }));
+    }
+
+    // Se cambia auto-save, riavvia il sistema di auto-save
+    if (key === 'gx-autosave' || key === 'gx-autosave-interval') {
+        if (window.setupAutoSave) {
+            window.setupAutoSave();
+        }
     }
 };
 
@@ -1621,25 +1642,36 @@ const renderAiCompanionSettings = () => {
             <!-- Local Model Selection -->
             <div class="space-y-4">
                 <h4 class="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Modello di Intelligenza Attiva</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div onclick="setState({ aiCompanion: { ...state.aiCompanion, model: 'qwen2.5-coder:1.5b' } })" 
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div onclick="setState({ aiCompanion: { ...state.aiCompanion, model: 'qwen2.5-coder:1.5b' } })"
                          class="p-6 rounded-[30px] border-2 cursor-pointer transition-all ${comp.model === 'qwen2.5-coder:1.5b' ? 'border-blue-500 bg-blue-500/5' : 'border-white/5 hover:border-white/10 bg-black/10'}">
                         <div class="flex items-center justify-between mb-4">
-                            <span class="px-3 py-1 bg-white/max-[0.05] rounded-full text-[8px] font-black text-blue-400 uppercase">Flash Protocol</span>
+                            <span class="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black text-blue-400 uppercase">Flash Protocol</span>
                             <div class="w-3 h-3 rounded-full ${comp.model === 'qwen2.5-coder:1.5b' ? 'bg-blue-500' : 'bg-gray-800'}"></div>
                         </div>
                         <h5 class="text-sm font-black text-white uppercase italic">Qwen 2.5 Coder 1.5B</h5>
                         <p class="text-[9px] text-gray-500 mt-2 leading-relaxed">Ultra veloce. Carica in circa 1.2GB di RAM. Ideale per laptop e mini-PC.</p>
                     </div>
 
-                    <div onclick="setState({ aiCompanion: { ...state.aiCompanion, model: 'qwen2.5-coder:7b' } })" 
+                    <div onclick="setState({ aiCompanion: { ...state.aiCompanion, model: 'qwen2.5-coder:7b' } })"
                          class="p-6 rounded-[30px] border-2 cursor-pointer transition-all ${comp.model === 'qwen2.5-coder:7b' ? 'border-purple-500 bg-purple-500/5' : 'border-white/5 hover:border-white/10 bg-black/10'}">
                         <div class="flex items-center justify-between mb-4">
-                            <span class="px-3 py-1 bg-white/max-[0.05] rounded-full text-[8px] font-black text-purple-400 uppercase">Pro Protocol</span>
+                            <span class="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black text-purple-400 uppercase">Pro Protocol</span>
                             <div class="w-3 h-3 rounded-full ${comp.model === 'qwen2.5-coder:7b' ? 'bg-purple-500' : 'bg-gray-800'}"></div>
                         </div>
                         <h5 class="text-sm font-black text-white uppercase italic">Qwen 2.5 Coder 7B</h5>
                         <p class="text-[9px] text-gray-500 mt-2 leading-relaxed">Alta precisione. Richiede ~5GB di VRAM o 8GB di RAM libera. Consigliato per workstation.</p>
+                    </div>
+
+                    <div onclick="setState({ aiCompanion: { ...state.aiCompanion, model: 'qwen2.5-coder:14b' } })"
+                         class="p-6 rounded-[30px] border-2 cursor-pointer transition-all relative ${comp.model === 'qwen2.5-coder:14b' ? 'border-amber-500 bg-amber-500/5' : 'border-white/5 hover:border-white/10 bg-black/10'}">
+                        <div class="absolute -top-2 -right-2 px-2 py-0.5 bg-amber-600 text-[7px] font-bold rounded-full text-white shadow-lg">MAX</div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="px-3 py-1 bg-white/5 rounded-full text-[8px] font-black text-amber-400 uppercase">Max Protocol</span>
+                            <div class="w-3 h-3 rounded-full ${comp.model === 'qwen2.5-coder:14b' ? 'bg-amber-500' : 'bg-gray-800'}"></div>
+                        </div>
+                        <h5 class="text-sm font-black text-white uppercase italic">Qwen 2.5 Coder 14B</h5>
+                        <p class="text-[9px] text-gray-500 mt-2 leading-relaxed">Massima precisione. Richiede ~9GB di RAM/VRAM. Per workstation con 32GB+ RAM.</p>
                     </div>
                 </div>
             </div>
@@ -1667,9 +1699,12 @@ window.pickAiFolder = async (key) => {
 };
 
 window.installAiCompanion = async () => {
-    const installPath = state.aiCompanion.installPath || 'C:\\Ollama';
-    const modelsPath = state.aiCompanion.modelsPath || 'C:\\OllamaModels';
-    
+    // Usa i percorsi configurati oppure ottieni defaults intelligenti dal backend
+    const installPath = state.aiCompanion.installPath || await window.electronAPI.aiCompanionGetDefaultInstallPath();
+    const modelsPath = state.aiCompanion.modelsPath || await window.electronAPI.aiCompanionGetDefaultModelsPath();
+
+    console.log(`[AI-SETTINGS] Starting installation with installPath: ${installPath}, modelsPath: ${modelsPath}`);
+
     const progressContainer = document.getElementById('ai-install-progress-container');
     const progressBar = document.getElementById('ai-install-bar');
     const progressLabel = document.getElementById('ai-install-status-label');
@@ -1687,8 +1722,27 @@ window.installAiCompanion = async () => {
     try {
         const result = await window.electronAPI.aiCompanionInstall({ installPath, modelsPath });
         if (result.success) {
-            setState({ aiCompanion: { ...state.aiCompanion, installed: true, status: 'ready' } });
-            window.gxToast("Ollama installato correttamente! Ora puoi scaricare il modello.", 'success');
+            // Salva anche i percorsi nello stato
+            setState({
+                aiCompanion: {
+                    ...state.aiCompanion,
+                    installed: true,
+                    installPath,
+                    modelsPath,
+                    status: 'ready'
+                }
+            });
+            console.log(`[AI-SETTINGS] Installation complete. installPath: ${installPath}, modelsPath: ${modelsPath}`);
+            window.gxToast("Ollama installato correttamente!", 'success');
+
+            // Auto-pull del modello selezionato
+            const model = state.aiCompanion.model;
+            window.gxToast(`Avvio download automatico del modello: ${model}`, 'info');
+
+            // Piccolo delay per lasciare che l'UI si aggiorni
+            setTimeout(() => {
+                window.pullAiModel(model);
+            }, 500);
         } else {
             window.gxToast(`Errore installazione: ${result.error}`, 'error');
         }
@@ -1700,48 +1754,193 @@ window.installAiCompanion = async () => {
     }
 };
 
-window.pullAiModel = async () => {
-    const model = state.aiCompanion.model;
+window.pullAiModel = async (forceModel = null) => {
+    const model = forceModel || state.aiCompanion.model;
     const progressContainer = document.getElementById('ai-pull-progress-container');
     const progressBar = document.getElementById('ai-pull-bar');
     const progressPercentage = document.getElementById('ai-pull-percentage');
     const progressStatus = document.getElementById('ai-pull-status');
 
-    if (progressContainer) progressContainer.classList.remove('hidden');
-    
+    if (!progressContainer || !progressBar) {
+        console.error('[AI-SETTINGS] Progress elements not found!');
+        window.gxToast("Errore UI: elementi progresso non trovati", 'error');
+        return;
+    }
+
+    progressContainer.classList.remove('hidden');
+    progressBar.style.width = '0%';
+    if (progressPercentage) progressPercentage.innerText = '0%';
+    if (progressStatus) progressStatus.innerText = 'Connessione a Ollama...';
+
+    console.log(`[AI-SETTINGS] Starting model download: ${model}`);
     window.gxToast(`Download modello ${model} in corso...`, 'info');
 
-    // Listener per il progresso (PowerShell/Ollama output parsing)
+    // Listener per il progresso reale da Ollama
+    let lastProgress = 0;
+    let phase = 'connecting';
+    let hasReceivedData = false;
+    let fallbackTimer = null;
+    let dataCounter = 0;
+    let totalSize = 0;
+    let downloadedSize = 0;
+
     const removeListener = window.electronAPI.onAiCompanionPullProgress((data) => {
-        if (progressStatus) progressStatus.innerText = data.trim();
+        if (!data) return;
         
-        // Parsing semplice della percentuale (Ollama manda stringhe tipo "downloading 45%...")
-        const match = data.match(/(\d+)%/);
-        if (match && progressBar && progressPercentage) {
-            const percent = match[1];
-            progressBar.style.width = `${percent}%`;
-            progressPercentage.innerText = `${percent}%`;
+        dataCounter++;
+        console.log(`[AI-PULL] Data #${dataCounter}:`, typeof data, JSON.stringify(data).substring(0, 200));
+        
+        hasReceivedData = true;
+        if (fallbackTimer) {
+            clearInterval(fallbackTimer);
+            fallbackTimer = null;
+        }
+
+        const output = data.toString().trim();
+        if (!output) return;
+
+        // Pulisci output da TUTTI i caratteri speciali Unicode
+        // Braille patterns (⠋⠙⠹⠼⠴⠧⠇⠏) + Block elements (░▏▎▍▌▋▊▉█▖▗▘▙▚▛▝▞▟)
+        const clean = output.replace(/[\u2800-\u28FF\u2580-\u259F\u2500-\u257F]/g, '')
+                           .replace(/Ô[a-z]+/g, '') // Fix per encoding alternativo
+                           .replace(/\s+/g, ' ')
+                           .trim();
+        
+        console.log(`[AI-PULL] Cleaned #${dataCounter}:`, clean.substring(0, 200));
+
+        // Rileva fase "pulling manifest"
+        if (clean.includes('pulling manifest')) {
+            phase = 'downloading';
+            if (progressStatus) progressStatus.innerText = 'Scaricamento modello...';
+            if (lastProgress < 5) {
+                progressBar.style.width = '5%';
+                if (progressPercentage) progressPercentage.innerText = '5%';
+            }
+            console.log('[AI-PULL] Phase: Downloading manifest');
+        } 
+        // Rileva righe con percentuale (formato: "pulling xxx: 100% ... 4.7 GB")
+        else if (clean.includes('pulling') && /(\d+)%/.test(clean)) {
+            phase = 'downloading';
+            if (progressStatus && lastProgress < 10) {
+                progressStatus.innerText = 'Scaricamento modello...';
+            }
+
+            // Estrai percentuale
+            const percentMatch = clean.match(/(\d+)%/);
+            if (percentMatch) {
+                const percent = parseInt(percentMatch[1]);
+                
+                // Estrai anche la dimensione (es: "4.7 GB")
+                const sizeMatch = clean.match(/([\d.]+)\s*(GB|MB)/i);
+                if (sizeMatch) {
+                    const size = parseFloat(sizeMatch[1]);
+                    const unit = sizeMatch[2].toUpperCase();
+                    const sizeInMB = unit === 'GB' ? size * 1024 : size;
+                    downloadedSize = sizeInMB;
+                    console.log(`[AI-PULL] Downloaded: ${size} ${unit} (${sizeInMB} MB)`);
+                }
+
+                // Mappa 0-100% a 5-85% della barra (lascia spazio per verify/install)
+                const mappedPercent = 5 + Math.min(percent * 0.8, 80);
+                if (mappedPercent > lastProgress) {
+                    lastProgress = mappedPercent;
+                    progressBar.style.width = `${mappedPercent}%`;
+                    if (progressPercentage) progressPercentage.innerText = `${percent}%`;
+                    console.log(`[AI-PULL] Progress: ${percent}% (bar: ${mappedPercent.toFixed(1)}%)`);
+                }
+            }
+        }
+        // Fase verifica
+        else if (clean.includes('verifying sha256') || clean.includes('verifying')) {
+            phase = 'verifying';
+            if (progressStatus) progressStatus.innerText = 'Verifica integrità...';
+            progressBar.style.width = '90%';
+            if (progressPercentage) progressPercentage.innerText = '95%';
+            console.log('[AI-PULL] Phase: Verifying');
+        }
+        // Fase scrittura/installazione
+        else if (clean.includes('writing manifest')) {
+            phase = 'installing';
+            if (progressStatus) progressStatus.innerText = 'Installazione modello...';
+            progressBar.style.width = '95%';
+            if (progressPercentage) progressPercentage.innerText = '98%';
+            console.log('[AI-PULL] Phase: Installing');
+        }
+        // Completato
+        else if (clean.includes('success') || clean.includes('pull complete')) {
+            phase = 'complete';
+            if (progressStatus) progressStatus.innerText = '✅ Modello installato!';
+            progressBar.style.width = '100%';
+            if (progressPercentage) progressPercentage.innerText = '100%';
+            lastProgress = 100;
+            console.log('[AI-PULL] Phase: Complete');
         }
     });
 
-    try {
-        const result = await window.electronAPI.aiCompanionPullModel(model);
-        if (result.success) {
-            setState({ 
-                aiCompanion: { 
-                    ...state.aiCompanion, 
-                    installed: true, 
-                    status: 'on',
-                    enabled: true
-                } 
-            });
-            window.gxToast("Modello scaricato e pronto. AI Companion è ora ATTIVO!", 'success');
-        } else {
-            window.gxToast("Errore durante il download del modello.", 'error');
+    // Spinner indeterminato: mostriamo che sta lavorando senza fingere progressi
+    fallbackTimer = setTimeout(() => {
+        if (!hasReceivedData && phase === 'connecting') {
+            console.warn('[AI-SETTINGS] No progress data yet, showing indeterminate spinner');
+            let dots = 0;
+            const indeterminateTimer = setInterval(() => {
+                if (phase !== 'connecting' || hasReceivedData || phase === 'complete') {
+                    clearInterval(indeterminateTimer);
+                    return;
+                }
+                dots = (dots + 1) % 4;
+                const dotsStr = '.'.repeat(dots);
+                if (progressStatus) progressStatus.innerText = `Connessione a Ollama${dotsStr}`;
+                // Anima la barra in modo indeterminato
+                const pseudoProgress = 5 + Math.sin(Date.now() / 1000) * 5;
+                progressBar.style.width = `${pseudoProgress}%`;
+                if (progressPercentage) progressPercentage.innerText = '...';
+            }, 500);
         }
+    }, 3000);
+
+    try {
+        console.log('[AI-SETTINGS] Calling ollama pull...');
+        const result = await window.electronAPI.aiCompanionPullModel(model);
+        console.log('[AI-SETTINGS] Pull result:', result);
+        
+        if (result.success) {
+            progressBar.style.width = '100%';
+            if (progressPercentage) progressPercentage.innerText = '100%';
+            if (progressStatus) progressStatus.innerText = '✅ Modello installato!';
+
+            console.log(`[AI-PULL] Before setState - modelDownloaded: ${state.aiCompanion.modelDownloaded}`);
+            setState({
+                aiCompanion: {
+                    ...state.aiCompanion,
+                    installed: true,
+                    modelDownloaded: true,
+                    status: state.aiCompanion.enabled ? 'on' : 'ready'
+                }
+            });
+            console.log(`[AI-PULL] After setState - modelDownloaded: true`);
+
+            // Forza re-render della sidebar per aggiornare subito la UI
+            if (window.renderSidebar) {
+                console.log('[AI-PULL] Forcing sidebar re-render');
+                window.renderSidebar();
+            }
+
+            window.gxToast(`Modello ${model} scaricato e pronto!`, 'success');
+        } else {
+            if (progressStatus) progressStatus.innerText = '❌ Errore durante il download';
+            window.gxToast(`Errore durante il download: ${result.error}`, 'error');
+        }
+    } catch (e) {
+        console.error('[AI-SETTINGS] Pull error:', e);
+        if (progressStatus) progressStatus.innerText = '❌ Errore fatale';
+        window.gxToast("Errore fatale durante il download.", 'error');
     } finally {
         if (removeListener) removeListener();
-        if (progressContainer) progressContainer.classList.add('hidden');
+        if (fallbackTimer) clearTimeout(fallbackTimer);
+        // Non nascondere subito il container, lascia vedere il risultato per 3 secondi
+        setTimeout(() => {
+            if (progressContainer) progressContainer.classList.add('hidden');
+        }, 3000);
     }
 };
 

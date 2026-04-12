@@ -30,6 +30,7 @@ if (!gotTheLock) {
     const { registerSystemHandlers } = require('./ipc/systemHandlers');
     const { registerDebugHandlers } = require('./ipc/debugHandlers');
     const { registerAiCompanionHandlers } = require('./ipc/aiCompanionHandlers');
+    const { registerAiReactivityHandlers } = require('./ipc/aiReactivityHandlers');
 
     // --- HARDENING (Local AppData Redirection) ---
 // Note: userData is set earlier in the root main.js script
@@ -91,6 +92,7 @@ app.whenReady().then(() => {
     registerSystemHandlers();
     registerDebugHandlers(mainWindow);
     registerAiCompanionHandlers();
+    registerAiReactivityHandlers(mainWindow);
 
     // 4. Auto-Updater Logic (Safe Mode)
     if (app.isPackaged) {

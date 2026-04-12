@@ -6,6 +6,20 @@
 @source "../**/*.html";
 @source "../**/*.js";
 
+/* Global Text Anti-Aliasing */
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ensure anti-aliasing propagates to all text elements */
+*, *::before, *::after {
+  -webkit-font-smoothing: inherit;
+  -moz-osx-font-smoothing: inherit;
+  text-rendering: inherit;
+}
+
 /* GXCode v3: Base Design System */
 :root {
   --radius: 0.5rem;

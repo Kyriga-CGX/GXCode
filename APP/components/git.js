@@ -2,7 +2,10 @@ import { state, subscribe } from '../core/state.js';
 
 export const initGit = () => {
     console.log('[GX GIT] Initializing Git Component...');
-    
+
+    // Fetch iniziale silenzioso per popolare i badge nell'Explorer
+    refreshGitStatusSilent();
+
     // Rerender on activity change
     subscribe((newState, oldState) => {
         if (newState.activeActivity === 'git' && oldState?.activeActivity !== 'git') {
@@ -10,8 +13,45 @@ export const initGit = () => {
         }
     });
 
+    // Refresh gitStatus quando cambia il workspace
+    subscribe((newState, oldState) => {
+        if (newState.workspaceData?.path !== oldState?.workspaceData?.path) {
+            refreshGitStatusSilent();
+        }
+    });
+
     if (state.activeActivity === 'git') {
         renderGit();
+    }
+};
+
+// Fetch silenzioso di gitStatus (senza UI loading)
+export const refreshGitStatusSilent = async () => {
+    if (!state.workspaceData?.path) return;
+    
+    try {
+        const res = await window.electronAPI.gitStatus(state.workspaceData.path);
+        if (!res.success) {
+            console.warn('[GX GIT] Silent refresh failed:', res.error);
+            return;
+        }
+
+        // Usiamo lo stesso formato di normalizePath in explorer.js (slash, lowercase)
+        const workspacePath = state.workspaceData.path.replace(/\\/g, '/').toLowerCase().replace(/\/$/, '');
+        const statusMap = {};
+        
+        res.files.forEach(f => {
+            // git status restituisce path relativi, dobbiamo convertirli in assoluti
+            const relativePath = f.path.replace(/\\/g, '/');
+            const absolutePath = (workspacePath + '/' + relativePath).toLowerCase();
+            statusMap[absolutePath] = f.status;
+        });
+        
+        setState({ gitStatus: statusMap });
+        console.log(`[GX GIT] Silent refresh: ${res.files.length} tracked files`);
+        console.log(`[GX GIT] Sample mappings:`, Object.entries(statusMap).slice(0, 3));
+    } catch (err) {
+        console.warn('[GX GIT] Silent refresh error:', err);
     }
 };
 
@@ -41,13 +81,16 @@ export const renderGit = async () => {
     }
 
     const { files, branch } = res;
-    
+
     // 🔥 SYNC GLOBAL STATE FOR FILE EXPLORER 🔥
+    // Usiamo lo stesso formato di normalizePath (slash, lowercase)
+    const workspacePath = (state.workspaceData?.path?.replace(/\\/g, '/').toLowerCase() || '').replace(/\/$/, '');
     const statusMap = {};
     files.forEach(f => {
-        // Normalizziamo il path per Windows per matchare workspaceData
-        const normPath = f.path.replace(/\//g, '\\');
-        statusMap[normPath] = f.status;
+        // git status restituisce path relativi, convertiamo in assoluti
+        const relativePath = f.path.replace(/\\/g, '/');
+        const absolutePath = (workspacePath + '/' + relativePath).toLowerCase();
+        statusMap[absolutePath] = f.status;
     });
     setState({ gitStatus: statusMap });
 
@@ -152,3 +195,4 @@ window.handleGitAction = async (action, data) => {
 };
 
 window.renderGit = renderGit;
+window.refreshGitStatusSilent = refreshGitStatusSilent;
