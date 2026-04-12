@@ -1,9 +1,12 @@
 const { ipcMain } = require('electron');
-const aiReactivityEngine = require('../services/aiReactivityEngine');
+const aiReactivityModule = require('../modules/ai/AIReactivityEngine');
 
 function registerAiReactivityHandlers(mainWindow) {
     // Imposta mainWindow per streaming responses
     global.mainWindow = mainWindow;
+
+    // Get engine instance
+    const engine = aiReactivityModule.getInstance();
 
     /**
      * Trigger analisi AI reattiva
@@ -29,7 +32,7 @@ function registerAiReactivityHandlers(mainWindow) {
             };
 
             // await è necessario perché analyze() è async e ritorna un Promise
-            const requestId = await aiReactivityEngine.analyze(safePayload);
+            const requestId = await engine.analyze(safePayload);
 
             return { success: true, requestId: Number(requestId) };
         } catch (err) {
@@ -42,7 +45,7 @@ function registerAiReactivityHandlers(mainWindow) {
      * Abort analisi corrente
      */
     ipcMain.handle('ai-reactivity:abort', async () => {
-        aiReactivityEngine.abortCurrent();
+        engine.abortCurrent();
         return { success: true };
     });
 
@@ -50,7 +53,7 @@ function registerAiReactivityHandlers(mainWindow) {
      * Clear coda analisi
      */
     ipcMain.handle('ai-reactivity:clear-queue', async () => {
-        aiReactivityEngine.clearQueue();
+        engine.clearQueue();
         return { success: true };
     });
 
@@ -58,7 +61,7 @@ function registerAiReactivityHandlers(mainWindow) {
      * Aggiorna configurazione (modello, ecc.)
      */
     ipcMain.handle('ai-reactivity:update-config', async (event, config) => {
-        aiReactivityEngine.updateConfig(config);
+        engine.updateConfig(config);
         return { success: true };
     });
 
@@ -67,7 +70,7 @@ function registerAiReactivityHandlers(mainWindow) {
      */
     ipcMain.handle('ai-reactivity:get-status', async () => {
         try {
-            const status = aiReactivityEngine.getStatus();
+            const status = engine.getStatus();
             // Sanitizza per IPC
             return {
                 isAnalyzing: !!status?.isAnalyzing,
@@ -103,7 +106,7 @@ function registerAiReactivityHandlers(mainWindow) {
                 lintErrors: []
             };
 
-            const requestId = await aiReactivityEngine.analyze(safePayload);
+            const requestId = await engine.analyze(safePayload);
 
             return { success: true, requestId };
         } catch (err) {
@@ -128,9 +131,9 @@ function registerAiReactivityHandlers(mainWindow) {
                 timeout: 3000
             }, (res) => {
                 if (res.statusCode === 200) {
-                    resolve({ 
+                    resolve({
                         ready: true,
-                        model: aiReactivityEngine.config.model
+                        model: engine.config.model
                     });
                 } else {
                     resolve({ ready: false, error: 'Ollama not responding' });

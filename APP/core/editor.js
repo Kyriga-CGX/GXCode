@@ -1,4 +1,5 @@
 import { state, subscribe, setState } from './state.js';
+import { lspBridge } from './lspBridge.js';
 
 let editor = null;
 let editorRight = null;
@@ -119,6 +120,16 @@ export const initEditor = () => {
     if (!editorRight && document.getElementById('monaco-editor-container-right')) {
         editorRight = window.monaco.editor.create(document.getElementById('monaco-editor-container-right'), createOptions(state.activeCgxTheme));
         setupEditorListeners(editorRight, 'right');
+    }
+
+    // Initialize LSP Bridge
+    if (window.monaco && editor) {
+        window.lspBridge = lspBridge; // Expose globally
+        lspBridge.init(window.monaco, editor).then(() => {
+            console.log('[Editor] LSP Bridge initialized');
+        }).catch(err => {
+            console.warn('[Editor] LSP Bridge init failed:', err);
+        });
     }
 
     // Funzione per intercettare i tasti in Monaco e inoltrarli al sistema globale

@@ -176,42 +176,55 @@
             <div id="sidebar-drag-bar" class="h-[1px] gx-divide-theme hover:h-1 hover:bg-blue-500 cursor-row-resize transition-all shrink-0 z-50 hidden"></div>
 
             <div id="sidebar-secondary-section" class="h-0 flex flex-col overflow-hidden bg-[var(--bg-side-alt)] border-t gx-border-theme transition-all">
-                <div id="pane-search" class="hidden flex flex-col h-full overflow-hidden p-4">
-                    <h3 class="text-[9px] font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Search</h3>
-                    <input type="text" id="global-search-input" placeholder="Search..." class="w-full bg-[var(--bg-side)] border gx-border-theme rounded-lg px-4 py-2 text-xs text-gray-200 outline-none">
-                    <div id="global-search-results" class="flex-1 overflow-y-auto mt-4 custom-scrollbar"></div>
+                <div id="pane-search" class="hidden flex flex-col h-full overflow-hidden">
+                    <!-- Header -->
+                    <div class="px-4 py-3 border-b border-[var(--border-dim)] bg-gradient-to-r from-[var(--bg-side)] to-[var(--bg-main)]">
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            <h3 class="text-[9px] font-black text-gray-500 uppercase tracking-[0.3em]">Search</h3>
+                        </div>
+                        <div class="relative">
+                            <input type="text" id="global-search-input" placeholder="Cerca nei file..." class="w-full bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-lg pl-10 pr-4 py-2.5 text-xs text-gray-200 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all placeholder:text-gray-600">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        </div>
+                    </div>
+                    <div id="global-search-results" class="flex-1 overflow-y-auto custom-scrollbar px-4 py-3"></div>
                 </div>
                 <div id="pane-git" class="hidden flex flex-col h-full overflow-hidden">
                     <div class="p-3 border-b gx-border-theme flex justify-between items-center"><h3 class="text-[9px] font-black text-gray-500 uppercase tracking-[0.3em]">Git</h3></div>
                     <div id="git-content" class="flex-1 overflow-y-auto custom-scrollbar p-3"></div>
                 </div>
                 <div id="pane-debug" class="hidden flex flex-col h-full overflow-hidden"></div>
-                <div id="pane-testing" class="hidden flex flex-col h-full overflow-hidden px-4 py-5">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex flex-col">
-                            <span class="text-[7px] text-gray-600 font-black uppercase tracking-[0.3em] mb-0.5">Workspace</span>
-                            <h3 class="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">Test <span class="text-blue-500">Explorer</span></h3>
+                <div id="pane-testing" class="hidden flex flex-col h-full overflow-hidden">
+                    <!-- Header -->
+                    <div class="px-4 py-3 border-b border-[var(--border-dim)] bg-gradient-to-r from-[var(--bg-side)] to-[var(--bg-main)]">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-400"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                <div class="flex flex-col">
+                                    <span class="text-[7px] text-gray-600 font-black uppercase tracking-[0.3em]">Workspace</span>
+                                    <h3 class="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">Test <span class="text-emerald-500">Explorer</span></h3>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button id="btn-scan-tests" class="p-2 rounded-lg hover:bg-blue-500/10 text-gray-500 hover:text-blue-400 transition-all active:scale-90 border border-transparent hover:border-blue-500/20" title="Scansiona Workspace">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.05 6.63 2.9L21 8"/><path d="M21 3v5h-5"/></svg>
+                                </button>
+                                <button id="btn-run-all-tests" class="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 hover:text-emerald-400 transition-all active:scale-90 border border-emerald-500/20" title="Esegui Tutti i Test">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 3 14 9-14 9V3z"/></svg>
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-1">
-                            <button id="btn-scan-tests" class="p-2 rounded-lg hover:bg-white/5 text-gray-500 hover:text-blue-400 transition-all active:scale-90" title="Scansiona Workspace">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.05 6.63 2.9L21 8"/><path d="M21 3v5h-5"/></svg>
-                            </button>
-                            <button id="btn-force-scan" class="p-2 rounded-lg hover:bg-white/5 text-red-500 hover:text-red-400 transition-all active:scale-90 border border-red-500/30" title="FORZA SCAN (Debug)">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/></svg>
-                            </button>
-                            <button id="btn-run-all-tests" class="p-2 rounded-lg hover:bg-white/5 text-gray-500 hover:text-emerald-400 transition-all active:scale-90" title="Esegui Tutti i Test">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 3 14 9-14 9V3z"/></svg>
-                            </button>
+
+                        <!-- Filtro Progetto -->
+                        <div class="mt-3">
+                            <select id="test-project-selector" class="w-full bg-[var(--bg-side-alt)] border border-[var(--border-dim)] rounded-lg px-3 py-2 text-[10px] text-gray-300 outline-none focus:border-blue-500/50 transition-all font-bold appearance-none cursor-pointer hover:bg-white/5">
+                                <option value="all">TUTTI I PROGETTI</option>
+                            </select>
                         </div>
                     </div>
-                    
-                    <!-- Filtro Progetto -->
-                    <div class="mb-4">
-                        <select id="test-project-selector" class="w-full bg-[var(--bg-side-alt)] border gx-border-theme rounded-lg px-3 py-1.5 text-[10px] text-gray-300 outline-none focus:border-blue-500/50 transition-all font-bold appearance-none cursor-pointer hover:bg-white/5">
-                            <option value="all">TUTTI I PROGETTI</option>
-                        </select>
-                    </div>
-                    <div id="test-tree-root" class="flex-1 overflow-y-auto custom-scrollbar pr-1"></div>
+
+                    <div id="test-tree-root" class="flex-1 overflow-y-auto custom-scrollbar px-4 py-3"></div>
                 </div>
             </div>
         </aside>

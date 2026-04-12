@@ -48,7 +48,14 @@ const getSettingsTabs = () => [
     {
         title: "Sviluppo & Moduli",
         tabs: [
-            { id: 'modules', label: window.t('settings.tabs.modules'), icon: '📦' }
+            { id: 'modules', label: window.t('settings.tabs.modules'), icon: '📦' },
+            { id: 'terminal', label: 'Terminal', icon: '💻' },
+            { id: 'ai-reactivity', label: 'AI Code Analysis', icon: '🧠' },
+            { id: 'testing', label: 'Testing', icon: '🧪' },
+            { id: 'debugger', label: 'Debugger', icon: '🐛' },
+            { id: 'git', label: 'Git', icon: '🔀' },
+            { id: 'extensions', label: 'Extensions', icon: '🧩' },
+            { id: 'lsp', label: 'Language Servers', icon: '📝' }
         ]
     }
 ];
@@ -403,23 +410,44 @@ const renderTabContent = () => {
             const config = state.youtrackConfig;
             return `
                 <div class="space-y-6">
-                    <p class="text-xs text-gray-500" data-i18n="settings.youtrack.desc">${window.t('settings.youtrack.desc')}</p>
+                    <div class="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                        <p class="text-xs text-blue-300">🎫 Collega il tuo account YouTrack per visualizzare e gestire i ticket direttamente dall'IDE.</p>
+                    </div>
+                    
                     <div class="space-y-4">
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] uppercase font-bold text-gray-500" data-i18n="settings.youtrack.url">${window.t('settings.youtrack.url')}</label>
-                            <input id="yt-url" type="text" placeholder="https://youtrack.jetbrains.com" value="${config.url}" class="p-2.5 bg-[#161b22] border border-gray-700 rounded text-xs text-gray-200 outline-none focus:border-blue-500">
+                            <label class="text-[10px] uppercase font-bold text-gray-500">YouTrack URL</label>
+                            <input id="yt-url" type="text" placeholder="https://youtrack.yourcompany.com" value="${config.url || ''}" class="p-2.5 bg-[#161b22] border border-gray-700 rounded text-xs text-gray-200 outline-none focus:border-blue-500 font-mono">
                         </div>
+                        
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] uppercase font-bold text-gray-500" data-i18n="settings.youtrack.token">${window.t('settings.youtrack.token')}</label>
-                            <input id="yt-token" type="password" placeholder="perm:xxxx.yyyy.zzzz" value="${config.token}" class="p-2.5 bg-[#161b22] border border-gray-700 rounded text-xs text-gray-200 outline-none focus:border-blue-500">
+                            <label class="text-[10px] uppercase font-bold text-gray-500">Permanent Token</label>
+                            <input id="yt-token" type="password" placeholder="perm:xxxx.yyyy.zzzz" value="${config.token || ''}" class="p-2.5 bg-[#161b22] border border-gray-700 rounded text-xs text-gray-200 outline-none focus:border-blue-500 font-mono">
+                            <p class="text-[10px] text-gray-500">
+                                <a href="https://www.jetbrains.com/help/youtrack/standalone/user-profile.html#manage-permanent-token" target="_blank" class="text-blue-400 hover:underline">Come ottenere il token →</a>
+                            </p>
                         </div>
-                        <div class="flex items-center gap-3 pt-2">
+                        
+                        <div class="flex items-center justify-between p-3 bg-black/20 border border-gray-800 rounded-lg">
+                            <div>
+                                <div class="text-xs text-gray-300 font-semibold">Abilita Sincronizzazione</div>
+                                <div class="text-[10px] text-gray-500">Mostra i ticket nel pannello Issues</div>
+                            </div>
                             <div onclick="window.toggleYoutrack()" class="w-10 h-5 p-0.5 rounded-full cursor-pointer transition-all ${config.enabled ? 'bg-blue-600' : 'bg-gray-700'}">
                                 <div class="w-4 h-4 bg-white rounded-full transition-all ${config.enabled ? 'translate-x-5' : 'translate-x-0'}"></div>
                             </div>
-                            <span class="text-xs text-gray-400" data-i18n="settings.youtrack.sync">${window.t('settings.youtrack.sync')}</span>
                         </div>
-                        <button onclick="window.saveYoutrackConfig()" class="mt-4 px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded text-xs font-bold hover:bg-blue-600/30 transition" data-i18n="settings.youtrack.save">${window.t('settings.youtrack.save')}</button>
+                        
+                        <div id="yt-status" class="hidden p-3 rounded-lg text-xs"></div>
+                        
+                        <div class="flex gap-2">
+                            <button onclick="window.testYoutrackConnection()" class="flex-1 px-4 py-2 bg-gray-700/50 text-gray-300 border border-gray-600 rounded text-xs font-bold hover:bg-gray-600/50 transition">
+                                🔌 Test Connection
+                            </button>
+                            <button onclick="window.saveYoutrackConfig()" class="flex-1 px-4 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded text-xs font-bold hover:bg-blue-600/30 transition">
+                                💾 Salva e Sincronizza
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -606,6 +634,20 @@ const renderTabContent = () => {
             return renderAiCompanionSettings();
         case 'modules':
             return renderModulesTab();
+        case 'terminal':
+            return renderTerminalSettings();
+        case 'ai-reactivity':
+            return renderAiReactivitySettings();
+        case 'testing':
+            return renderTestingSettings();
+        case 'debugger':
+            return renderDebuggerSettings();
+        case 'git':
+            return renderGitSettings();
+        case 'extensions':
+            return renderExtensionsSettings();
+        case 'lsp':
+            return renderLSPSettings();
         default:
             return '';
     }
@@ -1150,15 +1192,55 @@ window.toggleYoutrack = () => {
 };
 
 window.saveYoutrackConfig = () => {
-    const url = document.getElementById('yt-url').value;
-    const token = document.getElementById('yt-token').value;
-    const youtrackConfig = { ...state.youtrackConfig, url, token };
+    const url = document.getElementById('yt-url').value.trim();
+    const token = document.getElementById('yt-token').value.trim();
+    const youtrackConfig = { ...state.youtrackConfig, url, token, enabled: true };
     setState({ youtrackConfig });
-    
+
     // Ricarica immediatamente i ticket per mostrare i cambiamenti
     api.loadIssues();
-    
-    window.gxToast(window.t('settings.youtrack.success'), 'info');
+
+    window.gxToast('Configurazione YouTrack salvata! Sincronizzazione in corso...', 'success');
+};
+
+window.testYoutrackConnection = async () => {
+    const url = document.getElementById('yt-url').value.trim();
+    const token = document.getElementById('yt-token').value.trim();
+    const statusEl = document.getElementById('yt-status');
+
+    if (!url || !token) {
+        statusEl.className = 'p-3 rounded-lg text-xs bg-red-500/20 border border-red-500/30 text-red-300';
+        statusEl.innerHTML = '❌ Inserisci URL e Token prima di testare.';
+        statusEl.classList.remove('hidden');
+        return;
+    }
+
+    statusEl.className = 'p-3 rounded-lg text-xs bg-blue-500/20 border border-blue-500/30 text-blue-300';
+    statusEl.innerHTML = '🔄 Test connessione in corso...';
+    statusEl.classList.remove('hidden');
+
+    try {
+        const response = await fetch(`${url.replace(/\/$/, '')}/api/issues?fields=idReadable&$top=1`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            statusEl.className = 'p-3 rounded-lg text-xs bg-green-500/20 border border-green-500/30 text-green-300';
+            statusEl.innerHTML = `✅ Connessione riuscita! ${data.length} ticket trovati.`;
+        } else {
+            const error = await response.text();
+            statusEl.className = 'p-3 rounded-lg text-xs bg-red-500/20 border border-red-500/30 text-red-300';
+            statusEl.innerHTML = `❌ Errore: ${response.status} - ${error}`;
+        }
+    } catch (err) {
+        statusEl.className = 'p-3 rounded-lg text-xs bg-red-500/20 border border-red-500/30 text-red-300';
+        statusEl.innerHTML = `❌ Impossibile connettersi: ${err.message}`;
+    }
 };
 
 window.toggleMarketplaceSource = (sourceId) => {
@@ -1944,9 +2026,495 @@ window.pullAiModel = async (forceModel = null) => {
     }
 };
 
+// ============================================
+// SETTINGS UPDATE HELPERS
+// ============================================
+window.updateTerminalConfig = async (key, value) => {
+    const config = state.terminalConfig || {};
+    config[key] = key === 'fontSize' || key === 'scrollback' ? Number(value) : value;
+    setState({ terminalConfig: config });
+    localStorage.setItem('gx-terminal-config', JSON.stringify(config));
+    
+    if (window.electronAPI) {
+        await window.electronAPI.invoke('terminal-split:update-config', config);
+    }
+};
+
+window.updateAiReactivityConfig = async (key, value) => {
+    const config = state.aiReactivityConfig || {};
+    config[key] = key === 'timeout' || key === 'maxContextTokens' || key === 'idleTimeout' ? Number(value) : value;
+    setState({ aiReactivityConfig: config });
+    localStorage.setItem('gx-ai-reactivity-config', JSON.stringify(config));
+    
+    if (window.electronAPI) {
+        await window.electronAPI.invoke('ai-reactivity:update-config', config);
+    }
+};
+
+window.updateTestingConfig = async (key, value) => {
+    const config = state.testingConfig || {};
+    config[key] = value;
+    setState({ testingConfig: config });
+    localStorage.setItem('gx-testing-config', JSON.stringify(config));
+};
+
+window.updateDebuggerConfig = async (key, value) => {
+    const config = state.debuggerConfig || {};
+    config[key] = value;
+    setState({ debuggerConfig: config });
+    localStorage.setItem('gx-debugger-config', JSON.stringify(config));
+};
+
+window.updateGitConfig = async (key, value) => {
+    const config = state.gitConfig || {};
+    config[key] = key === 'fetchInterval' ? Number(value) : value;
+    setState({ gitConfig: config });
+    localStorage.setItem('gx-git-config', JSON.stringify(config));
+};
+
+window.updateExtensionsConfig = async (key, value) => {
+    const config = state.extensionsConfig || {};
+    config[key] = value;
+    setState({ extensionsConfig: config });
+    localStorage.setItem('gx-extensions-config', JSON.stringify(config));
+};
+
+window.updateLspConfig = async (key, value) => {
+    const config = state.lspConfig || {};
+    config[key] = value;
+    setState({ lspConfig: config });
+    localStorage.setItem('gx-lsp-config', JSON.stringify(config));
+};
+
+window.toggleLspLanguage = async (lang, enabled) => {
+    const config = state.lspConfig || { languages: [] };
+    if (!config.languages) config.languages = [];
+    
+    if (enabled) {
+        if (!config.languages.includes(lang)) config.languages.push(lang);
+    } else {
+        config.languages = config.languages.filter(l => l !== lang);
+    }
+    
+    setState({ lspConfig: config });
+    localStorage.setItem('gx-lsp-config', JSON.stringify(config));
+};
+
 // Auto-run diagnostics on open if first time
 subscribe((newState, oldState) => {
     if (newState.activeSettingsTab === 'ai-companion' && !newState.aiCompanion.stats.cpu) {
+
+// ============================================
+// TERMINAL SETTINGS
+// ============================================
+const renderTerminalSettings = () => {
+    const config = state.terminalConfig || {
+        fontSize: 14,
+        fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
+        cursorBlink: true,
+        scrollback: 5000,
+        defaultShell: ''
+    };
+
+    return `
+        <div class="space-y-8">
+            <div class="space-y-4">
+                <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Configurazione Terminal</h5>
+                
+                <div class="space-y-4">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs text-gray-400">Font Size</label>
+                        <input type="number" id="term-fontsize" value="${config.fontSize}" 
+                            onchange="window.updateTerminalConfig('fontSize', this.value)"
+                            class="bg-[var(--bg-side)] border border-[var(--border-dim)] text-gray-300 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500" />
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label class="text-xs text-gray-400">Scrollback Lines</label>
+                        <input type="number" id="term-scrollback" value="${config.scrollback}"
+                            onchange="window.updateTerminalConfig('scrollback', this.value)"
+                            class="bg-[var(--bg-side)] border border-[var(--border-dim)] text-gray-300 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500" />
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-400">Cursor Blink</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="term-blink" ${config.cursorBlink ? 'checked' : ''}
+                                onchange="window.updateTerminalConfig('cursorBlink', this.checked)"
+                                class="sr-only peer">
+                            <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <p class="text-xs text-blue-300">💡 Supporta split orizzontale/verticale, terminali multipli e AI shells (Claude, Qwen, Gemini)</p>
+            </div>
+        </div>
+    `;
+};
+
+// ============================================
+// AI REACTIVITY SETTINGS
+// ============================================
+const renderAiReactivitySettings = () => {
+    const config = state.aiReactivityConfig || {
+        enabled: true,
+        model: 'qwen2.5-coder:7b',
+        timeout: 180,
+        maxContextTokens: 6000,
+        idleTimeout: 2500,
+        enableStreaming: true,
+        enableSmartContext: true
+    };
+
+    return `
+        <div class="space-y-8">
+            <div class="space-y-4">
+                <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">AI Code Analysis</h5>
+                
+                <div class="flex items-center justify-between p-3 bg-black/20 border border-gray-800 rounded-lg">
+                    <div>
+                        <div class="text-xs text-gray-300 font-semibold">Abilita AI Reactivity</div>
+                        <div class="text-[10px] text-gray-500">Analisi automatica del codice durante l'editing</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="ai-react-enabled" ${config.enabled ? 'checked' : ''}
+                            onchange="window.updateAiReactivityConfig('enabled', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs text-gray-400">Modello Ollama</label>
+                    <input type="text" id="ai-react-model" value="${config.model}"
+                        onchange="window.updateAiReactivityConfig('model', this.value)"
+                        class="bg-[var(--bg-side)] border border-[var(--border-dim)] text-gray-300 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500 font-mono" />
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs text-gray-400">Timeout (secondi)</label>
+                    <input type="number" id="ai-react-timeout" value="${config.timeout / 1000}"
+                        onchange="window.updateAiReactivityConfig('timeout', this.value * 1000)"
+                        class="bg-[var(--bg-side)] border border-[var(--border-dim)] text-gray-300 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs text-gray-400">Max Context Tokens</label>
+                    <input type="number" id="ai-react-tokens" value="${config.maxContextTokens}"
+                        onchange="window.updateAiReactivityConfig('maxContextTokens', this.value)"
+                        class="bg-[var(--bg-side)] border border-[var(--border-dim)] text-gray-300 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Streaming Responses</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="ai-react-stream" ${config.enableStreaming ? 'checked' : ''}
+                            onchange="window.updateAiReactivityConfig('enableStreaming', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Smart Context Extraction</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="ai-react-smart" ${config.enableSmartContext ? 'checked' : ''}
+                            onchange="window.updateAiReactivityConfig('enableSmartContext', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                <p class="text-xs text-green-300">✅ Ollama HTTP API - Più veloce e affidabile rispetto alla CLI</p>
+            </div>
+        </div>
+    `;
+};
+
+// ============================================
+// TESTING SETTINGS
+// ============================================
+const renderTestingSettings = () => {
+    const config = state.testingConfig || {
+        defaultFramework: 'playwright',
+        autoDetect: true,
+        runOnSave: false,
+        showTestPanel: true
+    };
+
+    return `
+        <div class="space-y-8">
+            <div class="space-y-4">
+                <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Testing Configuration</h5>
+                
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs text-gray-400">Default Framework</label>
+                    <select id="test-framework" onchange="window.updateTestingConfig('defaultFramework', this.value)"
+                        class="bg-[var(--bg-side)] border border-[var(--border-dim)] text-gray-300 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500">
+                        <option value="playwright" ${config.defaultFramework === 'playwright' ? 'selected' : ''}>Playwright</option>
+                        <option value="jest" ${config.defaultFramework === 'jest' ? 'selected' : ''}>Jest</option>
+                        <option value="vitest" ${config.defaultFramework === 'vitest' ? 'selected' : ''}>Vitest</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Auto-detect Test Files</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="test-autodetect" ${config.autoDetect ? 'checked' : ''}
+                            onchange="window.updateTestingConfig('autoDetect', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Run Tests on Save</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="test-onsave" ${config.runOnSave ? 'checked' : ''}
+                            onchange="window.updateTestingConfig('runOnSave', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                <p class="text-xs text-purple-300">🧪 Playwright: ✅ | Jest: ✅ | Vitest: ✅</p>
+            </div>
+        </div>
+    `;
+};
+
+// ============================================
+// DEBUGGER SETTINGS
+// ============================================
+const renderDebuggerSettings = () => {
+    const config = state.debuggerConfig || {
+        enableSourceMaps: true,
+        autoDetectLaunchConfigs: true,
+        showWatchPanel: true,
+        showCallStackPanel: true
+    };
+
+    return `
+        <div class="space-y-8">
+            <div class="space-y-4">
+                <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Debugger Configuration</h5>
+                
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Enable Source Maps</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="debug-sourcemaps" ${config.enableSourceMaps ? 'checked' : ''}
+                            onchange="window.updateDebuggerConfig('enableSourceMaps', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Auto-detect launch.json</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="debug-autodetect" ${config.autoDetectLaunchConfigs ? 'checked' : ''}
+                            onchange="window.updateDebuggerConfig('autoDetectLaunchConfigs', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Show Watch Panel</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="debug-watch" ${config.showWatchPanel ? 'checked' : ''}
+                            onchange="window.updateDebuggerConfig('showWatchPanel', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                <p class="text-xs text-orange-300">🐛 Node.js Debugger + Chrome/Edge CDP Support</p>
+            </div>
+        </div>
+    `;
+};
+
+// ============================================
+// GIT SETTINGS
+// ============================================
+const renderGitSettings = () => {
+    const config = state.gitConfig || {
+        autoFetchStatus: true,
+        fetchInterval: 60000,
+        showGitGraph: true,
+        enableStash: true
+    };
+
+    return `
+        <div class="space-y-8">
+            <div class="space-y-4">
+                <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Git Configuration</h5>
+                
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Auto-fetch Status</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="git-autofetch" ${config.autoFetchStatus ? 'checked' : ''}
+                            onchange="window.updateGitConfig('autoFetchStatus', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs text-gray-400">Fetch Interval (ms)</label>
+                    <input type="number" id="git-interval" value="${config.fetchInterval}"
+                        onchange="window.updateGitConfig('fetchInterval', this.value)"
+                        class="bg-[var(--bg-side)] border border-[var(--border-dim)] text-gray-300 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500" />
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Show Git Graph</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="git-graph" ${config.showGitGraph ? 'checked' : ''}
+                            onchange="window.updateGitConfig('showGitGraph', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Enable Stash Management</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="git-stash" ${config.enableStash ? 'checked' : ''}
+                            onchange="window.updateGitConfig('enableStash', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p class="text-xs text-yellow-300">🔀 Full Git Support: Status, Commit, Push/Pull, Branches, Stash, Merge Conflicts</p>
+            </div>
+        </div>
+    `;
+};
+
+// ============================================
+// EXTENSIONS SETTINGS
+// ============================================
+const renderExtensionsSettings = () => {
+    const config = state.extensionsConfig || {
+        autoActivate: true,
+        extensionsDir: '~/.gxcode/extensions',
+        showMarketplace: true
+    };
+
+    return `
+        <div class="space-y-8">
+            <div class="space-y-4">
+                <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Extensions Configuration</h5>
+                
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Auto-activate Extensions</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="ext-autoactivate" ${config.autoActivate ? 'checked' : ''}
+                            onchange="window.updateExtensionsConfig('autoActivate', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs text-gray-400">Extensions Directory</label>
+                    <input type="text" id="ext-dir" value="${config.extensionsDir}"
+                        onchange="window.updateExtensionsConfig('extensionsDir', this.value)"
+                        class="bg-[var(--bg-side)] border border-[var(--border-dim)] text-gray-300 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500 font-mono" />
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Show Marketplace</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="ext-marketplace" ${config.showMarketplace ? 'checked' : ''}
+                            onchange="window.updateExtensionsConfig('showMarketplace', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="p-4 bg-pink-500/10 border border-pink-500/30 rounded-lg">
+                <p class="text-xs text-pink-300">🧩 Plugin System: Install, Activate, Deactivate Extensions</p>
+            </div>
+        </div>
+    `;
+};
+
+// ============================================
+// LSP SETTINGS
+// ============================================
+const renderLSPSettings = () => {
+    const config = state.lspConfig || {
+        enabled: true,
+        autoStart: true,
+        languages: ['typescript', 'javascript', 'python', 'html', 'css', 'json', 'markdown']
+    };
+
+    const allLanguages = ['typescript', 'javascript', 'python', 'html', 'css', 'json', 'markdown', 'go', 'rust', 'java', 'php'];
+
+    return `
+        <div class="space-y-8">
+            <div class="space-y-4">
+                <h5 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Language Server Protocol</h5>
+                
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Enable LSP</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="lsp-enabled" ${config.enabled ? 'checked' : ''}
+                            onchange="window.updateLspConfig('enabled', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-400">Auto-start Language Servers</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="lsp-autostart" ${config.autoStart ? 'checked' : ''}
+                            onchange="window.updateLspConfig('autoStart', this.checked)"
+                            class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs text-gray-400">Enabled Languages</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        ${allLanguages.map(lang => `
+                            <label class="flex items-center gap-2 p-2 bg-black/20 border border-gray-800 rounded cursor-pointer hover:border-blue-500 transition">
+                                <input type="checkbox" value="${lang}" 
+                                    ${config.languages.includes(lang) ? 'checked' : ''}
+                                    onchange="window.toggleLspLanguage('${lang}', this.checked)"
+                                    class="w-3 h-3 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-600 ring-offset-gray-800 focus:ring-2 focus:ring-offset-2" />
+                                <span class="text-xs text-gray-300 capitalize">${lang}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+                <p class="text-xs text-indigo-300">📝 IntelliSense, Go-to-Definition, Diagnostics per 7+ linguaggi</p>
+            </div>
+        </div>
+    `;
+};
+
         window.runAiDiagnostics();
     }
 });

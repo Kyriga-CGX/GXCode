@@ -65,69 +65,83 @@ export const initDebug = () => {
         pane.innerHTML = `
             <div class="flex flex-col h-full animate-fade-in">
                 <!-- Controls -->
-                <div class="p-4 border-b border-[var(--border-dim)] bg-[var(--bg-side)] flex items-center justify-between shrink-0">
+                <div class="p-4 border-b border-[var(--border-dim)] bg-gradient-to-r from-[var(--bg-side)] to-[var(--bg-main)] flex items-center justify-between shrink-0">
                     <div class="flex items-center gap-2">
-                        <button onclick="window.toggleDebugSession()" class="flex items-center gap-2 px-3 py-1.5 ${state.isDebugModeActive ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'} border rounded text-[10px] font-bold uppercase transition hover:scale-105 active:scale-95">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="${state.isDebugModeActive ? 'M6 6h12v12H6z' : 'M8 5v14l11-7z'}"/></svg>
+                        <button onclick="window.toggleDebugSession()" class="flex items-center gap-2 px-4 py-2 ${state.isDebugModeActive ? 'bg-gradient-to-r from-red-600/20 to-red-500/10 text-red-400 border-red-500/30 hover:from-red-500/20 hover:to-red-400/10' : 'bg-gradient-to-r from-emerald-600/20 to-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:from-emerald-500/20 hover:to-emerald-400/10'} border rounded-lg text-[10px] font-bold uppercase transition hover:scale-105 active:scale-95 shadow-lg ${state.isDebugModeActive ? 'shadow-red-900/20' : 'shadow-emerald-900/20'}">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="${state.isDebugModeActive ? 'M6 6h12v12H6z' : 'M8 5v14l11-7z'}"/></svg>
                             <span>${state.isDebugModeActive ? t('debug.stop') : t('debug.start')}</span>
                         </button>
                     </div>
-                    <div class="flex items-center gap-2 ${state.isDebugModeActive ? 'opacity-100' : 'opacity-30 pointer-events-none'}">
-                         <button onclick="window.debugContinue()" class="p-1.5 text-gray-400 hover:text-emerald-400 transition hover:bg-[var(--bg-side-alt)] rounded" title="${t('debug.continue')}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg></button>
-                         <button onclick="window.debugStep()" class="p-1.5 text-gray-400 hover:text-blue-400 transition hover:bg-[var(--bg-side-alt)] rounded" title="${t('debug.stepOver')}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg></button>
+                    <div class="flex items-center gap-1.5 ${state.isDebugModeActive ? 'opacity-100' : 'opacity-30 pointer-events-none'} transition-opacity">
+                         <button onclick="window.debugContinue()" class="p-2 text-gray-400 hover:text-emerald-400 transition hover:bg-white/5 rounded-lg border border-transparent hover:border-emerald-500/20" title="${t('debug.continue')}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+                         </button>
+                         <button onclick="window.debugStep()" class="p-2 text-gray-400 hover:text-blue-400 transition hover:bg-white/5 rounded-lg border border-transparent hover:border-blue-500/20" title="${t('debug.stepOver')}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>
+                         </button>
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-5">
                     <!-- Call Stack -->
                     <section class="space-y-3">
-                        <h5 class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">${t('debug.callStack')}</h5>
-                        <div class="space-y-1">
-                            ${state.debugCallStack && state.debugCallStack.length > 0 ? 
+                        <div class="flex items-center gap-2 px-2 py-2 rounded-lg bg-black/20 border border-[var(--border-ghost)]">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-yellow-400"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                            <h5 class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">${t('debug.callStack')}</h5>
+                        </div>
+                        <div class="space-y-1.5">
+                            ${state.debugCallStack && state.debugCallStack.length > 0 ?
                                 state.debugCallStack.map(cf => `
-                                    <div class="text-[10px] px-2 py-1 bg-[var(--bg-side)] border-l-2 border-yellow-500/50 text-gray-300 font-mono line-clamp-1 rounded-r">
-                                        ${cf.functionName} <span class="text-gray-600 text-[8px]">${t('debug.line')} ${cf.location.lineNumber + 1}</span>
+                                    <div class="text-[10px] px-3 py-2 bg-gradient-to-r from-yellow-500/5 to-transparent border-l-2 border-yellow-500/50 text-gray-300 font-mono line-clamp-1 rounded-r-lg hover:from-yellow-500/10 transition">
+                                        <span class="text-yellow-400 font-semibold">${cf.functionName}</span> <span class="text-gray-600 text-[8px]">: ${t('debug.line')} ${cf.location.lineNumber + 1}</span>
                                     </div>
-                                `).join('') : 
-                                `<div class="text-[10px] text-gray-600 italic px-2 border-l border-[var(--border-dim)]">${t('debug.noProcess')}</div>`
+                                `).join('') :
+                                `<div class="text-[10px] text-gray-600 italic px-3 py-2 border-l-2 border-[var(--border-dim)] rounded-r-lg">${t('debug.noProcess')}</div>`
                             }
                         </div>
                     </section>
 
                     <!-- Variables -->
                     <section class="space-y-3">
-                        <h5 class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">${t('debug.variables')}</h5>
-                        <div class="space-y-1">
-                            ${variables.length > 0 ? 
+                        <div class="flex items-center gap-2 px-2 py-2 rounded-lg bg-black/20 border border-[var(--border-ghost)]">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-400"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                            <h5 class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">${t('debug.variables')}</h5>
+                        </div>
+                        <div class="space-y-1.5">
+                            ${variables.length > 0 ?
                                 variables.map(v => `
-                                    <div class="flex items-baseline gap-2 text-[10px] px-2 py-1 hover:bg-[var(--bg-side)] rounded transition group border border-transparent hover:border-[var(--border-dim)]">
-                                        <span class="text-blue-400 font-bold font-mono">${v.name}:</span>
+                                    <div class="flex items-baseline gap-2 text-[10px] px-3 py-2 hover:bg-white/5 rounded-lg transition group border border-transparent hover:border-[var(--border-dim)] bg-black/10">
+                                        <span class="text-blue-400 font-bold font-mono">${v.name}</span>
+                                        <span class="text-gray-500">=</span>
                                         <span class="text-gray-300 font-mono truncate" title="${v.value}">${v.value}</span>
-                                        <span class="text-[8px] text-gray-600 uppercase ml-auto opacity-0 group-hover:opacity-100">${v.type}</span>
+                                        <span class="text-[8px] text-gray-600 uppercase ml-auto opacity-0 group-hover:opacity-100 transition-opacity px-1.5 py-0.5 rounded bg-gray-800">${v.type}</span>
                                     </div>
-                                `).join('') : 
-                                `<div class="text-[10px] text-gray-600 italic px-2 border-l border-[var(--border-dim)]">${t('debug.scopeEmpty')}</div>`
+                                `).join('') :
+                                `<div class="text-[10px] text-gray-600 italic px-3 py-2 border-l-2 border-[var(--border-dim)] rounded-r-lg">${t('debug.scopeEmpty')}</div>`
                             }
                         </div>
                     </section>
 
                     <!-- Breakpoints -->
                     <section class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <h5 class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">${t('debug.breakpoints')}</h5>
-                            <button onclick="window.clearAllBreakpoints()" class="text-[9px] text-gray-600 hover:text-red-400 uppercase font-bold transition">${t('debug.reset')}</button>
+                        <div class="flex items-center justify-between px-2 py-2 rounded-lg bg-black/20 border border-[var(--border-ghost)]">
+                            <div class="flex items-center gap-2">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-red-400"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                <h5 class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">${t('debug.breakpoints')}</h5>
+                            </div>
+                            <button onclick="window.clearAllBreakpoints()" class="text-[9px] text-gray-600 hover:text-red-400 uppercase font-bold transition px-2 py-1 rounded hover:bg-red-500/10">${t('debug.reset')}</button>
                         </div>
                         <div class="space-y-2">
-                            ${breakpoints.length === 0 ? `<div class="text-[10px] text-gray-600 italic px-2 border-l border-[var(--border-dim)]">${t('debug.noBreakpoints')}</div>` : ''}
+                            ${breakpoints.length === 0 ? `<div class="text-[10px] text-gray-600 italic px-3 py-2 border-l-2 border-[var(--border-dim)] rounded-r-lg">${t('debug.noBreakpoints')}</div>` : ''}
                             ${breakpoints.map(bp => {
                                 const fileName = bp.path.split(/[\\\\/]/).pop();
                                 return `
-                                    <div class="flex items-center justify-between p-2.5 bg-[var(--bg-side)] border border-[var(--border-dim)] rounded-lg group hover:border-red-500/30 transition shadow-sm">
-                                        <div class="flex flex-col">
-                                            <span class="text-[11px] font-bold text-gray-300 line-clamp-1">${fileName}</span>
+                                    <div class="flex items-center justify-between p-2.5 bg-gradient-to-r from-red-500/5 to-transparent border border-[var(--border-dim)] rounded-lg group hover:border-red-500/30 transition shadow-sm hover:shadow-red-900/10">
+                                        <div class="flex flex-col gap-0.5">
+                                            <span class="text-[11px] font-bold text-gray-300 line-clamp-1 group-hover:text-red-300 transition">${fileName}</span>
                                             <span class="text-[9px] text-gray-600 font-mono italic">${t('debug.line')} ${bp.line}</span>
                                         </div>
-                                        <div class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
+                                        <div class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)] animate-pulse"></div>
                                     </div>
                                 `;
                             }).join('')}

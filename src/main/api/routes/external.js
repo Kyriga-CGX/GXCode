@@ -22,13 +22,31 @@ function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
             const data = await response.json();
             if (!Array.isArray(data)) return res.json([]);
 
-            const formatted = data.map(issue => ({
-                id: issue.idReadable,
-                name: issue.summary,
-                project: issue.project?.name,
-                status: issue.state?.name,
-                rawUrl: `${url.replace(/\/$/, '')}/issue/${issue.idReadable}`
-            }));
+            const formatted = data.map(issue => {
+                const sprintField = issue.customFields?.find(f => f.name.toLowerCase() === 'sprint');
+                return {
+                    id: issue.idReadable,
+                    name: issue.summary,
+                    description: issue.description || '',
+                    project: issue.project?.name || 'Unknown',
+                    priority: issue.priority?.name || 'Normal',
+                    status: issue.state?.name || 'Open',
+                    assignee: issue.assignee?.fullName || null,
+                    tags: issue.tags?.map(t => ({
+                        name: t.name,
+                        color: t.color?.id || '1',
+                        background: t.color?.background,
+                        foreground: t.color?.foreground
+                    })) || [],
+                    links: issue.links?.filter(l => l.issue).map(l => ({
+                        direction: l.direction,
+                        id: l.issue.idReadable,
+                        summary: l.issue.summary
+                    })) || [],
+                    sprint: sprintField?.value?.name || sprintField?.value?.text || null,
+                    rawUrl: `${url.replace(/\/$/, '')}/issue/${issue.idReadable}`
+                };
+            });
             res.json(formatted);
         } catch (err) {
             res.status(500).json({ error: err.message });

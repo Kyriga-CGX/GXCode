@@ -74,6 +74,15 @@ export const state = {
     debugActiveLine: null,
     gitStatus: {}, // Map of path -> status (M, A, D, U)
     customAiConfig: JSON.parse(localStorage.getItem('gx-custom-ai-config') || '{"apiKey":"","endpoint":"http://localhost:11434/v1","models":[],"activeModel":"","isSetup":false}'),
+    
+    // New Module Configurations
+    terminalConfig: JSON.parse(localStorage.getItem('gx-terminal-config') || '{"fontSize":14,"fontFamily":"Cascadia Code","cursorBlink":true,"scrollback":5000}'),
+    aiReactivityConfig: JSON.parse(localStorage.getItem('gx-ai-reactivity-config') || '{"enabled":true,"model":"qwen2.5-coder:7b","timeout":180000,"maxContextTokens":6000,"idleTimeout":2500,"enableStreaming":true,"enableSmartContext":true}'),
+    testingConfig: JSON.parse(localStorage.getItem('gx-testing-config') || '{"defaultFramework":"playwright","autoDetect":true,"runOnSave":false,"showTestPanel":true}'),
+    debuggerConfig: JSON.parse(localStorage.getItem('gx-debugger-config') || '{"enableSourceMaps":true,"autoDetectLaunchConfigs":true,"showWatchPanel":true,"showCallStackPanel":true}'),
+    gitConfig: JSON.parse(localStorage.getItem('gx-git-config') || '{"autoFetchStatus":true,"fetchInterval":60000,"showGitGraph":true,"enableStash":true}'),
+    extensionsConfig: JSON.parse(localStorage.getItem('gx-extensions-config') || '{"autoActivate":true,"extensionsDir":"~/.gxcode/extensions","showMarketplace":true}'),
+    lspConfig: JSON.parse(localStorage.getItem('gx-lsp-config') || '{"enabled":true,"autoStart":true,"languages":["typescript","javascript","python","html","css","json","markdown"]}'),
     // Configurazione Gemini con merge dei default (Evita crash per schema-mismatch)
     geminiConfig: (() => {
         const defaults = {
@@ -193,6 +202,160 @@ export const state = {
         };
         const saved = JSON.parse(localStorage.getItem('gx-ai-companion-state') || '{}');
         return { ...defaults, ...saved };
+    })(),
+
+    // LSP (Language Server Protocol) State
+    lspConfig: (() => {
+        const defaults = {
+            enabled: true,
+            autoStart: true,
+            servers: {}, // Map<language, serverStatus>
+            activeServers: [],
+            enableDiagnostics: true,
+            enableCompletion: true,
+            enableHover: true,
+            enableSignatureHelp: true,
+            enableDefinition: true,
+            enableReferences: true,
+            enableRename: true,
+            enableCodeActions: true,
+            enableFormatting: true,
+            logLevel: 'info'
+        };
+        const saved = JSON.parse(localStorage.getItem('gx-lsp-config') || '{}');
+        return { ...defaults, ...saved };
+    })(),
+
+    // Testing Framework State
+    testingConfig: (() => {
+        const defaults = {
+            enabled: true,
+            defaultFramework: 'auto', // 'auto', 'playwright', 'jest', 'vitest', 'mocha'
+            autoDiscoverTests: true,
+            runOnSave: false,
+            showCoverage: true,
+            coverageThreshold: 80,
+            parallelExecution: false,
+            watchMode: false,
+            reporters: ['default'], // 'default', 'json', 'html', 'junit'
+            testExplorer: {
+                expanded: true,
+                showPassed: true,
+                showSkipped: true,
+                autoScroll: false
+            }
+        };
+        const saved = JSON.parse(localStorage.getItem('gx-testing-config') || '{}');
+        return { ...defaults, ...saved };
+    })(),
+
+    // Git Advanced State
+    gitAdvancedConfig: (() => {
+        const defaults = {
+            diffViewer: {
+                viewMode: 'split', // 'split' or 'inline'
+                showLineNumbers: true,
+                highlightWords: false,
+                ignoreWhitespace: false
+            },
+            conflictResolver: {
+                autoDetect: true,
+                showOnOpen: true,
+                defaultStrategy: 'manual' // 'manual', 'current', 'incoming'
+            },
+            stashManager: {
+                showUntracked: false,
+                autoPop: false,
+                confirmDrop: true
+            },
+            graphView: {
+                commitsPerPage: 50,
+                showAuthor: true,
+                showDate: true,
+                colorizeBranches: true,
+                infiniteScroll: true
+            }
+        };
+        const saved = JSON.parse(localStorage.getItem('gx-git-advanced-config') || '{}');
+        return { ...defaults, ...saved };
+    })(),
+
+    // Terminal Advanced State
+    terminalConfig: (() => {
+        const defaults = {
+            defaultShell: '', // Will be auto-detected by main process
+            fontSize: 14,
+            fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
+            cursorBlink: true,
+            cursorStyle: 'block', // 'block', 'line', 'underline'
+            scrollback: 5000,
+            splitLayout: 'single', // 'single', 'split-h', 'split-v'
+            splitSize: 0.5,
+            autoDetectCwd: true,
+            showTabs: true,
+            confirmClose: true,
+            persistentSessions: false,
+            // Task runner
+            tasks: {
+                autoDiscover: true,
+                showOnStart: false,
+                defaultTask: null,
+                problemMatchers: true
+            },
+            // Output channels
+            output: {
+                visible: false,
+                autoScroll: true,
+                maxLines: 10000,
+                showTimestamps: true,
+                showSource: true,
+                filterLevel: 'all' // 'all', 'info', 'warn', 'error'
+            }
+        };
+        const saved = JSON.parse(localStorage.getItem('gx-terminal-config') || '{}');
+        return { ...defaults, ...saved };
+    })(),
+
+    // Browser Debug State
+    browserDebugConfig: (() => {
+        const defaults = {
+            browserPath: '', // Auto-detect if empty
+            userDataDir: '', // Auto-generated if empty
+            debugPort: 9222,
+            defaultUrl: 'about:blank',
+            headless: false,
+            autoLaunch: false,
+            // Source maps
+            sourceMaps: {
+                enabled: true,
+                autoLoad: true,
+                loadSourceContent: true,
+                maxCacheSize: 100
+            },
+            // Console
+            console: {
+                visible: true,
+                preserveLog: false,
+                showTimestamps: true,
+                filterLevel: 'all'
+            },
+            // Network
+            network: {
+                visible: false,
+                recordRequests: true,
+                showWaterfall: true,
+                filterTypes: ['xhr', 'fetch', 'doc', 'js', 'css', 'img', 'media', 'font', 'ws', 'manifest', 'other']
+            },
+            // Elements
+            elements: {
+                visible: true,
+                autoRefresh: false,
+                showDOMProperties: true,
+                showComputedStyles: true
+            }
+        };
+        const saved = JSON.parse(localStorage.getItem('gx-browser-debug-config') || '{}');
+        return { ...defaults, ...saved };
     })()
 };
 
@@ -257,6 +420,13 @@ export const setState = (newState) => {
     }
     
     if (newState.hasOwnProperty('bottomPanelHeight')) localStorage.setItem('gx-bottom-panel-height', state.bottomPanelHeight);
+    if (newState.hasOwnProperty('terminalConfig')) localStorage.setItem('gx-terminal-config', JSON.stringify(state.terminalConfig));
+    if (newState.hasOwnProperty('aiReactivityConfig')) localStorage.setItem('gx-ai-reactivity-config', JSON.stringify(state.aiReactivityConfig));
+    if (newState.hasOwnProperty('testingConfig')) localStorage.setItem('gx-testing-config', JSON.stringify(state.testingConfig));
+    if (newState.hasOwnProperty('debuggerConfig')) localStorage.setItem('gx-debugger-config', JSON.stringify(state.debuggerConfig));
+    if (newState.hasOwnProperty('gitConfig')) localStorage.setItem('gx-git-config', JSON.stringify(state.gitConfig));
+    if (newState.hasOwnProperty('extensionsConfig')) localStorage.setItem('gx-extensions-config', JSON.stringify(state.extensionsConfig));
+    if (newState.hasOwnProperty('lspConfig')) localStorage.setItem('gx-lsp-config', JSON.stringify(state.lspConfig));
 
     console.log("[GX-STATE] Persistence updated for keys:", Object.keys(newState).filter(k => 
         ['activeRightTab', 'activeActivity', 'activeLeftTab', 'isLeftSidebarOpen', 'isRightSidebarOpen', 

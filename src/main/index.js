@@ -31,6 +31,11 @@ if (!gotTheLock) {
     const { registerDebugHandlers } = require('./ipc/debugHandlers');
     const { registerAiCompanionHandlers } = require('./ipc/aiCompanionHandlers');
     const { registerAiReactivityHandlers } = require('./ipc/aiReactivityHandlers');
+    const { registerTerminalSplitHandlers } = require('./ipc/terminalSplitHandlers');
+    const { registerTaskRunnerHandlers } = require('./ipc/taskRunnerHandlers');
+    const { registerChromeDebuggerHandlers } = require('./ipc/chromeDebuggerHandlers');
+    const { registerLSPHandlers } = require('./ipc/lspHandlers');
+    const AIReactivityModule = require('./modules/ai/AIReactivityEngine');
 
     // --- HARDENING (Local AppData Redirection) ---
 // Note: userData is set earlier in the root main.js script
@@ -93,6 +98,19 @@ app.whenReady().then(() => {
     registerDebugHandlers(mainWindow);
     registerAiCompanionHandlers();
     registerAiReactivityHandlers(mainWindow);
+    registerTerminalSplitHandlers();
+    registerTaskRunnerHandlers(mainWindow);
+    registerChromeDebuggerHandlers(mainWindow);
+    registerLSPHandlers(mainWindow);
+
+    // 3.5 Initialize AI Reactivity Module
+    AIReactivityModule.init({
+        userDataPath: localDataPath
+    }).then(() => {
+        console.log('[GX-BOOTSTRAP] AI Reactivity Engine initialized successfully');
+    }).catch(err => {
+        console.warn('[GX-BOOTSTRAP] AI Reactivity Engine init failed:', err.message);
+    });
 
     // 4. Auto-Updater Logic (Safe Mode)
     if (app.isPackaged) {

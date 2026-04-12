@@ -3,7 +3,11 @@
     "allow": [
       "Bash(npm start)",
       "Bash(node *)",
-      "Bash(npx *)"
+      "Bash(npx *)",
+      "Bash(dir *)",
+      "Bash(del *)",
+      "Bash(rmdir *)",
+      "Bash(git add *)"
     ]
   },
   "$version": 3

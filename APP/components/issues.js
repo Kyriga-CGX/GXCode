@@ -84,19 +84,38 @@ const renderIssueItem = (issue) => {
 
 let activeFilter = 'Tutti';
 let activeSprint = 'Tutti';
+let activeProject = 'Tutti';
 
 const renderFilterBar = () => {
+    // Get unique statuses from actual issues
+    const uniqueStatuses = [...new Set(state.issues.map(t => t.status).filter(Boolean))];
+    
     const filters = [
-        { id: 'Tutti', label: window.t('categories.all') },
-        { id: 'In Test', label: 'In Test' },
-        { id: 'In Progress', label: 'Progress' },
-        { id: 'KO', label: 'Ko' }
+        { id: 'Tutti', label: window.t('categories.all') || 'Tutti' },
+        ...uniqueStatuses.map(status => ({ id: status, label: status }))
     ];
 
-    const sprints = ['Tutti', ...new Set(state.issues.filter(t => t.sprint).map(t => t.sprint))];
+    const sprints = ['Tutti', ...new Set(state.issues.filter(t => t.sprint).map(t => t.sprint).filter(Boolean))];
+    const projects = ['Tutti', ...new Set(state.issues.map(t => t.project).filter(Boolean))];
+
+    // Statistics
+    const totalIssues = state.issues.length;
+    const issuesByStatus = {};
+    state.issues.forEach(issue => {
+        issuesByStatus[issue.status] = (issuesByStatus[issue.status] || 0) + 1;
+    });
 
     return `
         <div class="flex flex-col gap-2 px-3 py-3 border-b gx-border-theme bg-black/10 backdrop-blur-md">
+            <!-- Statistics -->
+            <div class="flex items-center gap-3 mb-2 pb-2 border-b border-gray-800/50">
+                <span class="text-[9px] text-gray-500 font-bold">Totale: <span class="text-blue-400">${totalIssues}</span></span>
+                ${Object.entries(issuesByStatus).slice(0, 5).map(([status, count]) => `
+                    <span class="text-[9px] text-gray-600">${status}: <span class="text-gray-400">${count}</span></span>
+                `).join('')}
+            </div>
+
+            <!-- Status Filters -->
             <div class="flex flex-wrap items-center gap-1.5">
                 ${filters.map(f => `
                     <button onclick="window.filterIssues('${f.id}')" class="px-2 py-0.5 rounded text-[8px] uppercase font-bold tracking-tighter transition-all border ${activeFilter === f.id ? 'bg-[var(--accent-glow)] border-[var(--accent)] text-[var(--accent)]' : 'bg-[var(--bg-main)] gx-border-theme text-gray-500 hover:text-gray-300'}">
@@ -104,15 +123,27 @@ const renderFilterBar = () => {
                     </button>
                 `).join('')}
             </div>
-            
-            ${sprints.length > 1 ? `
+
+            <!-- Project & Sprint Filters -->
             <div class="flex items-center gap-2">
-                <span class="text-[8px] uppercase font-bold text-gray-600 tracking-widest">${window.t('issues.sprint')}:</span>
-                <select onchange="window.filterIssuesBySprint(this.value)" class="flex-1 bg-[var(--bg-main)] border gx-border-theme rounded px-2 py-1 text-[9px] text-gray-300 focus:outline-none focus:border-[var(--accent)] transition cursor-pointer">
-                    ${sprints.map(s => `<option value="${s}" ${activeSprint === s ? 'selected' : ''}>${s}</option>`).join('')}
-                </select>
+                ${projects.length > 1 ? `
+                <div class="flex items-center gap-1 flex-1">
+                    <span class="text-[8px] uppercase font-bold text-gray-600 tracking-widest">Progetto:</span>
+                    <select onchange="window.filterByProject(this.value)" class="flex-1 bg-[var(--bg-main)] border gx-border-theme rounded px-2 py-1 text-[9px] text-gray-300 focus:outline-none focus:border-[var(--accent)] transition cursor-pointer">
+                        ${projects.map(p => `<option value="${p}" ${activeProject === p ? 'selected' : ''}>${p}</option>`).join('')}
+                    </select>
+                </div>
+                ` : ''}
+
+                ${sprints.length > 1 ? `
+                <div class="flex items-center gap-1 flex-1">
+                    <span class="text-[8px] uppercase font-bold text-gray-600 tracking-widest">${window.t('issues.sprint') || 'Sprint'}:</span>
+                    <select onchange="window.filterIssuesBySprint(this.value)" class="flex-1 bg-[var(--bg-main)] border gx-border-theme rounded px-2 py-1 text-[9px] text-gray-300 focus:outline-none focus:border-[var(--accent)] transition cursor-pointer">
+                        ${sprints.map(s => `<option value="${s}" ${activeSprint === s ? 'selected' : ''}>${s}</option>`).join('')}
+                    </select>
+                </div>
+                ` : ''}
             </div>
-            ` : ''}
         </div>
     `;
 };
@@ -240,6 +271,7 @@ export const initIssues = async () => {
 
     window.filterIssues = (cat) => { activeFilter = cat; render(); };
     window.filterIssuesBySprint = (sprint) => { activeSprint = sprint; render(); };
+    window.filterByProject = (project) => { activeProject = project; render(); };
 
     const render = () => {
         filterRoot.innerHTML = renderFilterBar();
@@ -284,11 +316,48 @@ export const initIssues = async () => {
         if (activeSprint !== 'Tutti') {
             filtered = filtered.filter(t => t.sprint === activeSprint);
         }
+        if (activeProject !== 'Tutti') {
+            filtered = filtered.filter(t => t.project === activeProject);
+        }
 
         contentBox.innerHTML = filtered.map(renderIssueItem).join('');
     };
 
     subscribe(render);
+
+    // Auto-refresh ogni 60 secondi
+    let refreshInterval = null;
+    const startAutoRefresh = () => {
+        if (refreshInterval) clearInterval(refreshInterval);
+        
+        const config = state.youtrackConfig || {};
+        if (config.enabled && config.url && config.token) {
+            refreshInterval = setInterval(() => {
+                console.log('[Issues] Auto-refreshing tickets...');
+                api.loadIssues();
+            }, 60000); // 60 secondi
+        }
+    };
+
+    const stopAutoRefresh = () => {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+            refreshInterval = null;
+        }
+    };
+
+    // Avvia auto-refresh
+    startAutoRefresh();
+
+    // Ferma auto-refresh se la configurazione viene disabilitata
+    subscribe((newState) => {
+        const config = newState.youtrackConfig || {};
+        if (!config.enabled || !config.url || !config.token) {
+            stopAutoRefresh();
+        } else {
+            startAutoRefresh();
+        }
+    });
 
     try {
         await api.loadIssues();
