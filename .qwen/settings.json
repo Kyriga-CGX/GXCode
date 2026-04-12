@@ -7,7 +7,9 @@
       "Bash(dir *)",
       "Bash(del *)",
       "Bash(rmdir *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(npm run *)"
     ]
   },
   "$version": 3

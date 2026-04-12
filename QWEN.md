@@ -12,9 +12,9 @@ This project is being managed by **GXCode IDE**.
 
 ## CURRENT WORKSPACE CONTEXT
 - **Open Editor Tabs**:
-  - `C:/Users/Kyrig/OneDrive/Desktop/prova/tests/example.spec.js` **[ACTIVE]**
-  - `C:/Users/Kyrig/OneDrive/Desktop/prova/asdasdasdas.js` 
-  - `C:/Users/Kyrig/OneDrive/Desktop/prova/tests/GX_IDENTITY.md` 
+  - `AI_COMPANION_IDLE_POLICY.md` 
+  - `APP/e2e/example.spec.js` 
+  - `e2e/debug.spec.js` **[ACTIVE]**
 
 
 ## INSTRUCTIONS
