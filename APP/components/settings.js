@@ -3,14 +3,24 @@ import { loadLocale } from '../core/i18n.js';
 import { api } from '../core/api.js';
 
 const getSkins = () => [
-    { id: 'dark', label: 'Industrial Dark (Default)' },
-    { id: 'classic', label: 'Classic IDE' },
-    { id: 'neon-cyber', label: 'Neon Cyber 2026' },
-    { id: 'nordic-frost', label: 'Nordic Frost 2026' },
-    { id: 'aurora-oled', label: 'Aurora OLED 2026' },
-    { id: 'titanium-carbon', label: 'Titanium Carbon 2026' },
-    { id: 'solar-flare', label: 'Solar Flare 2026' },
-    { id: 'void-stealth', label: 'Void Stealth 2026' }
+    // ── Dark Themes ──
+    { id: 'dark',             group: 'dark',  label: 'Industrial Dark',   preview: 'linear-gradient(135deg, #06080a 0%, #0c1020 60%, #08090d 100%)',    accent: '#3b82f6' },
+    { id: 'classic',          group: 'dark',  label: 'Classic IDE',        preview: 'linear-gradient(135deg, #0d1117 0%, #0f1521 60%, #161b22 100%)',    accent: '#2188ff' },
+    { id: 'neon-cyber',       group: 'dark',  label: 'Neon Cyber',         preview: 'linear-gradient(135deg, #0c0e14 0%, #160823 58%, #0c0a14 100%)',    accent: '#ff007c' },
+    { id: 'nordic-frost',     group: 'dark',  label: 'Nordic Frost',       preview: 'linear-gradient(135deg, #020617 0%, #061228 62%, #030b1a 100%)',    accent: '#38bdf8' },
+    { id: 'aurora-oled',      group: 'dark',  label: 'Aurora OLED',        preview: 'linear-gradient(135deg, #000000 0%, #001810 55%, #000000 100%)',    accent: '#00ffca' },
+    { id: 'titanium-carbon',  group: 'dark',  label: 'Titanium Carbon',    preview: 'linear-gradient(135deg, #0a0a0a 0%, #140e08 58%, #0a0808 100%)',    accent: '#f97316' },
+    { id: 'solar-flare',      group: 'dark',  label: 'Solar Flare',        preview: 'linear-gradient(135deg, #18181b 0%, #1a160a 58%, #141214 100%)',    accent: '#fbbf24' },
+    { id: 'void-stealth',     group: 'dark',  label: 'Void Stealth',       preview: 'linear-gradient(135deg, #020306 0%, #080418 58%, #030208 100%)',    accent: '#6366f1' },
+    // ── Light & Soft Themes ──
+    { id: 'morning-mist',     group: 'light', label: 'Morning Mist',       preview: 'linear-gradient(135deg, #f8faff 0%, #eef2ff 55%, #dce6ff 100%)',    accent: '#4a6fd8' },
+    { id: 'sakura-bloom',     group: 'light', label: 'Sakura Bloom',       preview: 'linear-gradient(135deg, #fff8fa 0%, #fff0f4 55%, #ffd8e4 100%)',    accent: '#c84a6a' },
+    { id: 'mint-serenity',    group: 'light', label: 'Mint Serenity',      preview: 'linear-gradient(135deg, #f5fff9 0%, #edfaf4 55%, #cce8da 100%)',    accent: '#28845e' },
+    { id: 'amber-parchment',  group: 'light', label: 'Amber Parchment',    preview: 'linear-gradient(135deg, #fffbf0 0%, #fef5d8 55%, #f8da90 100%)',    accent: '#9a6208' },
+    { id: 'lavender-cloud',   group: 'light', label: 'Lavender Cloud',     preview: 'linear-gradient(135deg, #faf8ff 0%, #f2eeff 55%, #d8ccff 100%)',    accent: '#6040b8' },
+    { id: 'ocean-pearl',      group: 'light', label: 'Ocean Pearl',        preview: 'linear-gradient(135deg, #f0f9ff 0%, #e8f4ff 55%, #bcd8ff 100%)',    accent: '#0660a0' },
+    { id: 'forest-moss',      group: 'light', label: 'Forest Moss',        preview: 'linear-gradient(135deg, #f5f8f2 0%, #edf3e8 55%, #cce0c4 100%)',    accent: '#386844' },
+    { id: 'sunset-cream',     group: 'light', label: 'Sunset Cream',       preview: 'linear-gradient(135deg, #fff8f2 0%, #fff0e8 55%, #faccb0 100%)',    accent: '#a84c28' },
 ];
 
 const getSettingsTabs = () => [
@@ -621,24 +631,35 @@ const renderTabContent = () => {
                     </div>
                 </div>
             `;
-        case 'appearance':
+        case 'appearance': {
             const currentSkin = getSavedSkin();
             const customColor = localStorage.getItem('cgx-grad-color') || '#ff0055';
-            return `
-                <div class="space-y-8">
-                    <div>
-                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4" data-i18n="settings.appearance.title">${window.t('settings.appearance.title')}</h4>
-                        <div class="grid grid-cols-2 gap-3 pb-8">
-                            ${getSkins().map(s => `
-                                <div onclick="window.applySkin('${s.id}')" class="p-4 border rounded-xl cursor-pointer transition-all flex flex-col gap-1 ${state.activeCgxTheme === s.id ? 'bg-blue-600/20 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'bg-[#161b22] border-gray-800 hover:border-gray-600'} group">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-[11px] font-bold uppercase tracking-widest ${state.activeCgxTheme === s.id ? 'text-blue-400' : 'text-gray-300 group-hover:text-white'}">${s.label}</span>
-                                        ${state.activeCgxTheme === s.id ? '<div class="w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_10px_#3b82f6]"></div>' : ''}
-                                    </div>
-                                    <div class="text-[9px] text-gray-500 font-medium uppercase tracking-tighter opacity-60">Evolution 2026 Edition</div>
-                                </div>
-                            `).join('')}
+            const allSkins = getSkins();
+            const darkSkins = allSkins.filter(s => s.group === 'dark');
+            const lightSkins = allSkins.filter(s => s.group === 'light');
+            const skinCard = (s) => {
+                const isActive = state.activeCgxTheme === s.id;
+                return `
+                    <div onclick="window.applySkin('${s.id}')" class="border rounded-xl cursor-pointer transition-all overflow-hidden ${isActive ? 'border-blue-500 shadow-[0_0_18px_rgba(59,130,246,0.25)]' : 'border-gray-800 hover:border-gray-600'} group">
+                        <div class="h-10 w-full relative" style="background:${s.preview}">
+                            <div class="absolute right-2 top-2 w-3 h-3 rounded-full border-2 border-white/40" style="background:${s.accent}"></div>
+                            ${isActive ? '<div class="absolute left-2 top-2 w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_8px_#3b82f6]"></div>' : ''}
                         </div>
+                        <div class="px-3 py-2 ${isActive ? 'bg-blue-600/15' : 'bg-[#161b22] group-hover:bg-[#1c2230]'}">
+                            <span class="text-[10px] font-bold uppercase tracking-widest leading-tight ${isActive ? 'text-blue-400' : 'text-gray-300 group-hover:text-white'}">${s.label}</span>
+                        </div>
+                    </div>
+                `;
+            };
+            return `
+                <div class="space-y-7">
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Dark Themes</h4>
+                        <div class="grid grid-cols-2 gap-3">${darkSkins.map(skinCard).join('')}</div>
+                    </div>
+                    <div class="border-t border-gray-800/60 pt-6">
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Light &amp; Soft Themes</h4>
+                        <div class="grid grid-cols-2 gap-3">${lightSkins.map(skinCard).join('')}</div>
                     </div>
                     <div id="settings-grad-box" class="${currentSkin === 'custom-gradient' ? 'block' : 'hidden'} space-y-4">
                         <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest" data-i18n="settings.appearance.customGrad">${window.t('settings.appearance.customGrad')}</h4>
@@ -646,6 +667,7 @@ const renderTabContent = () => {
                     </div>
                 </div>
             `;
+        }
         case 'language':
             return `
                 <div class="space-y-8">
