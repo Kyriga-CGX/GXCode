@@ -74,7 +74,7 @@ export const api = {
     
     // Phase 6: Sync Issues (YouTrack)
     loadIssues: async () => {
-         let { url, token, enabled } = state.youtrackConfig;
+         let { url, token, enabled, query, filterProjects } = state.youtrackConfig;
          
           // Fallback logic: if manual config is missing, check MCP servers
           if (!url || !token || !enabled) {
@@ -123,8 +123,14 @@ export const api = {
              return;
           }
 
-         const query = `?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}`;
-         const issues = await fetchJson(`/issues${query}`);
+         // Combina query testuale + filtro progetti in un'unica query YouTrack
+         let finalQuery = query || '';
+         if (filterProjects && filterProjects.length > 0) {
+             const projectFilter = `project: {${filterProjects.join(', ')}}`;
+             finalQuery = finalQuery ? `(${finalQuery}) AND ${projectFilter}` : projectFilter;
+         }
+         const params = `?url=${encodeURIComponent(url)}&token=${encodeURIComponent(token)}${finalQuery ? '&query=' + encodeURIComponent(finalQuery) : ''}`;
+         const issues = await fetchJson(`/issues${params}`);
          setState({ issues: issues || [] });
     },
     

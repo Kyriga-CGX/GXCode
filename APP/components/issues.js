@@ -36,48 +36,75 @@ const ytColorMap = {
 
 const renderIssueItem = (issue) => {
     const isActive = issue.id === state.activeIssueId;
+    const isWorking = issue.id === state.activeWorkingIssueId;
+    const myUsername = state.youtrackConfig?.myUsername || '';
+
     const statusClass = statusMap[issue.status] || 'bg-gray-500/10 text-gray-400 border-gray-500/30';
     const borderClass = borderColorMap[issue.status] || 'border-l-[var(--border-dim)]';
 
-    const priorityIcon = issue.priority === 'High' || issue.priority === 'Critical' ? '<span class="text-red-500">高</span>' : 
-                        issue.priority === 'Medium' || issue.priority === 'Normal' ? '<span class="text-yellow-500">中</span>' : 
-                        '<span class="text-gray-600">低</span>';
+    // Priorità con icone SVG
+    const priorityHtml = (issue.priority === 'High' || issue.priority === 'Critical')
+        ? `<span class="flex items-center gap-0.5 text-[8px] text-red-400 font-bold uppercase"><svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L22 20H2L12 2z"/></svg>${issue.priority}</span>`
+        : (issue.priority === 'Medium' || issue.priority === 'Normal')
+        ? `<span class="flex items-center gap-0.5 text-[8px] text-yellow-500 font-bold uppercase"><svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="11" width="18" height="2" rx="1"/></svg>${issue.priority}</span>`
+        : `<span class="flex items-center gap-0.5 text-[8px] text-gray-600 font-bold uppercase"><svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22L2 4h20L12 22z"/></svg>${issue.priority}</span>`;
 
-    const tagsHtml = (issue.tags || []).map(t => `
-        <span class="text-[8px] px-1 rounded border border-[var(--border-ghost)]" style="background: ${ytColorMap[t.color] || '#333'}22; color: ${ytColorMap[t.color] || '#ccc'}">
-            ${t.name}
-        </span>
+    // Badge assegnatario: IO / altro dipendente / non assegnato
+    const isAssignedToMe = myUsername && issue.assignee === myUsername;
+    const assigneeBadge = isAssignedToMe
+        ? `<span class="text-[8px] px-1.5 py-0.5 bg-blue-500/20 text-blue-400 border border-blue-500/40 rounded font-bold tracking-wider">IO</span>`
+        : issue.assignee
+        ? `<div class="flex items-center gap-1">
+               <div class="w-3.5 h-3.5 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center text-[7px] text-gray-400 font-bold shrink-0">${issue.assignee.charAt(0).toUpperCase()}</div>
+               <span class="text-[9px] text-gray-500 truncate max-w-[70px]">${issue.assignee}</span>
+           </div>`
+        : `<span class="text-[8px] text-gray-700 italic">Nessuno</span>`;
+
+    const tagsHtml = (issue.tags || []).slice(0, 3).map(t => `
+        <span class="text-[7px] px-1 py-0.5 rounded border" style="background:${t.background || ytColorMap[t.color] || '#333'}22;color:${t.foreground || ytColorMap[t.color] || '#aaa'};border-color:${t.background || '#444'}44">${t.name}</span>
     `).join('');
 
+    // Card styles: working ha bordo animato pulsante
+    const cardBase = `issue-item flex flex-col p-3 rounded-lg border transition-all hover:shadow-lg group border-l-[3px] ${borderClass} relative overflow-hidden cursor-pointer select-none`;
+    const cardState = isWorking
+        ? 'border-blue-500/70 bg-blue-500/5 shadow-[0_0_0_1px_rgba(59,130,246,0.3),0_0_12px_rgba(59,130,246,0.15)]'
+        : isActive
+        ? 'border-[var(--accent)] bg-[var(--accent-glow)]'
+        : 'border-[var(--border-dim)] bg-[var(--border-ghost)] hover:border-gray-600';
+
     return `
-        <div data-id="${issue.id}" class="issue-item flex flex-col p-3 rounded-lg border transition-all hover:shadow-lg group border-l-[3px] ${borderClass} relative overflow-hidden ${isActive ? 'border-[var(--accent)] bg-[var(--accent-glow)]' : 'border-[var(--border-dim)] bg-[var(--border-ghost)]'}" style="min-height: 80px; cursor: pointer;">
-            <div class="relative z-10 flex flex-col h-full pointer-events-none">
-                <div class="flex justify-between items-center mb-1">
-                    <div class="flex items-center gap-1.5 overflow-hidden">
-                        <span class="text-[10px] font-mono ${isActive ? 'text-blue-400 font-bold' : 'text-gray-500'} tracking-tighter">${issue.id}</span>
-                        <div class="flex gap-1 overflow-hidden">${tagsHtml}</div>
+        <div data-id="${issue.id}" data-url="${issue.rawUrl || ''}"
+             class="${cardBase} ${cardState}"
+             style="min-height: 80px;">
+            ${isWorking ? `
+            <div class="absolute top-1.5 right-1.5 z-20 flex items-center gap-1 px-1.5 py-0.5 bg-blue-600/80 rounded text-[7px] text-white font-bold uppercase tracking-wider border border-blue-400/40 backdrop-blur-sm">
+                <div class="w-1 h-1 rounded-full bg-white animate-pulse"></div>
+                WORKING
+            </div>` : ''}
+
+            <div class="relative z-10 flex flex-col h-full">
+                <!-- Header: ID + Tags + Status -->
+                <div class="flex justify-between items-start mb-1.5 gap-2">
+                    <div class="flex items-center gap-1.5 overflow-hidden flex-1">
+                        <span class="text-[10px] font-mono ${isWorking ? 'text-blue-400' : isActive ? 'text-blue-400' : 'text-gray-500'} font-bold tracking-tighter shrink-0">${issue.id}</span>
+                        <div class="flex gap-0.5 overflow-hidden">${tagsHtml}</div>
                     </div>
-                    <span class="text-[8px] px-1.5 py-0.5 rounded-full border ${statusClass} font-bold uppercase tracking-tighter shadow-sm flex-shrink-0">${issue.status}</span>
+                    <span class="text-[7px] px-1.5 py-0.5 rounded-full border ${statusClass} font-bold uppercase tracking-tighter shadow-sm shrink-0">${issue.status}</span>
                 </div>
-                
-                <h4 class="text-[11px] font-bold ${isActive ? 'text-white' : 'text-gray-200'} leading-tight mb-2 group-hover:text-blue-400 transition-colors truncate">${issue.name}</h4>
-                
-                <div class="flex justify-between items-center mt-auto pt-2 border-t gx-border-theme">
-                    <div class="flex items-center gap-1.5 grayscale group-hover:grayscale-0 transition">
-                        <div class="w-4 h-4 rounded-full bg-[var(--bg-side)] border border-[var(--border-dim)] flex items-center justify-center text-[8px] text-gray-300 shadow-sm font-bold">
-                            ${issue.assignee ? issue.assignee.charAt(0).toUpperCase() : '?'}
-                        </div>
-                        <span class="text-[9px] text-gray-500 font-medium truncate max-w-[80px]">${issue.assignee || window.t('issues.noAssignee')}</span>
-                    </div>
-                    <div class="flex items-center gap-1 px-1 py-0.5 rounded bg-[var(--bg-main)]">
-                        <span class="text-[9px] text-gray-600 uppercase tracking-widest font-bold">${issue.priority}</span>
-                        <div class="text-[10px] opacity-70">${priorityIcon}</div>
-                    </div>
+
+                <!-- Titolo -->
+                <h4 class="text-[11px] font-bold ${isWorking ? 'text-white' : isActive ? 'text-white' : 'text-gray-200'} leading-tight mb-2 group-hover:text-blue-300 transition-colors line-clamp-2">${issue.name}</h4>
+
+                <!-- Footer: Assegnatario + Priorità -->
+                <div class="flex justify-between items-center mt-auto pt-1.5 border-t border-white/5">
+                    ${assigneeBadge}
+                    ${priorityHtml}
                 </div>
             </div>
-            
-            <!-- Glow background overlay -->
-            <div class="absolute inset-0 z-0 bg-blue-500/5 ${isActive ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+
+            <!-- Glow overlay -->
+            <div class="absolute inset-0 z-0 ${isWorking ? 'bg-blue-500/5 opacity-100' : 'bg-blue-500/3 opacity-0 group-hover:opacity-100'} transition-opacity pointer-events-none rounded-lg"></div>
+            ${isWorking ? '<div class="absolute inset-0 z-0 rounded-lg animate-pulse bg-blue-500/3 pointer-events-none"></div>' : ''}
         </div>
     `;
 };
@@ -265,9 +292,26 @@ export const initIssues = async () => {
         if (!item) return;
 
         const issueId = item.getAttribute('data-id');
-        window.openIssuePopup(issueId);
+        const rawUrl = item.getAttribute('data-url');
+
+        // Ctrl+Click → apri nel browser
+        if (e.ctrlKey || e.metaKey) {
+            if (rawUrl && window.electronAPI?.openExternalLink) {
+                window.electronAPI.openExternalLink(rawUrl);
+            }
+            return;
+        }
+
+        // Click normale → segna come "working" + apri popup dettaglio
         setState({ activeIssueId: issueId });
+        window.toggleWorkingIssue(issueId);
+        window.openIssuePopup(issueId);
     });
+
+    window.toggleWorkingIssue = (issueId) => {
+        const current = state.activeWorkingIssueId;
+        setState({ activeWorkingIssueId: current === issueId ? null : issueId });
+    };
 
     window.filterIssues = (cat) => { activeFilter = cat; render(); };
     window.filterIssuesBySprint = (sprint) => { activeSprint = sprint; render(); };
@@ -322,6 +366,13 @@ export const initIssues = async () => {
 
         contentBox.innerHTML = filtered.map(renderIssueItem).join('');
     };
+
+    // Re-render anche quando cambia il ticket "working"
+    subscribe((newState, oldState) => {
+        if (newState.activeWorkingIssueId !== oldState?.activeWorkingIssueId) {
+            render();
+        }
+    });
 
     subscribe(render);
 

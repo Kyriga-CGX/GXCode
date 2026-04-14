@@ -11,7 +11,11 @@ export const state = {
     // settings.js handles skin persistence, but let's centralize other things here
     language: localStorage.getItem('gx-language') || 'it',
     mcpServers: JSON.parse(localStorage.getItem('gx-mcp-servers') || '[]'),
-    youtrackConfig: JSON.parse(localStorage.getItem('gx-youtrack-config') || '{"url":"", "token":"", "enabled":false}'),
+    youtrackConfig: (() => {
+        const defaults = { url: '', token: '', enabled: false, query: '', filterProjects: [], ytProjects: [], myUsername: '' };
+        const saved = JSON.parse(localStorage.getItem('gx-youtrack-config') || '{}');
+        return { ...defaults, ...saved };
+    })(),
     geminiApiKey: localStorage.getItem('gx-gemini-api-key') || '',
     anthropicApiKey: localStorage.getItem('gx-anthropic-api-key') || '',
     repositories: JSON.parse(localStorage.getItem('gx-repositories') || '[{"id":"gx-official", "name":"GX Official Repo", "url":"https://api.gxcode.io/v1", "type":"all", "enabled":true}]'),
@@ -58,6 +62,7 @@ export const state = {
     
     issues: [],
     activeIssueId: null,
+    activeWorkingIssueId: null,
     activeAgentId: localStorage.getItem('gx-active-agent-id'),
     workspaceData: JSON.parse(localStorage.getItem('gx-workspace-data') || 'null'),
     files: JSON.parse(localStorage.getItem('gx-workspace-files') || '[]'),

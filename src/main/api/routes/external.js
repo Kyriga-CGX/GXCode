@@ -4,12 +4,13 @@ function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
     let mcpServers = [];
 
     apiApp.get("/api/issues", async (req, res) => {
-        const { url, token } = req.query;
+        const { url, token, query } = req.query;
         if (!url || !token) return res.json([]);
 
         try {
             const fields = "idReadable,summary,description,project(name),priority(name),state(name),assignee(fullName),tags(name,color(id,background,foreground)),links(direction,issue(idReadable,summary)),customFields(name,value(name,text,id))";
-            const response = await fetch(`${url.replace(/\/$/, '')}/api/issues?fields=${fields}&$top=100`, {
+            const queryParam = query ? `&query=${encodeURIComponent(query)}` : '';
+            const response = await fetch(`${url.replace(/\/$/, '')}/api/issues?fields=${fields}&$top=100${queryParam}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,

@@ -415,18 +415,26 @@ const renderTabContent = () => {
             `;
         case 'youtrack':
             const config = state.youtrackConfig;
+            const ytProjectsHtml = (config.ytProjects || []).length > 0
+                ? (config.ytProjects).map(p => `
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 rounded p-1.5 transition select-none">
+                        <input type="checkbox" value="${p.id}" ${(config.filterProjects || []).includes(p.id) ? 'checked' : ''} class="yt-project-check accent-blue-500 w-3 h-3 rounded">
+                        <span class="text-[10px] text-gray-300 flex-1">${p.name}</span>
+                        <span class="text-[9px] text-gray-600 font-mono">${p.id}</span>
+                    </label>`).join('')
+                : `<span class="text-[9px] text-gray-600 italic px-1">Clicca "Carica Progetti" dopo aver inserito URL e Token</span>`;
             return `
-                <div class="space-y-6">
-                    <div class="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <div class="space-y-5">
+                    <div class="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                         <p class="text-xs text-blue-300">🎫 Collega il tuo account YouTrack per visualizzare e gestire i ticket direttamente dall'IDE.</p>
                     </div>
-                    
+
                     <div class="space-y-4">
                         <div class="flex flex-col gap-2">
                             <label class="text-[10px] uppercase font-bold text-gray-500">YouTrack URL</label>
                             <input id="yt-url" type="text" placeholder="https://youtrack.yourcompany.com" value="${config.url || ''}" class="p-2.5 bg-[#161b22] border border-gray-700 rounded text-xs text-gray-200 outline-none focus:border-blue-500 font-mono">
                         </div>
-                        
+
                         <div class="flex flex-col gap-2">
                             <label class="text-[10px] uppercase font-bold text-gray-500">Permanent Token</label>
                             <input id="yt-token" type="password" placeholder="perm:xxxx.yyyy.zzzz" value="${config.token || ''}" class="p-2.5 bg-[#161b22] border border-gray-700 rounded text-xs text-gray-200 outline-none focus:border-blue-500 font-mono">
@@ -434,7 +442,33 @@ const renderTabContent = () => {
                                 <a href="https://www.jetbrains.com/help/youtrack/standalone/user-profile.html#manage-permanent-token" target="_blank" class="text-blue-400 hover:underline">Come ottenere il token →</a>
                             </p>
                         </div>
-                        
+
+                        <!-- Query Filter -->
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] uppercase font-bold text-gray-500">Query Filtro</label>
+                            <input id="yt-query" type="text" placeholder="es: for: me state: {Open, Sprint}" value="${config.query || ''}" class="p-2.5 bg-[#161b22] border border-gray-700 rounded text-xs text-gray-200 outline-none focus:border-blue-500 font-mono">
+                            <div class="flex flex-wrap gap-1.5">
+                                <button onclick="document.getElementById('yt-query').value='for: me'" class="px-2 py-0.5 text-[9px] bg-gray-800 hover:bg-gray-700 text-gray-400 rounded border border-gray-700 transition font-mono">for: me</button>
+                                <button onclick="document.getElementById('yt-query').value='for: me State: {Open, In Progress, Sprint}'" class="px-2 py-0.5 text-[9px] bg-gray-800 hover:bg-gray-700 text-gray-400 rounded border border-gray-700 transition font-mono">for: me attivi</button>
+                                <button onclick="document.getElementById('yt-query').value='State: {Open, In Progress}'" class="px-2 py-0.5 text-[9px] bg-gray-800 hover:bg-gray-700 text-gray-400 rounded border border-gray-700 transition font-mono">team attivi</button>
+                                <button onclick="document.getElementById('yt-query').value=''" class="px-2 py-0.5 text-[9px] bg-gray-800 hover:bg-gray-700 text-gray-400 rounded border border-gray-700 transition">tutti</button>
+                            </div>
+                        </div>
+
+                        <!-- Project Multi-Select -->
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-[10px] uppercase font-bold text-gray-500">Filtra per Progetto</label>
+                                <button id="btn-load-projects" onclick="window.loadYoutrackProjects()" class="px-2.5 py-1 text-[9px] bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition font-bold border border-gray-600">
+                                    ↻ Carica Progetti
+                                </button>
+                            </div>
+                            <div id="yt-projects-list" class="flex flex-col gap-0.5 max-h-36 overflow-y-auto custom-scrollbar bg-[#161b22] border border-gray-700 rounded-lg p-2 min-h-[36px]">
+                                ${ytProjectsHtml}
+                            </div>
+                            ${(config.filterProjects || []).length > 0 ? `<p class="text-[9px] text-blue-400">${config.filterProjects.length} progett${config.filterProjects.length === 1 ? 'o' : 'i'} selezionat${config.filterProjects.length === 1 ? 'o' : 'i'}</p>` : ''}
+                        </div>
+
                         <div class="flex items-center justify-between p-3 bg-black/20 border border-gray-800 rounded-lg">
                             <div>
                                 <div class="text-xs text-gray-300 font-semibold">Abilita Sincronizzazione</div>
@@ -444,9 +478,9 @@ const renderTabContent = () => {
                                 <div class="w-4 h-4 bg-white rounded-full transition-all ${config.enabled ? 'translate-x-5' : 'translate-x-0'}"></div>
                             </div>
                         </div>
-                        
+
                         <div id="yt-status" class="hidden p-3 rounded-lg text-xs"></div>
-                        
+
                         <div class="flex gap-2">
                             <button onclick="window.testYoutrackConnection()" class="flex-1 px-4 py-2 bg-gray-700/50 text-gray-300 border border-gray-600 rounded text-xs font-bold hover:bg-gray-600/50 transition">
                                 🔌 Test Connection
@@ -1185,15 +1219,45 @@ window.toggleYoutrack = () => {
 };
 
 window.saveYoutrackConfig = () => {
-    const url = document.getElementById('yt-url').value.trim();
-    const token = document.getElementById('yt-token').value.trim();
-    const youtrackConfig = { ...state.youtrackConfig, url, token, enabled: true };
+    const url = document.getElementById('yt-url')?.value.trim() || '';
+    const token = document.getElementById('yt-token')?.value.trim() || '';
+    const query = document.getElementById('yt-query')?.value.trim() || '';
+    const filterProjects = [...document.querySelectorAll('.yt-project-check:checked')].map(cb => cb.value);
+    const youtrackConfig = { ...state.youtrackConfig, url, token, query, filterProjects, enabled: true };
     setState({ youtrackConfig });
-
-    // Ricarica immediatamente i ticket per mostrare i cambiamenti
     api.loadIssues();
-
     window.gxToast('Configurazione YouTrack salvata! Sincronizzazione in corso...', 'success');
+};
+
+window.loadYoutrackProjects = async () => {
+    const url = document.getElementById('yt-url')?.value.trim();
+    const token = document.getElementById('yt-token')?.value.trim();
+    const listEl = document.getElementById('yt-projects-list');
+    if (!listEl) return;
+    if (!url || !token) {
+        window.gxToast('Inserisci URL e Token prima di caricare i progetti', 'error');
+        return;
+    }
+    listEl.innerHTML = '<span class="text-[9px] text-blue-400 animate-pulse px-1">Caricamento progetti...</span>';
+    try {
+        const resp = await fetch(`${url.replace(/\/$/, '')}/api/admin/projects?fields=shortName,name&$top=50`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+        });
+        if (!resp.ok) throw new Error(`Errore ${resp.status}`);
+        const data = await resp.json();
+        const projects = data.map(p => ({ id: p.shortName, name: p.name }));
+        const currentFilter = state.youtrackConfig.filterProjects || [];
+        setState({ youtrackConfig: { ...state.youtrackConfig, ytProjects: projects } });
+        listEl.innerHTML = projects.map(p => `
+            <label class="flex items-center gap-2 cursor-pointer hover:bg-white/5 rounded p-1.5 transition select-none">
+                <input type="checkbox" value="${p.id}" ${currentFilter.includes(p.id) ? 'checked' : ''} class="yt-project-check accent-blue-500 w-3 h-3 rounded">
+                <span class="text-[10px] text-gray-300 flex-1">${p.name}</span>
+                <span class="text-[9px] text-gray-600 font-mono">${p.id}</span>
+            </label>`).join('');
+        window.gxToast(`${projects.length} progetti caricati`, 'success');
+    } catch(e) {
+        listEl.innerHTML = `<span class="text-[9px] text-red-400 px-1">Errore: ${e.message}</span>`;
+    }
 };
 
 window.testYoutrackConnection = async () => {
@@ -1223,6 +1287,17 @@ window.testYoutrackConnection = async () => {
 
         if (response.ok) {
             const data = await response.json();
+            // Salva username corrente per identificare "assegnato a me"
+            try {
+                const meResp = await fetch(`${url.replace(/\/$/, '')}/api/users/me?fields=fullName,login`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                if (meResp.ok) {
+                    const me = await meResp.json();
+                    const myUsername = me.fullName || me.login || '';
+                    setState({ youtrackConfig: { ...state.youtrackConfig, myUsername } });
+                }
+            } catch(_) {}
             statusEl.className = 'p-3 rounded-lg text-xs bg-green-500/20 border border-green-500/30 text-green-300';
             statusEl.innerHTML = `✅ Connessione riuscita! ${data.length} ticket trovati.`;
         } else {
