@@ -1,5 +1,6 @@
 import { state } from '../core/state.js';
 import { triggerGlowOnMention } from '../core/uiUtils.js';
+import { syncAllAiContextFiles } from '../core/aiKnowledgeBridge.js';
 
 let glowedInThisSession = new Set();
 let claudeTerm = null;
@@ -48,27 +49,35 @@ export const initClaudeCli = async () => {
     });
     claudeTerm.onResize(size => window.electronAPI.terminalResize('claude-cli', size.cols, size.rows));
 
-    // Monitor input for @mentions
-    claudeTerm.onKey(e => {
-        const { domEvent } = e;
-        
-        if (isMentionMode) {
-            handleMentionKey(domEvent);
-        } else if (domEvent && domEvent.key === '@') {
+    // Gestione @mentions — popup laterale con Agents/Skills (selezione solo mouse)
+    // Le frecce NON vengono intercettate: Claude le usa nativamente per file/cartelle nel terminale
+    claudeTerm.onKey(({ domEvent }) => {
+        if (domEvent.key === '@') {
             startMentionMode();
+        } else if (isMentionMode) {
+            if (domEvent.key === 'Escape') {
+                stopMentionMode();
+            } else if (domEvent.key === 'Backspace') {
+                if (mentionPrefix.length === 0) {
+                    stopMentionMode();
+                } else {
+                    mentionPrefix = mentionPrefix.slice(0, -1);
+                    updateFilteredItems();
+                    renderMentions();
+                }
+            } else if (domEvent.key.length === 1 && !domEvent.ctrlKey && !domEvent.metaKey && !domEvent.altKey) {
+                mentionPrefix += domEvent.key;
+                updateFilteredItems();
+                renderMentions();
+            }
+            // ArrowUp/Down, Enter, Tab: NON intercettati → vanno al terminale (Claude naviga file)
         }
     });
 
     // Supporto Professionale per Copia/Incolla (Scorciatoie Tastiera)
     claudeTerm.attachCustomKeyEventHandler((e) => {
-        // Se siamo in mention mode, blocchiamo le frecce/invio per farli andare al popup
-        // Importante: intercettiamo solo se abbiamo suggerimenti validi, altrimenti 
-        // lasciamo che Claude Code gestisca i suoi completamenti nativi (es. file @src/)
-        if (isMentionMode && filteredItems.length > 0) {
-            if (['ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Tab'].includes(e.key)) {
-                return false; 
-            }
-        }
+        // NON intercettiamo le frecce per Claude - lasciamo che il menu nativo funzioni
+        // Le skill/agent sono selezionabili solo tramite click
         if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'V')) return false;
 
         if (e.ctrlKey && e.key === 'c' && claudeTerm.hasSelection()) {
@@ -112,11 +121,11 @@ export const startClaudeCli = async () => {
     const apiKey = state.anthropicApiKey;
     const workspacePath = state.activeTerminalFolder || state.workspaceData?.path;
 
-    // Iniezione Context Dinamico (CLAUDE.md)
-    await ensureClaudeMetadata(workspacePath);
+    // Sincronizza tutti i file AI (CLAUDE.md, QWEN.md, GEMINI.md, GX_IDENTITY.md)
+    await syncAllAiContextFiles(state);
 
     const res = await window.electronAPI.terminalCreate('claude-cli', 'claude', workspacePath, apiKey);
-    
+
     if (res && res.success) {
         isStarted = true;
         claudeTerm.focus();
@@ -124,70 +133,6 @@ export const startClaudeCli = async () => {
         claudeTerm.write(`\r\n\x1b[31;1mERRORE AVVIO CLAUDE CLI\x1b[0m\r\n`);
         claudeTerm.write(`\x1b[33mDettaglio: ${res.error}\x1b[0m\r\n`);
         claudeTerm.write(`\x1b[90mAssicurati che 'npx' sia installato e la chiave sia valida.\x1b[0m\r\n`);
-    }
-};
-
-/**
- * Genera o aggiorna il file CLAUDE.md nella root del progetto per fornire contesto all'IA.
- */
-const ensureClaudeMetadata = async (workspacePath) => {
-    if (!workspacePath) return;
-    
-    try {
-        const aiPaths = await window.electronAPI.getAiPaths();
-        const gitInfo = await window.electronAPI.getGitRemote(workspacePath);
-        const openFiles = state.openFiles || [];
-        const activeFile = state.activeFileId;
-        
-        // Identità del progetto: Priorità all'URL Git, altrimenti nome cartella
-        const projectIdentity = gitInfo.success ? gitInfo.url : workspacePath.split(/[/\\]/).filter(Boolean).pop();
-
-        // Helper per rendere i path relativi alla root del progetto (robusto per Windows/Unix)
-        const getRelative = (fullPath) => {
-            if (!fullPath) return 'None';
-            const normPath = fullPath.replace(/\\/g, '/');
-            const normRoot = workspacePath.replace(/\\/g, '/');
-            
-            let relative = normPath.replace(normRoot, '');
-            if (relative.startsWith('/')) relative = relative.substring(1);
-            return relative || '.';
-        };
-
-        // Costruiamo il contenuto in modo leggibile e portatile
-        let content = `# ${projectIdentity.toUpperCase()} - PROJECT CONTEXT\n\n`;
-        content += `This project is being managed by **GXCode IDE**.\n\n`;
-        
-        content += `## PROJECT IDENTITY\n`;
-        content += `- **Remote/ID**: \`${projectIdentity}\`\n`;
-        content += `- **Local Root**: \`.\` (Current Working Directory)\n\n`;
-
-        content += `## IDE RESOURCES (GLOBAL)\n`;
-        content += `- **Agents Location**: \`~/.GXCODE/agents\`\n`;
-        content += `- **Skills Location**: \`~/.GXCODE/skills\`\n\n`;
-        
-        if (openFiles.length > 0) {
-            content += `## CURRENT WORKSPACE CONTEXT\n`;
-            content += `- **Open Editor Tabs**:\n`;
-            openFiles.forEach(f => {
-                const relPath = getRelative(f.path);
-                content += `  - \`${relPath}\` ${f.path === activeFile ? '**[ACTIVE]**' : ''}\n`;
-            });
-            content += `\n`;
-        }
-        
-        content += `\n## INSTRUCTIONS\n`;
-        content += `1. When the user asks about agents or skills, prioritize looking into the Global locations (relative to User Home).\n`;
-        content += `2. You have full access to the project root for searching and editing code.\n`;
-        content += `3. Use the open editor tabs as your primary context for what the user is currently working on.\n`;
-
-        // Scrittura del file
-        const separator = workspacePath.includes('\\') ? '\\' : '/';
-        const targetFile = workspacePath.endsWith(separator) ? `${workspacePath}CLAUDE.md` : `${workspacePath}${separator}CLAUDE.md`;
-        
-        await window.electronAPI.fsWriteFile(targetFile, content);
-        console.log("[CLAUDE-CLI-V3] Identità Git e contesto iniettati con successo.");
-    } catch (err) {
-        console.error("[CLAUDE-CLI] Failed to inject context:", err);
     }
 };
 
@@ -205,7 +150,6 @@ const startMentionMode = () => {
     mentionPrefix = '';
     selectedIndex = 0;
     updateFilteredItems();
-    console.log("[CLAUDE-MENTIONS] Mode started. Items:", filteredItems.length);
     showMentionsPopup();
 };
 
@@ -214,10 +158,9 @@ const stopMentionMode = () => {
     mentionPrefix = '';
     const popup = document.getElementById('claude-mentions-popup');
     if (popup) {
-        popup.style.display = 'none';
+        popup.classList.remove('active');
         popup.classList.add('hidden');
     }
-    console.log("[CLAUDE-MENTIONS] Mode stopped.");
 };
 
 const updateFilteredItems = () => {
@@ -225,76 +168,41 @@ const updateFilteredItems = () => {
         ...(state.agents || []).map(a => ({ ...a, type: 'agent' })),
         ...(state.skills || []).map(s => ({ ...s, type: 'skill' }))
     ];
-    filteredItems = all.filter(i => 
-        i.name.toLowerCase().includes(mentionPrefix.toLowerCase())
-    ).slice(0, 8); // Max 8 items
-    
+    const prefix = mentionPrefix.toLowerCase();
+    filteredItems = prefix.length === 0
+        ? all.slice(0, 15)
+        : all.filter(i => (i.name || '').toLowerCase().includes(prefix)).slice(0, 15);
     if (selectedIndex >= filteredItems.length) selectedIndex = 0;
-};
-
-const handleMentionKey = (e) => {
-    if (e.key === 'ArrowUp') {
-        selectedIndex = (selectedIndex - 1 + filteredItems.length) % filteredItems.length;
-        renderMentions();
-    } else if (e.key === 'ArrowDown') {
-        selectedIndex = (selectedIndex + 1) % filteredItems.length;
-        renderMentions();
-    } else if (e.key === 'Enter' || e.key === 'Tab') {
-        selectMention();
-    } else if (e.key === 'Escape' || e.key === ' ') {
-        stopMentionMode();
-    } else if (e.key === 'Backspace') {
-        if (mentionPrefix.length === 0) {
-            stopMentionMode();
-        } else {
-            mentionPrefix = mentionPrefix.slice(0, -1);
-            updateFilteredItems();
-            renderMentions();
-        }
-    } else if (e.key.length === 1) {
-        mentionPrefix += e.key;
-        updateFilteredItems();
-        renderMentions();
-
-        // Se digitano un separatore di percorso, chiudiamo subito il menù delle skill
-        // per lasciare che Claude Code gestisca i suoi completamenti nativi (es. @src/...)
-        if (e.key === '/' || e.key === '\\' || (filteredItems.length === 0 && mentionPrefix.length > 2)) {
-            stopMentionMode();
-        }
-    }
 };
 
 const showMentionsPopup = () => {
     const popup = document.getElementById('claude-mentions-popup');
     if (!popup || !claudeTerm) return;
 
-    const core = claudeTerm._core;
-    const charWidth = core._renderService?.dimensions?.actualCellWidth || 7.2;
-    const charHeight = core._renderService?.dimensions?.actualCellHeight || 15;
-    
-    const cursorX = claudeTerm.buffer.active.cursorX;
-    const cursorY = claudeTerm.buffer.active.cursorY;
-    
     const termRect = claudeTerm.element.getBoundingClientRect();
-    
-    let left = termRect.left + (cursorX * charWidth);
-    let top = termRect.top + (cursorY * charHeight) + 20;
+    const popupWidth = 280;
 
-    // Preveniamo che esca fuori dallo schermo
-    if (top + 250 > window.innerHeight) {
-        top = termRect.top + (cursorY * charHeight) - 260;
+    let left = termRect.right + 10;
+    let top = termRect.top + 40;
+
+    if (left + popupWidth > window.innerWidth) {
+        left = termRect.left - popupWidth - 10;
     }
-    if (left + 220 > window.innerWidth) {
-        left = window.innerWidth - 230;
+    top = Math.min(top, window.innerHeight - 380);
+    top = Math.max(10, top);
+    left = Math.max(10, left);
+
+    if (popup.parentElement !== document.body) {
+        document.body.appendChild(popup);
     }
 
-    popup.style.left = `${Math.max(10, left)}px`;
-    popup.style.top = `${Math.max(10, top)}px`;
-    popup.style.display = 'flex';
+    popup.style.position = 'fixed';
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+    popup.style.zIndex = '999999999';
     popup.classList.remove('hidden');
-    popup.style.zIndex = '999999'; // Super high priority
-    
-    console.log(`[CLAUDE-MENTIONS] Popup shown at ${popup.style.left}, ${popup.style.top}`);
+    popup.classList.add('active');
+
     renderMentions();
 };
 
@@ -308,11 +216,11 @@ const renderMentions = () => {
     }
 
     popup.innerHTML = filteredItems.map((item, idx) => {
-        const isSelected = idx === selectedIndex;
-        const icon = item.type === 'agent' ? '🤖' : '⚡';
+        const icon = item.type === 'skill' ? '⚡' : '🤖';
+        const iconClass = item.type === 'skill' ? 'skill' : 'agent';
         return `
-            <div class="mention-item ${isSelected ? 'selected' : ''}" onclick="window.selectClaudeMentionByIndex(${idx})">
-                <div class="mention-icon ${item.type}">${icon}</div>
+            <div class="mention-item" onclick="window.selectClaudeMentionByIndex(${idx})">
+                <div class="mention-icon ${iconClass}">${icon}</div>
                 <div class="mention-info">
                     <div class="mention-name">${item.name}</div>
                     <div class="mention-type">${item.type}</div>
@@ -320,8 +228,7 @@ const renderMentions = () => {
             </div>
         `;
     }).join('');
-    
-    // Esposizione globale temporanea per il click
+
     window.selectClaudeMentionByIndex = (idx) => {
         selectedIndex = idx;
         selectMention();
@@ -331,12 +238,8 @@ const renderMentions = () => {
 const selectMention = () => {
     const item = filteredItems[selectedIndex];
     if (item) {
-        // Inviamo solo la parte MANCANTE del nome (escludendo il prefisso già digitato dopo @)
-        // Ma attenzione: Claude CLI potrebbe non supportare l'inserimento parziale se non siamo sincronizzati.
-        // La strategia più sicura è inviare il nome completo (senza la @ che è già stata inviata al PTY dal terminale automaticamente quando l'abbiamo premuta)
-        
-        const remaining = item.name.substring(mentionPrefix.length);
-        window.electronAPI.terminalWrite('claude-cli', remaining + ' ');
+        const backspaces = '\b'.repeat(mentionPrefix.length);
+        window.electronAPI.terminalWrite('claude-cli', backspaces + item.name + ' ');
     }
     stopMentionMode();
 };

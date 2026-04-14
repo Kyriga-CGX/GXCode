@@ -102,22 +102,29 @@ export const initTests = () => {
                 const isPassed = test.status === 'passed';
                 const isRunning = test.status === 'running';
 
-                const statusIcon = isRunning ? `<div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>` :
-                                   isFailed ? `<div class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>` :
-                                   isPassed ? `<div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>` : 
-                                   `<div class="w-1 h-1 rounded-full bg-gray-700"></div>`;
+                // Icone stato più visibili: checkmark verde / X rosso / spinner / dot idle
+                const statusIcon = isRunning
+                    ? `<svg class="text-blue-400 animate-spin shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`
+                    : isFailed
+                    ? `<svg class="text-red-500 shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`
+                    : isPassed
+                    ? `<svg class="text-emerald-400 shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>`
+                    : `<div class="w-1 h-1 rounded-full bg-gray-600 shrink-0"></div>`;
+
+                // encodeURIComponent non codifica gli apostrofi: li sostituiamo con %27 per non rompere l'onclick
+                const safeTestName = encodeURIComponent(test.name).replace(/'/g, '%27');
 
                 return `
                     <div class="test-tree-item flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-white/5 transition-all cursor-pointer group" onclick="window.viewTestFile('${safeAbsPath}')">
                         <div class="flex items-center gap-2 overflow-hidden flex-1">
-                            <div class="shrink-0 flex items-center justify-center p-0.5">${statusIcon}</div>
-                            <span class="text-[10px] text-gray-500 font-medium truncate group-hover:text-white transition-colors tracking-tight">${test.name}</span>
+                            <div class="shrink-0 flex items-center justify-center w-3">${statusIcon}</div>
+                            <span class="text-[10px] ${isFailed ? 'text-red-400' : isPassed ? 'text-emerald-400' : 'text-gray-500'} font-medium truncate group-hover:text-white transition-colors tracking-tight">${test.name}</span>
                         </div>
                         <div class="flex gap-1.5 items-center opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
-                            <button onclick="event.stopPropagation(); window.runSingleTest('${safeAbsPath}', '${encodeURIComponent(test.name)}')" class="p-1 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all active:scale-95" title="Run Test">
+                            <button onclick="event.stopPropagation(); window.runSingleTest('${safeAbsPath}', '${safeTestName}')" class="p-1 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all active:scale-95" title="Run Test">
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 3 14 9-14 9V3z"/></svg>
                             </button>
-                            <button onclick="event.stopPropagation(); window.debugSingleTest('${safeAbsPath}', '${encodeURIComponent(test.name)}')" class="p-1 rounded-lg bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-white transition-all active:scale-95" title="Debug in Inspector">
+                            <button onclick="event.stopPropagation(); window.debugSingleTest('${safeAbsPath}', '${safeTestName}')" class="p-1 rounded-lg bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-white transition-all active:scale-95" title="Debug in Inspector">
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 2a10 10 0 1 0 10 10"/><path d="m16.2 16.2 3.8 3.8"/></svg>
                             </button>
                         </div>
@@ -328,12 +335,15 @@ export const initTests = () => {
         const decodedPath = decodeURIComponent(filePath);
         const decodedName = decodeURIComponent(testName);
         console.log(`[GX-TESTS] Running test: ${decodedName} in ${decodedPath}`);
-        
+
+        updateTestStatus(decodedPath, decodedName, 'running');
         setState({ isTestingInProgress: true, testTarget: 'run' });
         try {
-            await window.electronAPI.runTest(state.workspaceData.path, decodedPath, decodedName);
+            const success = await window.electronAPI.runTest(state.workspaceData.path, decodedPath, decodedName);
+            updateTestStatus(decodedPath, decodedName, success ? 'passed' : 'failed');
         } catch (err) {
             console.error("[GX-TESTS] Error:", err);
+            updateTestStatus(decodedPath, decodedName, 'failed');
         } finally {
             setState({ isTestingInProgress: false });
         }
@@ -343,7 +353,8 @@ export const initTests = () => {
         const decodedPath = decodeURIComponent(filePath);
         const decodedName = decodeURIComponent(testName);
         console.log(`[GX-TESTS] Debugging test: ${decodedName} in ${decodedPath}`);
-        
+
+        updateTestStatus(decodedPath, decodedName, 'running');
         setState({ isTestingInProgress: true, testTarget: 'debug', isDebugModeActive: true, debugActiveLine: null });
         try {
             const normDecoded = decodedPath.toLowerCase().replace(/\\/g, '/');
@@ -351,8 +362,12 @@ export const initTests = () => {
             const fileBreakpoints = (state.breakpoints || [])
                 .filter(bp => normalizePath(bp.path) === normDecoded && bp.type === 'playwright')
                 .map(bp => bp.line);
-            
-            await window.electronAPI.debugTest(state.workspaceData.path, decodedPath, decodedName, fileBreakpoints);
+
+            const success = await window.electronAPI.debugTest(state.workspaceData.path, decodedPath, decodedName, fileBreakpoints);
+            updateTestStatus(decodedPath, decodedName, success ? 'passed' : 'failed');
+        } catch (err) {
+            console.error("[GX-TESTS] Debug error:", err);
+            updateTestStatus(decodedPath, decodedName, 'failed');
         } finally {
             setState({ isTestingInProgress: false, isDebugModeActive: false, debugActiveLine: null });
             if (window.updateDebugActiveLine) window.updateDebugActiveLine();
@@ -365,6 +380,25 @@ export const initTests = () => {
         let path = p.toString().trim().toLowerCase().replace(/\\/g, '/');
         if (path.startsWith('file:///')) path = path.replace('file:///', '');
         return path;
+    };
+
+    // Aggiorna lo stato di un singolo test nel cache (running / passed / failed)
+    const updateTestStatus = (filePath, testName, status) => {
+        const cache = state.testFilesCache;
+        if (!cache || !cache.length) return;
+        const normPath = filePath.toLowerCase().replace(/\\/g, '/');
+        const updated = cache.map(file => {
+            const fileNorm = (file.fullPath || '').toLowerCase().replace(/\\/g, '/');
+            if (fileNorm !== normPath) return file;
+            return {
+                ...file,
+                testMatches: file.testMatches.map(t =>
+                    t.name === testName ? { ...t, status } : t
+                )
+            };
+        });
+        setState({ testFilesCache: updated });
+        renderTestTree();
     };
 
     // Listen for debug pause event

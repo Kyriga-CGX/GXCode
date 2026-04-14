@@ -1,8 +1,12 @@
 # GXCODE SYSTEM IDENTITY
 
-Questo file aiuta l'AI a capire i limiti e i poteri del sistema GXCode.
+Questo file definisce le capacità operative dell'ambiente GXCode. Tutte le AI (Claude, Qwen, Gemini) devono farvi riferimento.
+
+## PROJECT GUIDELINES
+*Nessuna linea guida specifica definita.*
 
 ## GX-SKILLS (TOOLING)
+Le seguenti competenze possono essere invocate tramite il comando `gx-skill run "<nome>"`.
 ### AI Context File Generator
 - **Descrizione**: Genera automaticamente CLAUDE.md, GEMINI.md, GX_IDENTITY.md nei workspace. Struttura progetto, guidelines AI, context injection per agenti.
 - **Invocazione**: `gx-skill run "AI Context File Generator"`
@@ -138,12 +142,6 @@ Questo file aiuta l'AI a capire i limiti e i poteri del sistema GXCode.
 ### xterm.js Renderer Integration
 - **Descrizione**: Integra xterm.js nel renderer. addon-fit per resize, theming coerente, copy/paste, scrollback buffer, multiple terminal tabs.
 - **Invocazione**: `gx-skill run "xterm.js Renderer Integration"`
-
-### MODEL SELECTION STRATEGIES
-Per massimizzare l'efficienza architettonica:
-- **Analisi (Haiku)**: Utilizzato per `Brief Analyzer` e scansione iniziale dei file.
-- **Generazione & Editing (Sonnet)**: Utilizzato per tutte le altre skill di progettazione e per la scrittura di codice/documentazione.
-- **Orchestrazione (Opus)**: Utilizzato per il coordinamento tra agenti, la delega di skill a entità esterne e la generazione dinamica di nuovi sotto-agenti se necessario.
 
 ## ACTIVE AGENTS
 - **AI Integration Specialist**: general

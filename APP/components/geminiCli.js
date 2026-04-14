@@ -1,5 +1,6 @@
 import { state } from '../core/state.js';
 import { triggerGlowOnMention } from '../core/uiUtils.js';
+import { syncAllAiContextFiles } from '../core/aiKnowledgeBridge.js';
 
 let glowedInThisSession = new Set();
 let geminiTerm = null;
@@ -44,22 +45,35 @@ export const initGeminiCli = async () => {
     });
     geminiTerm.onResize(size => window.electronAPI.terminalResize('gemini-cli', size.cols, size.rows));
 
-    // Monitor input for @mentions (Claude Pattern)
-    geminiTerm.onKey(e => {
-        const { domEvent } = e;
-        if (isMentionMode) {
-            handleMentionKey(domEvent);
-        } else if (domEvent && domEvent.key === '@') {
+    // Gestione @mentions — popup laterale con Agents/Skills (selezione solo mouse)
+    // Le frecce NON vengono intercettate: Gemini le usa nativamente per file/cartelle nel terminale
+    geminiTerm.onKey(({ domEvent }) => {
+        if (domEvent.key === '@') {
             startMentionMode();
+        } else if (isMentionMode) {
+            if (domEvent.key === 'Escape') {
+                stopMentionMode();
+            } else if (domEvent.key === 'Backspace') {
+                if (mentionPrefix.length === 0) {
+                    stopMentionMode();
+                } else {
+                    mentionPrefix = mentionPrefix.slice(0, -1);
+                    updateFilteredItems();
+                    renderMentions();
+                }
+            } else if (domEvent.key.length === 1 && !domEvent.ctrlKey && !domEvent.metaKey && !domEvent.altKey) {
+                mentionPrefix += domEvent.key;
+                updateFilteredItems();
+                renderMentions();
+            }
+            // ArrowUp/Down, Enter, Tab: NON intercettati → vanno al terminale (Gemini naviga file)
         }
     });
 
+    // Supporto Professionale per Copia/Incolla (Scorciatoie Tastiera)
     geminiTerm.attachCustomKeyEventHandler((e) => {
-        if (isMentionMode && filteredItems.length > 0) {
-            if (['ArrowUp', 'ArrowDown', 'Enter', 'Escape', 'Tab'].includes(e.key)) {
-                return false; 
-            }
-        }
+        // NON intercettiamo le frecce per Gemini - lasciamo che il menu nativo funzioni
+        // Le skill/agent sono selezionabili solo tramite click
         if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'V')) return false;
         if (e.ctrlKey && e.key === 'c' && geminiTerm.hasSelection()) {
             window.electronAPI.clipboardWrite(geminiTerm.getSelection());
@@ -95,66 +109,17 @@ export const startGeminiCli = async () => {
     
     const workspacePath = state.activeTerminalFolder || state.workspaceData?.path;
 
-    // Automatismi Context (GEMINI.md) - Replicating Claude logic
-    await ensureGeminiMetadata(workspacePath);
+    // Sincronizza tutti i file AI (GEMINI.md, CLAUDE.md, QWEN.md, GX_IDENTITY.md)
+    await syncAllAiContextFiles(state);
 
     const res = await window.electronAPI.terminalCreate('gemini-cli', 'gemini', workspacePath);
-    
+
     if (res && res.success) {
         isStarted = true;
         geminiTerm.focus();
     } else {
         geminiTerm.write(`\r\n\x1b[31;1mERRORE AVVIO GEMINI CLI\x1b[0m\r\n`);
         geminiTerm.write(`\x1b[33mDettaglio: ${res.error}\x1b[0m\r\n`);
-    }
-};
-
-/**
- * Automatismi Gemini: Genera il file GEMINI.md con il contesto del workspace.
- */
-const ensureGeminiMetadata = async (workspacePath) => {
-    if (!workspacePath) return;
-    try {
-        const gitInfo = await window.electronAPI.getGitRemote(workspacePath);
-        const projectIdentity = gitInfo.success ? gitInfo.url : workspacePath.split(/[/\\]/).filter(Boolean).pop();
-        const openFiles = state.openFiles || [];
-        const activeFile = state.activeFileId;
-
-        const getRelative = (fullPath) => {
-            if (!fullPath) return 'None';
-            const normPath = fullPath.replace(/\\/g, '/');
-            const normRoot = workspacePath.replace(/\\/g, '/');
-            let relative = normPath.replace(normRoot, '');
-            if (relative.startsWith('/')) relative = relative.substring(1);
-            return relative || '.';
-        };
-
-        let content = `# ${projectIdentity.toUpperCase()} - GEMINI CONTEXT\n\n`;
-        content += `This project is being managed by **GXCode IDE**.\n\n`;
-        content += `## PROJECT IDENTITY\n`;
-        content += `- **Remote/ID**: \`${projectIdentity}\`\n`;
-        content += `- **Local Root**: \`.\` (Current Working Directory)\n\n`;
-
-        if (openFiles.length > 0) {
-            content += `## CURRENT WORKSPACE CONTEXT\n`;
-            content += `- **Open Editor Tabs**:\n`;
-            openFiles.forEach(f => {
-                const relPath = getRelative(f.path);
-                content += `  - \`${relPath}\` ${f.path === activeFile ? '**[ACTIVE]**' : ''}\n`;
-            });
-            content += `\n`;
-        }
-        
-        content += `\n## INSTRUCTIONS\n`;
-        content += `1. Prioritize working with the current open files provided in this context.\n`;
-        content += `2. Refer to GEMINI_IDENTITY.md for project-specific directives.\n`;
-
-        const separator = workspacePath.includes('\\') ? '\\' : '/';
-        const targetFile = workspacePath.endsWith(separator) ? `${workspacePath}GEMINI.md` : `${workspacePath}${separator}GEMINI.md`;
-        await window.electronAPI.fsWriteFile(targetFile, content);
-        console.log("[GX-GEMINI] GEMINI.md generated.");
-    } catch (err) {
-        console.error("[GX-GEMINI] Metadata Error:", err);
     }
 };
 
@@ -165,7 +130,7 @@ export const focusGeminiCli = () => {
     }
 };
 
-// --- MENTION AUTOCOMPLETE LOGIC (Mirroring Claude) ---
+// --- MENTION AUTOCOMPLETE LOGIC ---
 
 const startMentionMode = () => {
     isMentionMode = true;
@@ -179,7 +144,10 @@ const stopMentionMode = () => {
     isMentionMode = false;
     mentionPrefix = '';
     const popup = document.getElementById('gemini-mentions-popup');
-    if (popup) popup.style.display = 'none';
+    if (popup) {
+        popup.classList.remove('active');
+        popup.classList.add('hidden');
+    }
 };
 
 const updateFilteredItems = () => {
@@ -187,34 +155,11 @@ const updateFilteredItems = () => {
         ...(state.agents || []).map(a => ({ ...a, type: 'agent' })),
         ...(state.skills || []).map(s => ({ ...s, type: 'skill' }))
     ];
-    filteredItems = all.filter(i => i.name.toLowerCase().includes(mentionPrefix.toLowerCase())).slice(0, 8);
+    const prefix = mentionPrefix.toLowerCase();
+    filteredItems = prefix.length === 0
+        ? all.slice(0, 15)
+        : all.filter(i => (i.name || '').toLowerCase().includes(prefix)).slice(0, 15);
     if (selectedIndex >= filteredItems.length) selectedIndex = 0;
-};
-
-const handleMentionKey = (e) => {
-    if (e.key === 'ArrowUp') {
-        selectedIndex = (selectedIndex - 1 + filteredItems.length) % filteredItems.length;
-        renderMentions();
-    } else if (e.key === 'ArrowDown') {
-        selectedIndex = (selectedIndex + 1) % filteredItems.length;
-        renderMentions();
-    } else if (e.key === 'Enter' || e.key === 'Tab') {
-        selectMention();
-    } else if (e.key === 'Escape' || e.key === ' ') {
-        stopMentionMode();
-    } else if (e.key === 'Backspace') {
-        if (mentionPrefix.length === 0) stopMentionMode();
-        else {
-            mentionPrefix = mentionPrefix.slice(0, -1);
-            updateFilteredItems();
-            renderMentions();
-        }
-    } else if (e.key.length === 1) {
-        mentionPrefix += e.key;
-        updateFilteredItems();
-        renderMentions();
-        if (e.key === '/' || e.key === '\\') stopMentionMode();
-    }
 };
 
 const showMentionsPopup = () => {
@@ -222,38 +167,66 @@ const showMentionsPopup = () => {
     if (!popup || !geminiTerm) return;
 
     const termRect = geminiTerm.element.getBoundingClientRect();
-    const cursorX = geminiTerm.buffer.active.cursorX;
-    const cursorY = geminiTerm.buffer.active.cursorY;
-    const charWidth = 7.2; // Default approx
-    const charHeight = 15; // Default approx
-    
-    popup.style.left = `${termRect.left + (cursorX * charWidth)}px`;
-    popup.style.top = `${termRect.top + (cursorY * charHeight) + 20}px`;
-    popup.style.display = 'flex';
+    const popupWidth = 280;
+
+    let left = termRect.right + 10;
+    let top = termRect.top + 40;
+
+    if (left + popupWidth > window.innerWidth) {
+        left = termRect.left - popupWidth - 10;
+    }
+    top = Math.min(top, window.innerHeight - 380);
+    top = Math.max(10, top);
+    left = Math.max(10, left);
+
+    if (popup.parentElement !== document.body) {
+        document.body.appendChild(popup);
+    }
+
+    popup.style.position = 'fixed';
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+    popup.style.zIndex = '999999999';
+    popup.classList.remove('hidden');
+    popup.classList.add('active');
+
     renderMentions();
 };
 
 const renderMentions = () => {
     const popup = document.getElementById('gemini-mentions-popup');
     if (!popup) return;
+
     if (filteredItems.length === 0) {
-        popup.innerHTML = `<div class="p-2 text-[10px] text-gray-500 text-center">Nessun risultato</div>`;
+        popup.innerHTML = `<div class="p-2 text-[10px] text-gray-500 uppercase tracking-widest text-center">Nessun risultato</div>`;
         return;
     }
-    popup.innerHTML = filteredItems.map((item, idx) => `
-        <div class="mention-item ${idx === selectedIndex ? 'selected' : ''}" onclick="window.selectGeminiMention(${idx})">
-            <div class="mention-name">${item.name}</div>
-            <div class="mention-type">${item.type}</div>
-        </div>
-    `).join('');
-    window.selectGeminiMention = (idx) => { selectedIndex = idx; selectMention(); };
+
+    popup.innerHTML = filteredItems.map((item, idx) => {
+        const icon = item.type === 'skill' ? '⚡' : '🤖';
+        const iconClass = item.type === 'skill' ? 'skill' : 'agent';
+        return `
+            <div class="mention-item" onclick="window.selectGeminiMentionByIndex(${idx})">
+                <div class="mention-icon ${iconClass}">${icon}</div>
+                <div class="mention-info">
+                    <div class="mention-name">${item.name}</div>
+                    <div class="mention-type">${item.type}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    window.selectGeminiMentionByIndex = (idx) => {
+        selectedIndex = idx;
+        selectMention();
+    };
 };
 
 const selectMention = () => {
     const item = filteredItems[selectedIndex];
     if (item) {
-        const remaining = item.name.substring(mentionPrefix.length);
-        window.electronAPI.terminalWrite('gemini-cli', remaining + ' ');
+        const backspaces = '\b'.repeat(mentionPrefix.length);
+        window.electronAPI.terminalWrite('gemini-cli', backspaces + item.name + ' ');
     }
     stopMentionMode();
 };

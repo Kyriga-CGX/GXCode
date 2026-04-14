@@ -1,0 +1,69 @@
+/* Agent Selector Styles */
+
+#agent-selector-container {
+    position: relative;
+}
+
+#agent-selector-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+}
+
+#agent-selector-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+#agent-selector-dropdown {
+    animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.agent-selector-item {
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.agent-selector-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.agent-selector-item:active {
+    transform: scale(0.98);
+}
+
+/* Custom scrollbar per la lista */
+#agent-selector-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+#agent-selector-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#agent-selector-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+#agent-selector-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}

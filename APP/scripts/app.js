@@ -17,6 +17,7 @@ import { initDebug } from '../components/debug.js';
 import { initAiKnowledgeBridge } from '../core/aiKnowledgeBridge.js';
 import { initDebugToolbar } from '../components/debugToolbar.js';
 import { initSidebar } from '../components/sidebar.js';
+import { initAgentSelector } from '../components/agentSelector.js';
 import { initGlobalEvents } from '../core/events.js';
 import { tomcatAssistant } from '../components/tomcatAssistant.js';
 import { initAiSuggestionPills } from '../components/aiSuggestionPills.js';
@@ -112,8 +113,9 @@ const bootstrap = async () => {
         await loadLocale(localStorage.getItem('gx-language') || 'it');
 
         // Moduli UI (Reattività Immediata)
-        initGlobalEvents(); 
-        initSidebar();      
+        initGlobalEvents();
+        initSidebar();
+        initAgentSelector();
         initMarketplaceNav();
         initWindowControls();
         initPanelToggles();

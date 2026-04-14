@@ -78,6 +78,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fsWriteFile: (filePath, content, options) => ipcRenderer.invoke('fs-write-file', filePath, content, options),
   fsDelete: (targetPath) => ipcRenderer.invoke('fs-delete', targetPath),
   fsRename: (oldPath, newPath) => ipcRenderer.invoke('fs-rename', oldPath, newPath),
+  fsReadDir: (dirPath) => ipcRenderer.invoke('fs-read-dir', dirPath), // Lista file/cartelle
   getAiPaths: () => ipcRenderer.invoke('get-ai-paths'),
   getGitRemote: (workspacePath) => ipcRenderer.invoke('git-remote-url', workspacePath),
 

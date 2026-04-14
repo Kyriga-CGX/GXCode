@@ -43,7 +43,7 @@ export const state = {
     isMarketplaceOpen: false,
     activeMarketplaceTab: 'agents',
     isSettingsOpen: false,
-    isSettingsMobileMenuOpen: true,
+    isSettingsMobileMenuOpen: false,
     isAddingRepo: false,
     activeSettingsTab: 'preferences',
     activeLeftTab: localStorage.getItem('gx-active-left-tab') || 'explorer',

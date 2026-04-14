@@ -1,20 +1,30 @@
 /* Claude @Mentions Popup - Evolution 2026 Elite Style */
 
-#claude-mentions-popup {
-    position: absolute;
-    z-index: 10000;
+/* Stili comuni per tutti i popup delle menzioni (Claude, Qwen, Gemini) */
+#claude-mentions-popup,
+#qwen-mentions-popup,
+#gemini-mentions-popup {
+    position: fixed !important;
+    z-index: 999999999 !important;
     min-width: 220px;
     max-height: 280px;
-    background: rgba(10, 13, 18, 0.9);
-    backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6), 0 0 20px rgba(59, 130, 246, 0.1);
-    overflow-y: auto;
-    display: none;
-    flex-direction: column;
-    padding: 6px;
+    background: rgba(10, 13, 18, 0.95) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6), 0 0 20px rgba(59, 130, 246, 0.1) !important;
+    overflow-y: auto !important;
+    display: none !important; /* Default nascosto */
+    flex-direction: column !important;
+    padding: 6px !important;
     animation: popupFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Quando il popup è visibile (class .active invece di rimuovere .hidden) */
+#claude-mentions-popup.active,
+#qwen-mentions-popup.active,
+#gemini-mentions-popup.active {
+    display: flex !important;
 }
 
 @keyframes popupFadeIn {
@@ -61,6 +71,18 @@
     border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
+.mention-icon.folder {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.mention-icon.file {
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
 .mention-info {
     flex: 1;
     display: flex;
@@ -88,11 +110,80 @@
 }
 
 /* Custom Scrollbar */
-#claude-mentions-popup::-webkit-scrollbar {
+#claude-mentions-popup::-webkit-scrollbar,
+#qwen-mentions-popup::-webkit-scrollbar,
+#gemini-mentions-popup::-webkit-scrollbar {
     width: 4px;
 }
 
-#claude-mentions-popup::-webkit-scrollbar-thumb {
+#claude-mentions-popup::-webkit-scrollbar-thumb,
+#qwen-mentions-popup::-webkit-scrollbar-thumb,
+#gemini-mentions-popup::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
+}
+
+/* Claude popup: accent arancione */
+#claude-mentions-popup {
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6), 0 0 20px rgba(249, 115, 22, 0.12) !important;
+}
+
+#claude-mentions-popup .mention-item:hover {
+    background: rgba(249, 115, 22, 0.12);
+    border-color: rgba(249, 115, 22, 0.25);
+}
+
+#claude-mentions-popup::before {
+    content: 'AGENTS & SKILLS';
+    display: block;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    color: rgba(249, 115, 22, 0.6);
+    padding: 6px 12px 2px;
+    text-transform: uppercase;
+}
+
+/* Gemini popup: accent blu */
+#gemini-mentions-popup {
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6), 0 0 20px rgba(59, 130, 246, 0.12) !important;
+}
+
+#gemini-mentions-popup .mention-item:hover {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.25);
+}
+
+#gemini-mentions-popup::before {
+    content: 'AGENTS & SKILLS';
+    display: block;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    color: rgba(59, 130, 246, 0.6);
+    padding: 6px 12px 2px;
+    text-transform: uppercase;
+}
+
+/* Qwen popup: accent viola */
+#qwen-mentions-popup {
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6), 0 0 20px rgba(139, 92, 246, 0.12) !important;
+}
+
+#qwen-mentions-popup .mention-item:hover,
+#qwen-mentions-popup .mention-item.selected {
+    background: rgba(139, 92, 246, 0.12);
+    border-color: rgba(139, 92, 246, 0.25);
+}
+
+/* Header titolo nel popup Qwen */
+#qwen-mentions-popup::before {
+    content: 'AGENTS & SKILLS';
+    display: block;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    color: rgba(139, 92, 246, 0.6);
+    padding: 6px 12px 2px;
+    text-transform: uppercase;
 }

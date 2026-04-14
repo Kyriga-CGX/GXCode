@@ -1,4 +1,4 @@
-# HTTPS://GITHUB.COM/KYRIGA-CGX/GXCODE.GIT - GEMINI CONTEXT
+# HTTPS://GITHUB.COM/KYRIGA-CGX/GXCODE.GIT - PROJECT CONTEXT
 
 This project is being managed by **GXCode IDE**.
 
@@ -6,13 +6,13 @@ This project is being managed by **GXCode IDE**.
 - **Remote/ID**: `https://github.com/Kyriga-CGX/GXCode.git`
 - **Local Root**: `.` (Current Working Directory)
 
-## CURRENT WORKSPACE CONTEXT
-- **Open Editor Tabs**:
-  - `C:/Users/Kyrig/OneDrive/Desktop/prova/tests/example.spec.js` **[ACTIVE]**
-  - `C:/Users/Kyrig/OneDrive/Desktop/prova/asdasdasdas.js` 
-  - `C:/Users/Kyrig/OneDrive/Desktop/prova/tests/GX_IDENTITY.md` 
+## IDE RESOURCES (GLOBAL)
+- **Agents Location**: `~/.GXCODE/agents`
+- **Skills Location**: `~/.GXCODE/skills`
 
 
 ## INSTRUCTIONS
-1. Prioritize working with the current open files provided in this context.
-2. Refer to GEMINI_IDENTITY.md for project-specific directives.
+1. When the user asks about agents or skills, prioritize looking into the Global locations (relative to User Home).
+2. You have full access to the project root for searching and editing code.
+3. Use the open editor tabs as your primary context for what the user is currently working on.
+4. Refer to **GX_IDENTITY.md** for detailed system capabilities (Skills and Agents).

@@ -356,9 +356,13 @@ function registerTestHandlers(mainWindow) {
         return new Promise((resolve) => {
             const testCwd = resolveTestCwd(filePath, workspacePath);
             const relativePath = path.relative(testCwd, filePath).replace(/\\/g, '/');
+            // Passa il path relativo come filtro file + --grep ancorato per isolare il singolo test
             const args = ['playwright', 'test', relativePath];
-            if (testName) args.push('-g', testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-            
+            if (testName) {
+                const escapedName = testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                args.push('--grep', escapedName);
+            }
+
             // Cross-platform: usa 'npx' invece di 'npx.cmd'
             const npx = os.platform() === 'win32' ? 'npx.cmd' : 'npx';
             const child = spawn(npx, args, { cwd: testCwd, env, shell: true });
