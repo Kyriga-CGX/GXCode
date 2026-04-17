@@ -12,7 +12,7 @@ function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
 
         const baseUrl = url.replace(/\/mcp\/?$/, '').replace(/\/$/, '');
         try {
-            const fields = "idReadable,summary,description,project(name),priority(name),state(name),assignee(fullName),tags(name,color(id,background,foreground)),links(direction,issue(idReadable,summary)),customFields(name,value(name,text,id))";
+            const fields = "idReadable,summary,description,project(name),priority(name),state(name),assignee(fullName),reporter(fullName,login),created,tags(name,color(id,background,foreground)),links(direction,issue(idReadable,summary)),customFields(name,value(name,text,id))";
             const queryParam = query ? `&query=${encodeURIComponent(query)}` : '';
             const response = await fetch(`${baseUrl}/api/issues?fields=${fields}&$top=100${queryParam}`, {
                 method: 'GET',
@@ -49,6 +49,8 @@ function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
                         summary: l.issue.summary
                     })) || [],
                     sprint: sprintField?.value?.name || sprintField?.value?.text || null,
+                    reporter: issue.reporter?.fullName || issue.reporter?.login || null,
+                    created: issue.created || null,
                     rawUrl: `${baseUrl}/issue/${issue.idReadable}`
                 };
             });
