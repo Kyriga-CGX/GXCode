@@ -25,3 +25,4 @@ dist_electron/
 .env
 gemini-session.json
 *.session.json
+.claude/

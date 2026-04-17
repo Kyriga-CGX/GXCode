@@ -1240,15 +1240,30 @@ window.toggleYoutrack = () => {
     if (youtrackConfig.enabled) api.loadIssues();
 };
 
-window.saveYoutrackConfig = () => {
+window.saveYoutrackConfig = async () => {
     const url = document.getElementById('yt-url')?.value.trim() || '';
     const token = document.getElementById('yt-token')?.value.trim() || '';
     const query = document.getElementById('yt-query')?.value.trim() || '';
     const filterProjects = [...document.querySelectorAll('.yt-project-check:checked')].map(cb => cb.value);
+    if (!url || !token) {
+        window.gxToast('Inserisci URL e Token prima di salvare', 'error');
+        return;
+    }
     const youtrackConfig = { ...state.youtrackConfig, url, token, query, filterProjects, enabled: true };
     setState({ youtrackConfig });
+    try {
+        const resp = await fetch('http://localhost:5000/api/youtrack/configure-mcp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, token })
+        });
+        const result = await resp.json();
+        if (!resp.ok) throw new Error(result.error || 'Errore configurazione MCP');
+        window.gxToast(`Configurazione salvata! MCP: ${result.mcpUrl}`, 'success');
+    } catch (err) {
+        window.gxToast(`YouTrack salvato, ma errore MCP: ${err.message}`, 'error');
+    }
     api.loadIssues();
-    window.gxToast('Configurazione YouTrack salvata! Sincronizzazione in corso...', 'success');
 };
 
 window.loadYoutrackProjects = async () => {

@@ -1,4 +1,7 @@
 const { BrowserWindow } = require('electron');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
     let mcpServers = [];
@@ -62,6 +65,31 @@ function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
             res.json({ success: true, count: mcpServers.length });
         } else {
             res.status(400).json({ error: "Invalid data" });
+        }
+    });
+
+    apiApp.post("/api/youtrack/configure-mcp", (req, res) => {
+        const { url, token } = req.body;
+        if (!url || !token) {
+            return res.status(400).json({ error: "URL e token sono obbligatori" });
+        }
+        const claudeSettingsPath = path.join(os.homedir(), '.claude', 'settings.json');
+        try {
+            let settings = {};
+            if (fs.existsSync(claudeSettingsPath)) {
+                try { settings = JSON.parse(fs.readFileSync(claudeSettingsPath, 'utf8')); } catch (_) {}
+            }
+            const mcpUrl = url.replace(/\/$/, '') + '/mcp';
+            settings.mcpServers = settings.mcpServers || {};
+            settings.mcpServers.youtrack = {
+                type: 'http',
+                url: mcpUrl,
+                headers: { Authorization: `Bearer ${token}` }
+            };
+            fs.writeFileSync(claudeSettingsPath, JSON.stringify(settings, null, 2), 'utf8');
+            res.json({ success: true, mcpUrl });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
         }
     });
 
