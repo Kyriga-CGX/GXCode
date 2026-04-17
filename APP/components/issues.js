@@ -125,96 +125,78 @@ let activeDate     = 'Tutti';   // Tutti | Oggi | Settimana | Mese
 let activeAssignee = '';        // testo libero
 
 const renderFilterBar = () => {
-    const issues = state.issues || [];
-    const uniqueStatuses  = [...new Set(issues.map(t => t.status).filter(Boolean))];
-    const sprints  = ['Tutti', ...new Set(issues.filter(t => t.sprint).map(t => t.sprint).filter(Boolean))];
-    const projects = ['Tutti', ...new Set(issues.map(t => t.project).filter(Boolean))];
-    const priorities = ['Tutti', 'Critical', 'High', 'Medium', 'Normal', 'Low'].filter(p => p === 'Tutti' || issues.some(i => i.priority === p));
+    const issues         = state.issues || [];
+    const uniqueStatuses = [...new Set(issues.map(t => t.status).filter(Boolean))];
+    const sprints        = ['Tutti', ...new Set(issues.filter(t => t.sprint).map(t => t.sprint).filter(Boolean))];
+    const projects       = ['Tutti', ...new Set(issues.map(t => t.project).filter(Boolean))];
+    const priorities     = ['Tutti', 'Critical', 'High', 'Medium', 'Normal', 'Low'].filter(p => p === 'Tutti' || issues.some(i => i.priority === p));
+    const totalIssues    = issues.length;
 
-    const totalIssues = issues.length;
-    const issuesByStatus = {};
-    issues.forEach(i => { issuesByStatus[i.status] = (issuesByStatus[i.status] || 0) + 1; });
+    const selCls = 'w-full bg-[var(--bg-main)] border gx-border-theme rounded px-1.5 py-1 text-[9px] text-gray-300 focus:outline-none focus:border-[var(--accent)] cursor-pointer';
+    const pillActive   = 'shrink-0 px-2 py-0.5 rounded-full text-[8px] font-bold border bg-[var(--accent-glow)] border-[var(--accent)] text-[var(--accent)] transition-all';
+    const pillInactive = 'shrink-0 px-2 py-0.5 rounded-full text-[8px] font-bold border gx-border-theme text-gray-500 hover:text-gray-300 bg-[var(--bg-main)] transition-all';
 
-    const statusFilters = [
-        { id: 'Tutti', label: 'Tutti' },
-        ...uniqueStatuses.map(s => ({ id: s, label: s }))
-    ];
-
-    const dateOptions = [
-        { id: 'Tutti', label: 'Tutti' },
-        { id: 'Oggi', label: 'Oggi' },
-        { id: 'Settimana', label: '7gg' },
-        { id: 'Mese', label: '30gg' }
-    ];
-
-    const btnCls = (active) => `px-2 py-0.5 rounded text-[8px] uppercase font-bold tracking-tighter transition-all border ${active ? 'bg-[var(--accent-glow)] border-[var(--accent)] text-[var(--accent)]' : 'bg-[var(--bg-main)] gx-border-theme text-gray-500 hover:text-gray-300'}`;
+    const hasActiveFilters = activeFilter !== 'Tutti' || activePriority !== 'Tutti' || activeDate !== 'Tutti' || activeAssignee || activeSprint !== 'Tutti' || activeProject !== 'Tutti';
 
     return `
-        <div class="flex flex-col gap-2 px-3 py-2.5 border-b gx-border-theme bg-black/10 backdrop-blur-md">
-            <!-- Stats -->
-            <div class="flex items-center gap-2 pb-1.5 border-b border-gray-800/50">
-                <span class="text-[9px] text-gray-500 font-bold">Totale: <span class="text-blue-400">${totalIssues}</span></span>
-                ${Object.entries(issuesByStatus).slice(0, 4).map(([s, c]) =>
-                    `<span class="text-[8px] text-gray-700">${s}: <span class="text-gray-500">${c}</span></span>`
+        <div class="flex flex-col gap-2 px-2.5 py-2 border-b gx-border-theme bg-black/10">
+
+            <!-- Stat + reset -->
+            <div class="flex items-center justify-between">
+                <span class="text-[9px] text-gray-600 font-bold">Issues: <span class="text-blue-400">${totalIssues}</span></span>
+                ${hasActiveFilters ? `<button onclick="window.resetAllFilters()" class="text-[8px] text-gray-600 hover:text-red-400 transition font-bold tracking-wide">✕ reset</button>` : ''}
+            </div>
+
+            <!-- Status pills — riga singola scrollabile -->
+            <div class="flex gap-1 overflow-x-auto" style="scrollbar-width:none">
+                <button onclick="window.filterIssues('Tutti')" class="${activeFilter === 'Tutti' ? pillActive : pillInactive}">Tutti</button>
+                ${uniqueStatuses.map(s =>
+                    `<button onclick="window.filterIssues('${s}')" class="${activeFilter === s ? pillActive : pillInactive}">${s}</button>`
                 ).join('')}
             </div>
 
-            <!-- Status -->
-            <div class="flex flex-wrap gap-1">
-                ${statusFilters.map(f =>
-                    `<button onclick="window.filterIssues('${f.id}')" class="${btnCls(activeFilter === f.id)}">${f.label}</button>`
-                ).join('')}
-            </div>
-
-            <!-- Priorità -->
-            <div class="flex items-center gap-1.5">
-                <span class="text-[8px] uppercase font-bold text-gray-600 tracking-widest shrink-0">Priorità:</span>
-                <div class="flex flex-wrap gap-1">
-                    ${priorities.map(p =>
-                        `<button onclick="window.filterByPriority('${p}')" class="${btnCls(activePriority === p)}">${p}</button>`
-                    ).join('')}
+            <!-- Grid 2×2 compact selects -->
+            <div class="grid grid-cols-2 gap-1.5">
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-[7px] uppercase font-bold text-gray-700 tracking-widest">Priorità</span>
+                    <select onchange="window.filterByPriority(this.value)" class="${selCls}">
+                        ${priorities.map(p => `<option value="${p}" ${activePriority === p ? 'selected' : ''}>${p}</option>`).join('')}
+                    </select>
                 </div>
-            </div>
-
-            <!-- Data creazione -->
-            <div class="flex items-center gap-1.5">
-                <span class="text-[8px] uppercase font-bold text-gray-600 tracking-widest shrink-0">Data:</span>
-                <div class="flex gap-1">
-                    ${dateOptions.map(d =>
-                        `<button onclick="window.filterByDate('${d.id}')" class="${btnCls(activeDate === d.id)}">${d.label}</button>`
-                    ).join('')}
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-[7px] uppercase font-bold text-gray-700 tracking-widest">Data</span>
+                    <select onchange="window.filterByDate(this.value)" class="${selCls}">
+                        <option value="Tutti"     ${activeDate === 'Tutti'      ? 'selected' : ''}>Tutti</option>
+                        <option value="Oggi"      ${activeDate === 'Oggi'       ? 'selected' : ''}>Oggi</option>
+                        <option value="Settimana" ${activeDate === 'Settimana'  ? 'selected' : ''}>Ultimi 7gg</option>
+                        <option value="Mese"      ${activeDate === 'Mese'       ? 'selected' : ''}>Ultimi 30gg</option>
+                    </select>
                 </div>
-            </div>
-
-            <!-- Progetto + Sprint -->
-            <div class="flex gap-2">
-                ${projects.length > 1 ? `
-                <div class="flex items-center gap-1 flex-1 min-w-0">
-                    <span class="text-[8px] uppercase font-bold text-gray-600 shrink-0">Prog:</span>
-                    <select onchange="window.filterByProject(this.value)" class="flex-1 min-w-0 bg-[var(--bg-main)] border gx-border-theme rounded px-1.5 py-0.5 text-[9px] text-gray-300 focus:outline-none focus:border-[var(--accent)] cursor-pointer">
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-[7px] uppercase font-bold text-gray-700 tracking-widest">Progetto</span>
+                    <select onchange="window.filterByProject(this.value)" class="${selCls}">
                         ${projects.map(p => `<option value="${p}" ${activeProject === p ? 'selected' : ''}>${p}</option>`).join('')}
                     </select>
-                </div>` : ''}
-                ${sprints.length > 1 ? `
-                <div class="flex items-center gap-1 flex-1 min-w-0">
-                    <span class="text-[8px] uppercase font-bold text-gray-600 shrink-0">Sprint:</span>
-                    <select onchange="window.filterIssuesBySprint(this.value)" class="flex-1 min-w-0 bg-[var(--bg-main)] border gx-border-theme rounded px-1.5 py-0.5 text-[9px] text-gray-300 focus:outline-none focus:border-[var(--accent)] cursor-pointer">
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-[7px] uppercase font-bold text-gray-700 tracking-widest">Sprint</span>
+                    <select onchange="window.filterIssuesBySprint(this.value)" class="${selCls}">
                         ${sprints.map(s => `<option value="${s}" ${activeSprint === s ? 'selected' : ''}>${s}</option>`).join('')}
                     </select>
-                </div>` : ''}
+                </div>
             </div>
 
-            <!-- Assegnatario (testo libero) -->
-            <div class="flex items-center gap-1.5">
-                <span class="text-[8px] uppercase font-bold text-gray-600 shrink-0">Utente:</span>
+            <!-- Utente -->
+            <div class="flex items-center gap-1.5 bg-[var(--bg-main)] border gx-border-theme rounded px-2 py-1 focus-within:border-[var(--accent)] transition">
+                <span class="text-[9px] text-gray-700 shrink-0">👤</span>
                 <input
                     id="filter-assignee-input"
                     type="text"
-                    placeholder="es. giovanni.faggiano"
+                    placeholder="filtra per utente..."
                     value="${activeAssignee}"
-                    class="flex-1 bg-[var(--bg-main)] border gx-border-theme rounded px-2 py-0.5 text-[9px] text-gray-300 outline-none focus:border-[var(--accent)] font-mono placeholder:text-gray-700"
+                    class="flex-1 bg-transparent text-[9px] text-gray-300 outline-none font-mono placeholder:text-gray-700 min-w-0"
                 />
-                <button id="filter-assignee-clear" onclick="window.clearAssigneeFilter()" style="display:${activeAssignee ? 'inline' : 'none'}" class="text-[9px] text-gray-600 hover:text-white transition px-1">✕</button>
+                <button id="filter-assignee-clear" onclick="window.clearAssigneeFilter()" style="display:${activeAssignee ? 'inline' : 'none'}" class="text-[9px] text-gray-600 hover:text-white transition shrink-0">✕</button>
             </div>
         </div>
     `;
@@ -403,6 +385,11 @@ export const initIssues = async () => {
     window.filterByProject     = (v) => { activeProject  = v; render(); };
     window.filterByPriority    = (v) => { activePriority = v; render(); };
     window.filterByDate        = (v) => { activeDate     = v; render(); };
+    window.resetAllFilters     = ()  => {
+        activeFilter = 'Tutti'; activeSprint = 'Tutti'; activeProject = 'Tutti';
+        activePriority = 'Tutti'; activeDate = 'Tutti'; activeAssignee = '';
+        render();
+    };
     window.clearAssigneeFilter = ()  => {
         activeAssignee = '';
         const inp = document.getElementById('filter-assignee-input');
