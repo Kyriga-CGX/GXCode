@@ -68,6 +68,29 @@ function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
         }
     });
 
+    apiApp.post("/api/youtrack/test", async (req, res) => {
+        const { url, token } = req.body;
+        if (!url || !token) return res.status(400).json({ error: "URL e token obbligatori" });
+        const baseUrl = url.replace(/\/mcp\/?$/, '').replace(/\/$/, '');
+        try {
+            const response = await fetch(`${baseUrl}/api/users/me?fields=fullName,login`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+            if (!response.ok) {
+                const text = await response.text();
+                return res.status(response.status).json({ error: `YouTrack error ${response.status}: ${text}` });
+            }
+            const user = await response.json();
+            res.json({ success: true, fullName: user.fullName || user.login || 'Utente', baseUrl });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     apiApp.post("/api/youtrack/configure-mcp", (req, res) => {
         const { url, token } = req.body;
         if (!url || !token) {

@@ -1314,33 +1314,19 @@ window.testYoutrackConnection = async () => {
     statusEl.classList.remove('hidden');
 
     try {
-        const response = await fetch(`${url.replace(/\/$/, '')}/api/issues?fields=idReadable&$top=1`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json'
-            }
+        const resp = await fetch('http://localhost:5000/api/youtrack/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, token })
         });
-
-        if (response.ok) {
-            const data = await response.json();
-            // Salva username corrente per identificare "assegnato a me"
-            try {
-                const meResp = await fetch(`${url.replace(/\/$/, '')}/api/users/me?fields=fullName,login`, {
-                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-                });
-                if (meResp.ok) {
-                    const me = await meResp.json();
-                    const myUsername = me.fullName || me.login || '';
-                    setState({ youtrackConfig: { ...state.youtrackConfig, myUsername } });
-                }
-            } catch(_) {}
-            statusEl.className = 'p-3 rounded-lg text-xs bg-green-500/20 border border-green-500/30 text-green-300';
-            statusEl.innerHTML = `✅ Connessione riuscita! ${data.length} ticket trovati.`;
-        } else {
-            const error = await response.text();
+        const result = await resp.json();
+        if (!resp.ok) {
             statusEl.className = 'p-3 rounded-lg text-xs bg-red-500/20 border border-red-500/30 text-red-300';
-            statusEl.innerHTML = `❌ Errore: ${response.status} - ${error}`;
+            statusEl.innerHTML = `❌ ${result.error}`;
+        } else {
+            setState({ youtrackConfig: { ...state.youtrackConfig, myUsername: result.fullName } });
+            statusEl.className = 'p-3 rounded-lg text-xs bg-green-500/20 border border-green-500/30 text-green-300';
+            statusEl.innerHTML = `✅ Connessione riuscita! Utente: ${result.fullName}`;
         }
     } catch (err) {
         statusEl.className = 'p-3 rounded-lg text-xs bg-red-500/20 border border-red-500/30 text-red-300';
