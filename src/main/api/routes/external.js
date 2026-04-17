@@ -10,10 +10,11 @@ function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
         const { url, token, query } = req.query;
         if (!url || !token) return res.json([]);
 
+        const baseUrl = url.replace(/\/mcp\/?$/, '').replace(/\/$/, '');
         try {
             const fields = "idReadable,summary,description,project(name),priority(name),state(name),assignee(fullName),tags(name,color(id,background,foreground)),links(direction,issue(idReadable,summary)),customFields(name,value(name,text,id))";
             const queryParam = query ? `&query=${encodeURIComponent(query)}` : '';
-            const response = await fetch(`${url.replace(/\/$/, '')}/api/issues?fields=${fields}&$top=100${queryParam}`, {
+            const response = await fetch(`${baseUrl}/api/issues?fields=${fields}&$top=100${queryParam}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -48,7 +49,7 @@ function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
                         summary: l.issue.summary
                     })) || [],
                     sprint: sprintField?.value?.name || sprintField?.value?.text || null,
-                    rawUrl: `${url.replace(/\/$/, '')}/issue/${issue.idReadable}`
+                    rawUrl: `${baseUrl}/issue/${issue.idReadable}`
                 };
             });
             res.json(formatted);
@@ -65,6 +66,23 @@ function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
             res.json({ success: true, count: mcpServers.length });
         } else {
             res.status(400).json({ error: "Invalid data" });
+        }
+    });
+
+    apiApp.post("/api/youtrack/projects", async (req, res) => {
+        const { url, token } = req.body;
+        if (!url || !token) return res.status(400).json({ error: "URL e token obbligatori" });
+        const baseUrl = url.replace(/\/mcp\/?$/, '').replace(/\/$/, '');
+        try {
+            const response = await fetch(`${baseUrl}/api/admin/projects?fields=shortName,name&$top=50`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+            });
+            if (!response.ok) throw new Error(`YouTrack error ${response.status}`);
+            const data = await response.json();
+            res.json(data.map(p => ({ id: p.shortName, name: p.name })));
+        } catch (err) {
+            res.status(500).json({ error: err.message });
         }
     });
 
@@ -102,7 +120,8 @@ function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
             if (fs.existsSync(claudeSettingsPath)) {
                 try { settings = JSON.parse(fs.readFileSync(claudeSettingsPath, 'utf8')); } catch (_) {}
             }
-            const mcpUrl = url.replace(/\/$/, '') + '/mcp';
+            const baseUrl = url.replace(/\/mcp\/?$/, '').replace(/\/$/, '');
+            const mcpUrl = baseUrl + '/mcp';
             settings.mcpServers = settings.mcpServers || {};
             settings.mcpServers.youtrack = {
                 type: 'http',
@@ -110,7 +129,7 @@ function registerExternalRoutes(apiApp, GOOGLE_CONFIG) {
                 headers: { Authorization: `Bearer ${token}` }
             };
             fs.writeFileSync(claudeSettingsPath, JSON.stringify(settings, null, 2), 'utf8');
-            res.json({ success: true, mcpUrl });
+            res.json({ success: true, mcpUrl, baseUrl });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }

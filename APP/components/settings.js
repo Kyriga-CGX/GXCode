@@ -1277,12 +1277,16 @@ window.loadYoutrackProjects = async () => {
     }
     listEl.innerHTML = '<span class="text-[9px] text-blue-400 animate-pulse px-1">Caricamento progetti...</span>';
     try {
-        const resp = await fetch(`${url.replace(/\/$/, '')}/api/admin/projects?fields=shortName,name&$top=50`, {
-            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+        const resp = await fetch('http://localhost:5000/api/youtrack/projects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, token })
         });
-        if (!resp.ok) throw new Error(`Errore ${resp.status}`);
-        const data = await resp.json();
-        const projects = data.map(p => ({ id: p.shortName, name: p.name }));
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.error || `Errore ${resp.status}`);
+        }
+        const projects = await resp.json();
         const currentFilter = state.youtrackConfig.filterProjects || [];
         setState({ youtrackConfig: { ...state.youtrackConfig, ytProjects: projects } });
         listEl.innerHTML = projects.map(p => `
