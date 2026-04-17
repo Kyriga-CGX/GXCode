@@ -2,8 +2,16 @@ import { setState } from '../core/state.js';
 
 export const initUpdater = () => {
     // Controllo ogni 5 minuti (300000ms)
-    // Per test rapidi, lo mettiamo a 1 minuto
-    const CHECK_INTERVAL = 60000 * 5; 
+    const CHECK_INTERVAL = 60000 * 5;
+    let updateNotificationShown = false;
+
+    const showUpdatePopup = () => {
+        if (updateNotificationShown) return; // Mostra la notifica una sola volta per sessione
+        updateNotificationShown = true;
+        if (window.gxToast) {
+            window.gxToast(window.t('updater.available'), 'info', 6000);
+        }
+    };
 
     const checkForUpdates = async () => {
         try {
@@ -13,12 +21,6 @@ export const initUpdater = () => {
             }
         } catch (err) {
             console.warn("[Updater] Errore verifica:", err);
-        }
-    };
-
-    const showUpdatePopup = () => {
-        if (window.gxToast) {
-            window.gxToast(window.t('updater.available'), 'info', 6000);
         }
     };
 

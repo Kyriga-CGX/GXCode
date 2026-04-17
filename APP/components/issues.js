@@ -139,7 +139,7 @@ const renderFilterBar = () => {
     const hasActiveFilters = activeFilter !== 'Tutti' || activePriority !== 'Tutti' || activeDate !== 'Tutti' || activeAssignee || activeSprint !== 'Tutti' || activeProject !== 'Tutti';
 
     return `
-        <div class="flex flex-col gap-2 px-2.5 py-2 border-b gx-border-theme bg-black/10">
+        <div class="flex flex-col gap-2 px-2.5 py-2 border-b gx-border-theme bg-[var(--bg-side-alt)]">
 
             <!-- Stat + reset -->
             <div class="flex items-center justify-between">
@@ -279,7 +279,7 @@ window.openIssuePopup = (issueId) => {
     document.getElementById('modals-root').appendChild(modal);
     modal.querySelector('#issue-open-browser-btn')?.addEventListener('click', () => {
         const url = issue.rawUrl;
-        if (url && window.electronAPI?.openExternalLink) window.electronAPI.openExternalLink(url);
+        if (url && window.electronAPI?.shellOpenExternal) window.electronAPI.shellOpenExternal(url);
     });
 };
 
@@ -304,7 +304,7 @@ export const initIssues = async () => {
         const issueId = item.getAttribute('data-id');
         const rawUrl  = item.getAttribute('data-url');
         if (e.ctrlKey || e.metaKey) {
-            if (rawUrl && window.electronAPI?.openExternalLink) window.electronAPI.openExternalLink(rawUrl);
+            if (rawUrl && window.electronAPI?.shellOpenExternal) window.electronAPI.shellOpenExternal(rawUrl);
             return;
         }
         setState({ activeIssueId: issueId });

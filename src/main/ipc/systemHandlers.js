@@ -24,9 +24,19 @@ function registerSystemHandlers() {
 
     ipcMain.handle('check-for-updates', async () => {
         if (!app.isPackaged) return false;
-        if (pendingUpdateCheck) return !!(await pendingUpdateCheck).updateInfo;
+        const semver = require('semver');
+        const currentVersion = app.getVersion();
+        if (pendingUpdateCheck) {
+            try {
+                const res = await pendingUpdateCheck;
+                return res?.updateInfo?.version ? semver.gt(res.updateInfo.version, currentVersion) : false;
+            } catch { return false; }
+        }
         pendingUpdateCheck = autoUpdater.checkForUpdates();
-        try { const res = await pendingUpdateCheck; return !!res.updateInfo; }
+        try {
+            const res = await pendingUpdateCheck;
+            return res?.updateInfo?.version ? semver.gt(res.updateInfo.version, currentVersion) : false;
+        }
         catch (e) { return false; } finally { pendingUpdateCheck = null; }
     });
 

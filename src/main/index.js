@@ -116,8 +116,12 @@ app.whenReady().then(() => {
     if (app.isPackaged) {
         try {
             const { autoUpdater } = require('electron-updater');
+            autoUpdater.autoDownload = false; // Il download parte solo su richiesta esplicita dell'utente
             autoUpdater.on('update-available', () => {
                 mainWindow.webContents.send('update-available');
+            });
+            autoUpdater.on('download-progress', (progress) => {
+                mainWindow.webContents.send('download-progress', progress.percent);
             });
             autoUpdater.on('update-downloaded', () => {
                 mainWindow.webContents.send('update-ready-to-install');

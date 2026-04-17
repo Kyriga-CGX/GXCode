@@ -29,6 +29,10 @@
     --bg-side-gradient: linear-gradient(180deg, #0a0d12 0%, #0d1525 100%);
 }
 
+[data-cgx-theme="dark"] {
+    --header-bg: #0e1220;
+}
+
 [data-cgx-theme="classic"] {
     --bg-main: #0d1117;
     --bg-side: #161b22;
@@ -70,6 +74,7 @@
     --text-main: #e2e8f0;
     --term-bg: #050508;
     --term-fg: #ff007c;
+    --header-bg: #0e1018;
     --bg-main-gradient: linear-gradient(135deg, #0c0e14 0%, #160823 58%, #0c0a14 100%);
     --bg-side-gradient: linear-gradient(180deg, #08090c 0%, #180a28 100%);
 }
@@ -84,6 +89,7 @@
     --text-main: #f1f5f9;
     --term-bg: #01040a;
     --term-fg: #38bdf8;
+    --header-bg: #0a1228;
     --bg-main-gradient: linear-gradient(160deg, #020617 0%, #061228 62%, #030b1a 100%);
     --bg-side-gradient: linear-gradient(180deg, #050a18 0%, #091828 100%);
 }
@@ -114,6 +120,7 @@
     --text-main: #e5e5e5;
     --term-bg: #000000;
     --term-fg: #f97316;
+    --header-bg: #1a1a1a;
     --bg-main-gradient: linear-gradient(145deg, #0a0a0a 0%, #140e08 58%, #0a0808 100%);
     --bg-side-gradient: linear-gradient(180deg, #0f0f0f 0%, #1a1610 100%);
 }
@@ -128,6 +135,7 @@
     --text-main: #fafafa;
     --term-bg: #0c0c0e;
     --term-fg: #fbbf24;
+    --header-bg: #141418;
     --bg-main-gradient: linear-gradient(145deg, #18181b 0%, #1a160a 58%, #141214 100%);
     --bg-side-gradient: linear-gradient(180deg, #09090b 0%, #140f06 100%);
 }
@@ -336,6 +344,7 @@
     background: var(--bg-side-gradient, var(--bg-side));
 }
 
+[data-cgx-theme="dark"] #left-sidebar,
 [data-cgx-theme="neon-cyber"] #left-sidebar,
 [data-cgx-theme="aurora-oled"] #left-sidebar,
 [data-cgx-theme="void-stealth"] #left-sidebar,
@@ -352,6 +361,31 @@
 [data-cgx-theme="forest-moss"] #left-sidebar,
 [data-cgx-theme="sunset-cream"] #left-sidebar,
 [data-cgx-theme="light"] #left-sidebar {
+    background: var(--bg-side-gradient, var(--bg-side)) !important;
+}
+
+#right-sidebar {
+    border-left: 1px solid var(--border-dim) !important;
+    background: var(--bg-side-gradient, var(--bg-side));
+}
+
+[data-cgx-theme="dark"] #right-sidebar,
+[data-cgx-theme="neon-cyber"] #right-sidebar,
+[data-cgx-theme="aurora-oled"] #right-sidebar,
+[data-cgx-theme="void-stealth"] #right-sidebar,
+[data-cgx-theme="classic"] #right-sidebar,
+[data-cgx-theme="nordic-frost"] #right-sidebar,
+[data-cgx-theme="titanium-carbon"] #right-sidebar,
+[data-cgx-theme="solar-flare"] #right-sidebar,
+[data-cgx-theme="morning-mist"] #right-sidebar,
+[data-cgx-theme="sakura-bloom"] #right-sidebar,
+[data-cgx-theme="mint-serenity"] #right-sidebar,
+[data-cgx-theme="amber-parchment"] #right-sidebar,
+[data-cgx-theme="lavender-cloud"] #right-sidebar,
+[data-cgx-theme="ocean-pearl"] #right-sidebar,
+[data-cgx-theme="forest-moss"] #right-sidebar,
+[data-cgx-theme="sunset-cream"] #right-sidebar,
+[data-cgx-theme="light"] #right-sidebar {
     background: var(--bg-side-gradient, var(--bg-side)) !important;
 }
 
