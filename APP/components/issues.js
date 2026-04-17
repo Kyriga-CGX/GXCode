@@ -212,10 +212,9 @@ const renderFilterBar = () => {
                     type="text"
                     placeholder="es. giovanni.faggiano"
                     value="${activeAssignee}"
-                    oninput="window.filterByAssignee(this.value)"
                     class="flex-1 bg-[var(--bg-main)] border gx-border-theme rounded px-2 py-0.5 text-[9px] text-gray-300 outline-none focus:border-[var(--accent)] font-mono placeholder:text-gray-700"
                 />
-                ${activeAssignee ? `<button onclick="window.filterByAssignee('')" class="text-[9px] text-gray-600 hover:text-white transition px-1">✕</button>` : ''}
+                <button id="filter-assignee-clear" onclick="window.clearAssigneeFilter()" style="display:${activeAssignee ? 'inline' : 'none'}" class="text-[9px] text-gray-600 hover:text-white transition px-1">✕</button>
             </div>
         </div>
     `;
@@ -287,7 +286,7 @@ window.openIssuePopup = (issueId) => {
                 <span class="text-[10px] text-gray-600 italic">Sprint: ${issue.sprint || 'N/A'}</span>
                 <div class="flex gap-3">
                     <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 text-[10px] font-bold text-gray-400 hover:text-white uppercase transition">Chiudi</button>
-                    <button onclick="window.electronAPI.openExternalLink('${issue.rawUrl}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-lg transition uppercase flex items-center gap-2">
+                    <button id="issue-open-browser-btn" data-url="${issue.rawUrl || ''}" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-lg transition uppercase flex items-center gap-2">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
                         Apri in Browser
                     </button>
@@ -296,6 +295,10 @@ window.openIssuePopup = (issueId) => {
         </div>
     `;
     document.getElementById('modals-root').appendChild(modal);
+    modal.querySelector('#issue-open-browser-btn')?.addEventListener('click', () => {
+        const url = issue.rawUrl;
+        if (url && window.electronAPI?.openExternalLink) window.electronAPI.openExternalLink(url);
+    });
 };
 
 export const initIssues = async () => {
@@ -331,16 +334,7 @@ export const initIssues = async () => {
         setState({ activeWorkingIssueId: state.activeWorkingIssueId === issueId ? null : issueId });
     };
 
-    window.filterIssues        = (v) => { activeFilter   = v; render(); };
-    window.filterIssuesBySprint= (v) => { activeSprint   = v; render(); };
-    window.filterByProject     = (v) => { activeProject  = v; render(); };
-    window.filterByPriority    = (v) => { activePriority = v; render(); };
-    window.filterByDate        = (v) => { activeDate     = v; render(); };
-    window.filterByAssignee    = (v) => { activeAssignee = v; render(); };
-
-    const render = () => {
-        filterRoot.innerHTML = renderFilterBar();
-
+    const renderContent = () => {
         const config = state.youtrackConfig || {};
         if (!config.url || !config.token || !config.enabled) {
             contentBox.innerHTML = `
@@ -354,7 +348,6 @@ export const initIssues = async () => {
                 </div>`;
             return;
         }
-
         if (!state.issues || state.issues.length === 0) {
             contentBox.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-10 opacity-40">
@@ -364,29 +357,20 @@ export const initIssues = async () => {
                 </div>`;
             return;
         }
-
         let filtered = state.issues;
-
-        if (activeFilter !== 'Tutti')
-            filtered = filtered.filter(t => t.status === activeFilter);
-        if (activeSprint !== 'Tutti')
-            filtered = filtered.filter(t => t.sprint === activeSprint);
-        if (activeProject !== 'Tutti')
-            filtered = filtered.filter(t => t.project === activeProject);
-        if (activePriority !== 'Tutti')
-            filtered = filtered.filter(t => t.priority === activePriority);
-        if (activeAssignee.trim())
-            filtered = filtered.filter(t =>
-                (t.assignee || '').toLowerCase().includes(activeAssignee.toLowerCase()) ||
-                (t.reporter  || '').toLowerCase().includes(activeAssignee.toLowerCase())
-            );
+        if (activeFilter !== 'Tutti')   filtered = filtered.filter(t => t.status === activeFilter);
+        if (activeSprint !== 'Tutti')   filtered = filtered.filter(t => t.sprint === activeSprint);
+        if (activeProject !== 'Tutti')  filtered = filtered.filter(t => t.project === activeProject);
+        if (activePriority !== 'Tutti') filtered = filtered.filter(t => t.priority === activePriority);
+        if (activeAssignee.trim())      filtered = filtered.filter(t =>
+            (t.assignee || '').toLowerCase().includes(activeAssignee.toLowerCase()) ||
+            (t.reporter  || '').toLowerCase().includes(activeAssignee.toLowerCase())
+        );
         if (activeDate !== 'Tutti') {
             const now  = Date.now();
             const days = activeDate === 'Oggi' ? 1 : activeDate === 'Settimana' ? 7 : 30;
-            const from = now - days * 24 * 60 * 60 * 1000;
-            filtered = filtered.filter(t => t.created && t.created >= from);
+            filtered   = filtered.filter(t => t.created && t.created >= now - days * 86400000);
         }
-
         if (filtered.length === 0) {
             contentBox.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-10 opacity-40">
@@ -395,8 +379,37 @@ export const initIssues = async () => {
                 </div>`;
             return;
         }
-
         contentBox.innerHTML = filtered.map(renderIssueItem).join('');
+    };
+
+    const render = () => {
+        filterRoot.innerHTML = renderFilterBar();
+        // Attach live input listener — non ricostruisce la barra ad ogni tasto
+        const assigneeInput = document.getElementById('filter-assignee-input');
+        if (assigneeInput) {
+            assigneeInput.addEventListener('input', (e) => {
+                activeAssignee = e.target.value;
+                // Mostra/nascondi pulsante ✕ senza rifare il render della barra
+                const clearBtn = document.getElementById('filter-assignee-clear');
+                if (clearBtn) clearBtn.style.display = activeAssignee ? 'inline' : 'none';
+                renderContent();
+            });
+        }
+        renderContent();
+    };
+
+    window.filterIssues        = (v) => { activeFilter   = v; render(); };
+    window.filterIssuesBySprint= (v) => { activeSprint   = v; render(); };
+    window.filterByProject     = (v) => { activeProject  = v; render(); };
+    window.filterByPriority    = (v) => { activePriority = v; render(); };
+    window.filterByDate        = (v) => { activeDate     = v; render(); };
+    window.clearAssigneeFilter = ()  => {
+        activeAssignee = '';
+        const inp = document.getElementById('filter-assignee-input');
+        if (inp) inp.value = '';
+        const clearBtn = document.getElementById('filter-assignee-clear');
+        if (clearBtn) clearBtn.style.display = 'none';
+        renderContent();
     };
 
     subscribe((newState, oldState) => {
